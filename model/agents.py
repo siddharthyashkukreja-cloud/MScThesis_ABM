@@ -22,6 +22,10 @@ class BaseTrader:
         self.params = params
         self.rng = rng
         self.state = TraderState()
+        self.inventory   = 0.0
+        self.cash        = 0.0
+        self.entry_price = params.v0   # or p0 — reference price for MtM
+        self.mtm_pnl     = 0.0
 
     def observe(self, market_state: MarketState) -> None:
         raise NotImplementedError

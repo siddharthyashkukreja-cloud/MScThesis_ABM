@@ -42,12 +42,26 @@ class Simulation:
         for trader in self.traders:
             trader.observe(market_state)
 
-        # Traders decide orders
-        orders = []
+       # Traders decide orders
+        orders = []          # full list, one entry per trader (includes (0, 0.0) for non-traders)
+        active_orders = []   # only non-zero orders passed to market
+
         for trader in self.traders:
             side, volume = trader.decide(market_state)
+            orders.append((side, volume))
             if side != 0 and volume > 0:
-                orders.append((side, volume))
+                active_orders.append((side, volume))
+
+        # Market clears on active orders only
+        stats = self.market.step(active_orders)
+        new_price = self.market.price
+
+        # Update ALL traders' inventory/PnL using full aligned list
+        for trader, (side, vol) in zip(self.traders, orders):
+            trader.inventory += side * vol
+            trader.cash      -= side * vol * new_price
+            trader.mtm_pnl    = trader.inventory * (new_price - trader.entry_price)
+
 
         # Market clears
         stats = self.market.step(orders)
