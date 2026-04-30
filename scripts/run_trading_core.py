@@ -3,9 +3,9 @@ import os
 import csv
 import numpy as np
 
-from ..model.globals import ModelParams
-from ..model.simulation import Simulation
-from ..model.agents import FundamentalTrader, MomentumTrader, NoiseTrader
+from model.globals import ModelParams
+from model.simulation import Simulation
+from model.agents import FundamentalTrader, MomentumTrader, NoiseTrader
 
 
 def build_traders(params: ModelParams, seed: int = 123):
@@ -38,8 +38,8 @@ def build_traders(params: ModelParams, seed: int = 123):
 def main():
     params = ModelParams(
         n_noise=50,
-        n_fundamental=10,
-        n_momentum=10,
+        n_fundamental=0,
+        n_momentum=0,
         lambda_=1e-4,
         v0=100.0,
         m0=0.0,

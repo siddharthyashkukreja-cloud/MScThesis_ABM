@@ -51,15 +51,15 @@ class FundamentalTrader(BaseTrader):
 
     def decide(self, market_state: MarketState) -> Tuple[int, float]:
         x = self.mispricing
-        if x == 0.0:
+        # Linear demand: q_f = kappa * (v_t - p_t)
+        q = self.params.kappa * x
+
+        if q == 0.0:
             return 0, 0.0
 
-        q = self.params.kappa * abs(x) + """self.params.kappa_3 * (abs(x) ** 3)"""
-        if q <= 0.0:
-            return 0, 0.0
-
-        side = +1 if x > 0 else -1
-        return side, q
+        side = +1 if q > 0 else -1
+        volume = abs(q)
+        return side, volume
 
 
 class MomentumTrader(BaseTrader):

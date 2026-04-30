@@ -1,4 +1,3 @@
-# mscthesis_abm/model/market.py
 from dataclasses import dataclass
 from typing import Iterable, Tuple, Dict
 
@@ -10,14 +9,14 @@ class MarketState:
     price: float
     fundamental: float
     momentum: float
+    vol: float
     t: int
-    vol: float 
 
 
 class Market:
     """
-    Centralised market/auctioneer implementing linear price impact
-    and an EWMA momentum signal.
+    Centralised market/auctioneer implementing linear price impact,
+    EWMA momentum, and EWMA volatility.
     """
 
     def __init__(self, params: ModelParams, globals_: GlobalState):
@@ -28,24 +27,25 @@ class Market:
         self.momentum = params.m0
         self.last_price = self.price
 
-        # Stats
+        # Demand stats
         self.excess_demand = 0.0
         self.cum_abs_demand = 0.0
         self.cum_excess_demand = 0.0
 
-        # in Market.__init__
+        # Volatility EWMA
         self.vol_ewma = 0.0
-        self.vol_alpha = 0.05  # e.g., EWMA weight
+        self.vol_alpha = 0.05  # EWMA weight
 
-        # in Market.step, after updating price
-        ret = (self.price - self.last_price)
-        self.vol_ewma = self.vol_alpha * (ret ** 2) + (1 - self.vol_alpha) * self.vol_ewma
+    def current_vol(self) -> float:
+        # sqrt of EWMA variance; small floor to avoid zero
+        return max(self.vol_ewma ** 0.5, 1e-8)
 
     def get_state(self) -> MarketState:
         return MarketState(
             price=self.price,
             fundamental=self.globals.v,
             momentum=self.momentum,
+            vol=self.current_vol(),
             t=self.globals.t,
         )
 
@@ -61,7 +61,7 @@ class Market:
         supply = 0.0
 
         for side, volume in orders:
-            if volume <= 0:
+            if volume <= 0.0:
                 continue
             if side > 0:
                 demand += volume
@@ -83,10 +83,14 @@ class Market:
         a = self.params.alpha
         self.momentum = a * dp + (1.0 - a) * self.momentum
 
+        # Volatility update (EWMA of squared returns)
+        self.vol_ewma = self.vol_alpha * (dp ** 2) + (1.0 - self.vol_alpha) * self.vol_ewma
+
         return {
             "demand": demand,
             "supply": supply,
             "excess_demand": excess,
             "price": self.price,
             "momentum": self.momentum,
+            "vol": self.current_vol(),
         }

@@ -4,7 +4,7 @@ import numpy as np
 
 from .globals import ModelParams, GlobalState
 from .market import Market, MarketState
-from agents.base import BaseTrader
+from .agents import BaseTrader
 
 
 class Simulation:
