@@ -1,80 +1,192 @@
-# scripts/run_trading_core.py
+"""
+run_simulation.py  —  Run ABM with calibrated parameters for each regime.
+
+Loads calibrated parameters from output/calibrated_params.csv,
+constructs ModelParams, runs N_RUNS simulations per regime,
+and saves aggregated output for analysis.ipynb comparison.
+
+Outputs (per regime):
+    output/sim_{regime}_runs.csv      — all runs stacked (t, run_id, price, fundamental)
+    output/sim_{regime}_median.csv    — median + IQR path across runs
+"""
+
+from __future__ import annotations
+
 import os
-import csv
 import numpy as np
+import pandas as pd
 
-from model.globals import ModelParams
-from model.simulation import Simulation
+from model.globals import ModelParams, GlobalState
+from model.market import Market
 from model.agents import FundamentalTrader, MomentumTrader, NoiseTrader
+from model.simulation import Simulation
 
-def build_traders(params: ModelParams, seed: int = 123):
-    rng = np.random.default_rng(seed)
-    traders = []
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+N_RUNS   = 50    # Monte Carlo runs per regime
+SEED_BASE = 0    # seeds: SEED_BASE + run_id
 
-    # Noise traders — participation now driven by p_noise, not 1/N
-    for _ in range(params.n_noise):
-        traders.append(NoiseTrader(params, rng))
+REGIME_STEPS = {
+    "calm"    : 503,
+    "stressed": 252,
+}
 
-    # Fundamental traders
-    for _ in range(params.n_fundamental):
-        traders.append(FundamentalTrader(params, rng))
-
-    # Momentum traders
-    for _ in range(params.n_momentum):
-        traders.append(MomentumTrader(params, rng))
-
-    return traders
+# Fixed agent counts
+N_FUNDAMENTAL = 1
+N_MOMENTUM    = 1
+N_NOISE       = 1
 
 
-def main():
-    params = ModelParams(
-        # Population
-        n_noise        = 20,
-        n_fundamental  = 30,
-        n_momentum     = 10,
+# ---------------------------------------------------------------------------
+# Build ModelParams from calibrated row
+# ---------------------------------------------------------------------------
 
-        # Price impact
-        lambda_        = 1e-3,       # permanent impact
-        lambda_tran    = 5e-3,       # transitory impact (5× permanent)
-        rho_tran       = 0.8,        # 80% of transient decays each step
+def build_params(row: pd.Series, n_steps: int) -> ModelParams:
+    """
+    Map KF-EM estimates to ModelParams.
 
-        # Fundamental process
-        v0             = 100.0,
+    Calibrated fields:  gamma, beta, alpha (fixed), g, sigma_v, sigma_n, v0
+    The remaining fields (lambda_, kappa, delta, etc.) use sensible defaults
+    consistent with the Majewski linear demand formulation.
+    """
+    # Fundamental value initial level from calibration
+    v0 = float(row["v0"])
+
+    # lambda_: Majewski do not estimate this from price data alone.
+    # Use a small positive value so price impact is present but weak.
+    # Can be updated once order-flow data is available.
+    lambda_     = 0.01
+    lambda_tran = 0.005
+    rho_tran    = 0.9
+
+    # kappa: fundamentalist demand scale.  In the linear KF model,
+    # kappa is absorbed into gamma (gamma = lambda * kappa in Majewski eq 3.4).
+    # Recover: kappa = gamma / lambda_
+    gamma = float(row["gamma"])
+    kappa = gamma / lambda_
+
+    # delta: dead-band.  Set to 1 std of mispricing ~ sigma_n.
+    delta = float(row["sigma_n"]) * 0.5
+
+    return ModelParams(
+        n_noise        = N_NOISE,
+        n_fundamental  = N_FUNDAMENTAL,
+        n_momentum     = N_MOMENTUM,
+        lambda_        = lambda_,
+        lambda_tran    = lambda_tran,
+        rho_tran       = rho_tran,
+        v0             = v0,
         m0             = 0.0,
-        price_distortion = 2.0,      # start 2 points below fundamental
-        mu_v           = 0.0,
-        sigma_v        = 0.05,       # per-step fundamental vol
-
-        # Fundamental trader
-        kappa          = 0.05,
-        delta          = 2,        # dead-band half-width around fundamental
-
-        # Momentum trader
-        alpha          = 0.1,
-        beta           = 0.5,
-        gamma          = 10.0,
-
-        # Noise trader
-        sigma_n        = 1.0,
-        p_noise        = 0.20,           # 20% chance to trade per step
-        noise_size_dist  = "geometric",
-        noise_size_param = 0.3,          # mean size ≈ 1/0.3 ≈ 3.3 units × sigma_n
+        price_distortion = 0.0,    # start at fair value
+        mu_v           = float(row["g"]),
+        sigma_v        = float(row["sigma_v"]),
+        kappa          = kappa,
+        delta          = delta,
+        alpha          = float(row["alpha"]),
+        beta           = float(row["beta"]),
+        gamma          = float(row["gamma"]),
+        sigma_n        = float(row["sigma_n"]),
+        p_noise        = 1.0,          # noise traders active every step
+        noise_size_dist  = "fixed",
+        noise_size_param = 1.0,
     )
 
-    traders = build_traders(params, seed=123)
-    sim     = Simulation(params, traders, seed=42)
-    history = sim.run(n_steps=50_000)
 
-    os.makedirs("output", exist_ok=True)
-    out_path = os.path.join("output", "trading_core_history.csv")
-    with open(out_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(history.keys())
-        for i in range(len(history["t"])):
-            writer.writerow([history[k][i] for k in history.keys()])
+# ---------------------------------------------------------------------------
+# Single simulation run
+# ---------------------------------------------------------------------------
 
-    print(f"Saved history to {out_path}")
+def single_run(params: ModelParams, n_steps: int, seed: int) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
 
+    traders = [
+        FundamentalTrader(params, rng),
+        MomentumTrader(params, rng),
+        NoiseTrader(params, rng),
+    ]
+
+    sim = Simulation(params, traders, seed=seed)
+    history = sim.run(n_steps)
+
+    df = pd.DataFrame({
+        "t"          : history["t"],
+        "price"      : history["price"],
+        "fundamental": history["fundamental"],
+        "momentum"   : history["momentum"],
+    })
+    # Compute log versions to match calibration output
+    df["log_price"]       = np.log(np.clip(df["price"],       1e-10, None))
+    df["log_fundamental"] = np.log(np.clip(df["fundamental"], 1e-10, None))
+    df["mispricing"]      = df["log_price"] - df["log_fundamental"]
+    df["log_return"]      = df["log_price"].diff()
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Monte Carlo over N_RUNS
+# ---------------------------------------------------------------------------
+
+def run_regime(regime: str, row: pd.Series) -> None:
+    n_steps = REGIME_STEPS[regime]
+    params  = build_params(row, n_steps)
+
+    print(f"\nSimulating [{regime}]  {N_RUNS} runs x {n_steps} steps...")
+    print(f"  gamma={params.gamma:.4f}  beta={params.beta:.4f}  "
+          f"sigma_v={params.sigma_v:.5f}  sigma_n={params.sigma_n:.5f}  "
+          f"g={params.mu_v:.6f}  v0={params.v0:.4f}")
+
+    all_runs = []
+    for run_id in range(N_RUNS):
+        df = single_run(params, n_steps, seed=SEED_BASE + run_id)
+        df["run_id"] = run_id
+        all_runs.append(df)
+
+    stacked = pd.concat(all_runs, ignore_index=True)
+    out_runs = f"output/sim_{regime}_runs.csv"
+    stacked.to_csv(out_runs, index=False)
+    print(f"  Saved {len(stacked)} rows to {out_runs}")
+
+    # Median + IQR per timestep
+    grp = stacked.groupby("t")
+    median = pd.DataFrame({
+        "t"             : grp["t"].first(),
+        "log_price_med" : grp["log_price"].median(),
+        "log_price_p25" : grp["log_price"].quantile(0.25),
+        "log_price_p75" : grp["log_price"].quantile(0.75),
+        "log_fund_med"  : grp["log_fundamental"].median(),
+        "mispricing_med": grp["mispricing"].median(),
+        "mispricing_p25": grp["mispricing"].quantile(0.25),
+        "mispricing_p75": grp["mispricing"].quantile(0.75),
+        "log_ret_med"   : grp["log_return"].median(),
+        "log_ret_std"   : grp["log_return"].std(),
+    }).reset_index(drop=True)
+
+    out_med = f"output/sim_{regime}_median.csv"
+    median.to_csv(out_med, index=False)
+    print(f"  Saved median path to {out_med}")
+
+    # Print quick diagnostics
+    all_rets = stacked["log_return"].dropna()
+    from scipy import stats as sp
+    kurt = sp.kurtosis(all_rets)
+    skew = sp.skew(all_rets)
+    mis_std = stacked["mispricing"].std()
+    print(f"  Return skew={skew:.3f}  excess_kurt={kurt:.3f}  "
+          f"mispricing_std={mis_std:.5f}")
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    os.makedirs("output", exist_ok=True)
+
+    params_df = pd.read_csv("output/calibrated_params.csv")
+
+    for regime in ["calm", "stressed"]:
+        row = params_df[params_df.regime == regime].iloc[0]
+        run_regime(regime, row)
+
+    print("\nDone. Now run analysis.ipynb to compare simulated vs empirical.")
