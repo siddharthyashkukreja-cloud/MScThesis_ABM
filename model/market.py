@@ -12,51 +12,51 @@ class MarketState:
     vol: float
     t: int
 
-
 class Market:
     """
-    Centralised market/auctioneer implementing linear price impact,
-    EWMA momentum, and EWMA volatility.
+    Centralised market/auctioneer.
+
+    Price impact is split into:
+      - permanent component  (lambda_)     : persistent shift in fair value
+      - transitory component (lambda_tran) : short-lived microstructure impact,
+                                             mean-reverts at rate rho_tran per step.
+    This mimics the depth-of-book effect of a LOB without explicitly maintaining
+    one, and is a standard decomposition in the empirical market-impact literature
+    (e.g. Almgren-Chriss, Gatheral).
     """
 
     def __init__(self, params: ModelParams, globals_: GlobalState):
-        self.params = params
+        self.params  = params
         self.globals = globals_
 
-        self.price = params.v0 - params.price_distortion
-        self.momentum = params.m0
+        self.perm_price = params.v0 - params.price_distortion
+        self.transient  = 0.0
+        self.price      = self.perm_price
         self.last_price = self.price
+        self.momentum   = params.m0
 
-        # Demand stats
-        self.excess_demand = 0.0
-        self.cum_abs_demand = 0.0
-        self.cum_excess_demand = 0.0
+        # Demand accumulators
+        self.excess_demand      = 0.0
+        self.cum_abs_demand     = 0.0
+        self.cum_excess_demand  = 0.0
 
         # Volatility EWMA
-        self.vol_ewma = 0.0
-        self.vol_alpha = 0.05  # EWMA weight
+        self.vol_ewma  = params.sigma_v ** 2   # warm-start instead of zero
+        self.vol_alpha = 0.05
 
     def current_vol(self) -> float:
-        # sqrt of EWMA variance; small floor to avoid zero
         return max(self.vol_ewma ** 0.5, 1e-8)
 
     def get_state(self) -> MarketState:
         return MarketState(
-            price=self.price,
-            fundamental=self.globals.v,
-            momentum=self.momentum,
-            vol=self.current_vol(),
-            t=self.globals.t,
+            price       = self.price,
+            fundamental = self.globals.v,
+            momentum    = self.momentum,
+            vol         = self.current_vol(),
+            t           = self.globals.t,
         )
 
     def step(self, orders: Iterable[Tuple[int, float]]) -> Dict[str, float]:
-        """
-        Perform one market clearing step.
-
-        orders: iterable of (side, volume)
-          side   in {+1 (buy), -1 (sell)}
-          volume >= 0
-        """
         demand = 0.0
         supply = 0.0
 
@@ -69,28 +69,39 @@ class Market:
                 supply += volume
 
         excess = demand - supply
-        self.excess_demand = excess
-        self.cum_abs_demand += demand + supply
+        self.excess_demand      = excess
+        self.cum_abs_demand    += demand + supply
         self.cum_excess_demand += excess
 
-        # Price impact
-        self.last_price = self.price
-        delta_p = self.params.lambda_ * excess
-        self.price = max(0.0, self.price + delta_p)
+        # --- Permanent impact ---
+        self.perm_price = max(0.0, self.perm_price + self.params.lambda_ * excess)
 
-        # Momentum update (EWMA of price changes)
+        # --- Transitory impact (mean-reverts each step) ---
+        self.transient = (
+            self.params.rho_tran * self.transient        # decay
+            + self.params.lambda_tran * excess           # new impulse
+        )
+
+        # --- Observed price = permanent + transient ---
+        self.last_price = self.price
+        self.price      = max(0.0, self.perm_price + self.transient)
+
+        # --- Momentum update (EWMA of price changes) ---
         dp = self.price - self.last_price
-        a = self.params.alpha
+        a  = self.params.alpha
         self.momentum = a * dp + (1.0 - a) * self.momentum
 
-        # Volatility update (EWMA of squared returns)
-        self.vol_ewma = self.vol_alpha * (dp ** 2) + (1.0 - self.vol_alpha) * self.vol_ewma
+        # --- Volatility update (EWMA of squared returns) ---
+        self.vol_ewma = (
+            self.vol_alpha * dp ** 2
+            + (1.0 - self.vol_alpha) * self.vol_ewma
+        )
 
         return {
-            "demand": demand,
-            "supply": supply,
+            "demand"       : demand,
+            "supply"       : supply,
             "excess_demand": excess,
-            "price": self.price,
-            "momentum": self.momentum,
-            "vol": self.current_vol(),
+            "price"        : self.price,
+            "momentum"     : self.momentum,
+            "vol"          : self.current_vol(),
         }

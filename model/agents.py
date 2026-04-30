@@ -37,8 +37,12 @@ class BaseTrader:
 
 class FundamentalTrader(BaseTrader):
     """
-    Fundamental-value trader: mean-reversion towards v_t with
-    linear and cubic demand in mispricing (kappa, kappa_3), only linear for now.
+    Fundamental-value trader with:
+      - Dead-band threshold δ: only trade if |v_t - p_t| > delta
+      - Discrete Poisson volume: n ~ Poisson(kappa * |v_t - p_t|)
+        so order size is a random integer, mean proportional to mispricing,
+        but near-zero mispricings produce near-zero *expected* orders AND
+        are suppressed entirely below the threshold.
     """
 
     def __init__(self, params: ModelParams, rng: np.random.Generator):
@@ -46,19 +50,23 @@ class FundamentalTrader(BaseTrader):
         self.mispricing = 0.0
 
     def observe(self, market_state: MarketState) -> None:
-        # v_t - p_t
         self.mispricing = market_state.fundamental - market_state.price
 
     def decide(self, market_state: MarketState) -> Tuple[int, float]:
         x = self.mispricing
-        # Linear demand: q_f = kappa * (v_t - p_t)
-        q = self.params.kappa * x
 
-        if q == 0.0:
+        # --- Dead band: do nothing if mispricing is small ---
+        if abs(x) <= self.params.delta:
             return 0, 0.0
 
-        side = +1 if q > 0 else -1
-        volume = abs(q)
+        # --- Discrete volume draw: Poisson with mean kappa * |mispricing| ---
+        lam = self.params.kappa * abs(x)
+        volume = float(self.rng.poisson(lam))
+
+        if volume == 0:
+            return 0, 0.0
+
+        side = +1 if x > 0 else -1
         return side, volume
 
 
@@ -92,47 +100,48 @@ class NoiseTrader(BaseTrader):
     """
     Zero-intelligence / noise trader.
 
-    - Trades with small participation probability each step.
-    - Order size scales with current volatility: σ_n * f(vol_t).
-
-    Here we take vol_t from market_state if available, otherwise
-    fall back to the fundamental vol parameter sigma_v.
+    - Participation probability p_noise per step (from ModelParams, 
+      not 1/N so participation is independent of pool size).
+    - Order size drawn from a discrete distribution (geometric, Poisson, or fixed)
+      scaled by sigma_n. Discrete sizes give a heavier-tailed volume distribution
+      even before adding an LOB.
+    - Side is iid uniform ±1.
     """
 
     def __init__(
         self,
         params: ModelParams,
         rng: np.random.Generator,
-        participation_prob: float,
-        vol_scale: float = 1.0,
     ):
         super().__init__(params, rng)
-        self.participation_prob = participation_prob
-        self.vol_scale = vol_scale
 
     def observe(self, market_state: MarketState) -> None:
-        # Noise trader ignores information for direction, but we may
-        # use volatility proxy in decide()
-        self._last_market_state = market_state
+        pass  # noise trader ignores all signals
+
+    def _draw_size(self) -> float:
+        dist = self.params.noise_size_dist
+        p    = self.params.noise_size_param
+
+        if dist == "geometric":
+            # geometric(p): mean = 1/p; heavy right tail
+            n = self.rng.geometric(p)
+        elif dist == "poisson":
+            # poisson(lam): mean = lam
+            n = max(self.rng.poisson(p), 1)
+        else:
+            # fixed unit size
+            n = 1
+
+        return float(n) * self.params.sigma_n
 
     def decide(self, market_state: MarketState) -> Tuple[int, float]:
-        # Participation
-        if self.rng.random() > self.participation_prob:
+        # Participation gate
+        if self.rng.random() > self.params.p_noise:
             return 0, 0.0
 
-        # Volatility proxy:
-        # - if MarketState has attribute 'vol', use it
-        # - else fall back to sigma_v from params
-        vol = getattr(market_state, "vol", self.params.sigma_v)
-        vol = max(vol, 1e-8)  # avoid zero
-
-        # Scale noise order with volatility: σ_n * vol_scale * vol
-        base = self.params.sigma_n
-        volume = base * self.vol_scale * vol
-
+        volume = self._draw_size()
         if volume <= 0.0:
             return 0, 0.0
 
-        # Random side
         side = +1 if self.rng.random() < 0.5 else -1
         return side, volume
