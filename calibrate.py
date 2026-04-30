@@ -282,7 +282,7 @@ def m_step(
 def em_calibrate(
     log_prices: np.ndarray,
     regime: str,
-    max_iter: int = 200,
+    max_iter: int = 10000000,
     tol: float = 1e-6,
 ) -> dict:
     """
