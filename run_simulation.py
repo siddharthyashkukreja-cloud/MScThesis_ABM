@@ -33,9 +33,9 @@ REGIME_STEPS = {
 }
 
 # Fixed agent counts
-N_FUNDAMENTAL = 1
-N_MOMENTUM    = 1
-N_NOISE       = 1
+N_FUNDAMENTAL = 30
+N_MOMENTUM    = 10
+N_NOISE       = 10
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ def build_params(row: pd.Series, n_steps: int) -> ModelParams:
     # lambda_: Majewski do not estimate this from price data alone.
     # Use a small positive value so price impact is present but weak.
     # Can be updated once order-flow data is available.
-    lambda_     = 0.01
+    lambda_     = 1
     lambda_tran = 0.005
     rho_tran    = 0.9
 
