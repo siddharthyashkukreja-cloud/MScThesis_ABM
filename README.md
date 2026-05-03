@@ -1,63 +1,185 @@
-# MScThesis_ABM — CCP Systemic Risk Agent-Based Model
+# MScThesis_ABM
 
-MSc Thesis: *An Agent-Based Model of Central Clearing: Client Clearing, Contagion and Systemic Risk*
+Agent-based simulation of a CCP-cleared financial market, built to study systemic risk, margin procyclicality, and contagion dynamics under calm and stressed market regimes.
 
 ---
 
-## Architecture
+## Overview
+
+This project implements a heterogeneous agent-based model (HABM), calibrated to real market data. The simulation reproduces stylised facts of financial markets — fat-tailed returns, volatility clustering, autocorrelation structure — and overlays a CCP margin and default framework to study how clearing mechanics interact with price dynamics under stress. The model can be thought of as an extension to the Deloitte-Simudyne CCP Risk Model with client tiers and a richer market environment.
+
+---
+
+## Repository Structure
 
 ```
-model/
-  globals.py       ModelParams dataclass + GlobalState (fundamental process)
-  lob.py           Discrete-time call-auction limit order book (matching engine)
-  agents.py        BaseTrader + ZeroIntelligenceTrader (Stage 1); stubs for FV / Momentum
-  simulation.py    Simulation driver (step sequence mirrors Simudyne CCP ODD)
-data/
-  thesis_data_calm.csv      SPY daily order-flow data, 2013-2018 (calm regime)
-  thesis_data_stressed.csv  SPY daily order-flow data, 2014-2016 (stressed regime)
-calibrate.py       ZI parameter estimation from BuyVol/SellVol data (to do)
-run_simulation.py  Entry point
-output/            Generated CSVs (git-ignored)
+MScThesis_ABM/
+├── data/
+│   ├── thesis_data_calm.csv        # Real market data – calm regime (2018-2019)
+│   └── thesis_data_stressed.csv    # Real market data – stressed regime (2008-2009)
+│
+├── model/
+│   ├── globals.py      # ModelParams dataclass; GlobalState (fundamental value process)
+│   ├── agents.py       # BaseTrader + FundamentalTrader, MomentumTrader, Noise Vol. Trader (+ maybe market maker)
+│   ├── lob.py       # 
+│   ├── margin.py       # 
+│   └── simulation.py   # 
+│
+├── calibrate.py        #   
+├── run_simulation.py   # 
+├── analysis.ipynb      # Exploratory analysis and plots
+│
+└── output/
+
 ```
+
+---
+
+## How to Run
+
+```bash
+# 1. Calibrate KF+EM on real data
+python calibrate.py
+
+# 2. Run Monte Carlo simulation
+python run_simulation.py
+
+# 3. Open notebook for analysis
+jupyter notebook analysis.ipynb
+```
+
+Step 2 reads from `output/calibrated_params.csv`. If calibration has already been run, step 1 can be skipped.
+
+
+---
+
+## Model Description
+
+The model covers 3 stages, and parameters are calibrated on S\&P E-mini futures data. The three stages are:
+
+ 1. Financial Market Simulation
+
+ 2. Margin Call Framework
+
+ 3. Default Management Framework
+
+
+
+--- 
+
+## Financial Market Simulation
+
+Choices to be made:
+1. LOB or no?
+2. FV signal: calibrated as a parameter or externally fed jump diffusion?
+3. Market making agent?
+4. Almgren-Chriss execution?
+5. Calibration: Kalman-Filter + EM (Bouchaud), EM based on surrogate modelling (minimising distance to stylised facts) like Gao Deep Hedging or ABM Liquidity Risk by Krishnen
+
+### Agents
+
+Three heterogeneous trader types (+ possible Market Maker):
+
+**Fundamental Trader**
+
+
+**Momentum Trader**
+
+
+**Noise Trader**
+
+
+One Market Engine/CCP:
+
+
+
+
+Two types of clearing members:
+
+**Bank Clearing Member**
+
+
+**Non-Bank Clearing Member**
+
+
+### Market Clearing
+
+
+### Fundamental Value Process
+
+--- 
+
+## Margin Call 
+
+### Initial Margin
+
+### Variation Margin
+
+### Default Fund
+
+---
+
+## Default Management Framework 
+
+--- 
+
+## Calibration
+
+
+---
+
+## Step Sequence
+
 
 ---
 
 ## Staged Development Plan
 
-| Stage | Components | Status |
-|-------|------------|--------|
-| 1 | LOB matching engine + ZI traders | Done |
-| 2 | FundamentalTrader + MomentumTrader + GBM fundamental | - |
-| 3 | Variation margin / IM per agent (60-step calls) | - |
-| 4 | Cover-2 default fund (510-step recalculation) | - |
-| 5 | Five-level waterfall + position auction | - |
-| 6 | Stressed vs normal data regimes | - |
+The model is being built incrementally to isolate bugs at each layer before adding complexity:
+
+| Stage | What is added | Validation target |
+|---|---|---|
+| 1 | Baseline market + ZI noise only | Price discovery, return distribution |
+| 2 | + Fundamental and momentum traders | Stylised facts: fat tails, vol clustering, ACF |
+| 3 | + Balance sheets and IM/VM margin (current) | Cash depletion dynamics, margin call frequency |
+| 4 | + Default fund | Default fund adequacy under stress |
+| 5 | + Full CCP waterfall + fire-sale contagion | Cascade absorption, margin spiral |
+| 6 | + Almgren-Chriss distressed liquidation | Price impact from forced sales |
+| 7 | Stressed data | Stressed default probability, procyclicality |
 
 ---
 
-## Data
+## Future/Possible Extensions
 
-Both CSVs contain **daily** SPY (S&P 500 ETF) observations with columns:
+The following are on the roadmap but not yet implemented:
 
-| Column | Description |
-|--------|-------------|
-| `OPrice` / `DPrice` | Open / close price |
-| `Ret_mkt_t` | Daily log return |
-| `BuyVol_LR1` / `SellVol_LR1` | Daily buy/sell volume (Lee-Ready, 1-tick) |
-| `IVol_t_m` | Intraday realised variance (minutes) |
-| `VarianceRatio1/2` | Variance ratios (microstructure noise test) |
-
-**Calibration plan (Stage 1):** estimate Cont-Stoikov arrival rates
-(lambda, mu, delta) from daily `BuyVol / SellVol` ratios and `IVol_t_m`.
-High-frequency TAQ data is not required at this stage; the daily aggregates
-are sufficient to anchor the order-of-magnitude of ZI rates at 5-min resolution.
-HF data can be added later for more precise depth calibration.
+- **Volatility traders** — Heston-style demand proportional to $\nu_t$ (stochastic variance), as in Gao et al. (2023). Demand: $\Delta \log P \propto \zeta \cdot \nu_t$, where $\nu_t$ follows a CIR mean-reverting process.
+- **Almgren-Chriss liquidation** — distressed agents (capital ratio ≤ 8%) slice positions optimally, generating measurable temporary price impact haircuts.
+- **Basel III deleveraging** — bank CMs deleverage when capital ratio approaches 8% floor; non-bank CMs freeze order submission.
+- **Client clearing delay** — non-bank CMs face a one-step delay in passing margin calls to clients, creating transient funding gaps.
+- **Strategy switching** — agents switch between fundamental, momentum, and noise strategies based on recent performance, following the reinforcement learning framework in Gao et al. (2023).
+- **Cover-2 default fund** — DF sized to cover the two largest member defaults (EMIR Art. 42); contributions proportional to exposure; recalculated daily.
+- **LOB / market maker** — optional limit order book with a market-making agent to provide liquidity between call auctions.
 
 ---
 
-## Running
+## Research Questions/Hypotheses
 
-```bash
-pip install numpy pandas
-python run_simulation.py
-```
+1. Is Cover-2 sufficient to absorb a stressed default scenario calibrated to 2008-2009 data?
+2. Do bank CMs that clear for clients face higher default probability than proprietary traders under margin spirals?
+3. How does trade concentration (crowded positions) amplify contagion through the CCP waterfall?
+4. What is the conditional probability of a second default given a first?
+5. Does CoMargin (correlated margin) reduce procyclicality relative to individual SPAN-style IM?
+6. How does CCP fire-sale price impact differ between calm and stressed regimes?
+
+---
+
+## References
+
+- Majewski, A., Ciliberti, S., & Bouchaud, J.-P. (2018). *Co-existence of Trend and Value in Financial Markets: Estimating an Extended Chiarella Model.* arXiv:1807.11751.
+- Almgren, R. & Chriss, N. (2000). *Optimal Execution of Portfolio Transactions.* Journal of Risk.
+- Gao, X. et al. (2023). *Deeper Hedging: A New Agent-based Model for Effective Deep Hedging.* arXiv:2310.18755.
+- Bookstaber, R., Paddrik, M. & Tivnan, B. (2014). *An Agent-based Model for Financial Vulnerability.* OFR Working Paper 2014-05.
+- Kyle, A.S. (1985). *Continuous Auctions and Insider Trading.* Econometrica, 53(6), 1315–1335.
+- CPMI-IOSCO (2012). *Principles for Financial Market Infrastructures.*
+- ESMA (2016). *RTS 2016/2251 — Margin Requirements for Non-Centrally Cleared OTC Derivatives.*
