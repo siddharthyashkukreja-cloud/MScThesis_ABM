@@ -1,5 +1,5 @@
 # mscthesis_abm/model/simulation.py
-from typing import List, Dict, Any
+from typing import List, Dict
 import numpy as np
 
 from .globals import ModelParams, GlobalState
@@ -9,7 +9,12 @@ from .agents import BaseTrader
 
 class Simulation:
     """
-    Top-level simulation driver for the Extended Chiarella ABM.
+    Top-level simulation driver.
+
+    Dispatches to market.step_log() or market.step() based on
+    params.log_price_mode.  All outputs (price, inventory, mtm_pnl,
+    excess_demand) are structurally identical so the downstream
+    margin-call / CCP stress framework needs no changes.
     """
 
     def __init__(
@@ -23,51 +28,49 @@ class Simulation:
         self.market  = Market(params, self.globals)
         self.traders = traders
 
-        self.history: Dict[str, List[float]] = {
+        self.history: Dict[str, list] = {
             "t"            : [],
             "price"        : [],
             "fundamental"  : [],
             "momentum"     : [],
             "excess_demand": [],
+            "vol"          : [],
         }
 
     def step(self) -> None:
         market_state = self.market.get_state()
 
-        # 1. Traders observe
         for trader in self.traders:
             trader.observe(market_state)
 
-        # 2. Traders decide orders
-        orders       = []
-        active_orders = []
-        for trader in self.traders:
-            side, volume = trader.decide(market_state)
-            orders.append((side, volume))
-            if side != 0 and volume > 0:
-                active_orders.append((side, volume))
+        decisions = [trader.decide(market_state) for trader in self.traders]
 
-        # 3. Market clears — called ONCE on active orders
-        stats = self.market.step(active_orders)
+        if self.params.log_price_mode:
+            stats = self.market.step_log(decisions)
+        else:
+            active = [(s, v) for s, v in decisions if s != 0 and v > 0]
+            stats  = self.market.step(active)
+
         new_price = self.market.price
 
-        # 4. Update all traders' inventory/PnL
-        for trader, (side, vol) in zip(self.traders, orders):
-            trader.inventory += side * vol
-            trader.cash      -= side * vol * new_price
+        # Inventory / cash / MtM -- identical formula in both modes.
+        # In log mode, magnitude is a dimensionless log-increment used
+        # as a stylised position size for margin-call accounting.
+        for trader, (side, mag) in zip(self.traders, decisions):
+            trader.inventory += side * mag
+            trader.cash      -= side * mag * new_price
             trader.mtm_pnl    = trader.inventory * (new_price - trader.entry_price)
 
-        # 5. Record
         self.history["t"].append(self.globals.t)
         self.history["price"].append(self.market.price)
         self.history["fundamental"].append(self.globals.v)
         self.history["momentum"].append(self.market.momentum)
         self.history["excess_demand"].append(self.market.excess_demand)
+        self.history["vol"].append(self.market.current_vol())
 
-        # 6. Advance fundamental process
         self.globals.step_fundamental()
 
-    def run(self, n_steps: int) -> Dict[str, List[float]]:
+    def run(self, n_steps: int) -> Dict[str, list]:
         for _ in range(n_steps):
             self.step()
         return self.history

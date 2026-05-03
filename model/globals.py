@@ -1,5 +1,5 @@
 # mscthesis_abm/model/globals.py
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 import numpy as np
 
@@ -12,48 +12,58 @@ class ModelParams:
     n_momentum: int
 
     # Price impact and fundamental process
-    lambda_: float          # permanent price impact coefficient λ
-    lambda_tran: float      # transitory impact coefficient (set > lambda_)
-    rho_tran: float         # mean-reversion speed of transient component (0 < rho < 1)
-    v0: float               # initial fundamental value
+    lambda_: float          # permanent price impact (volume mode only)
+    lambda_tran: float      # transitory impact (volume mode only)
+    rho_tran: float         # transient mean-reversion (volume mode only)
+    v0: float               # initial fundamental value (price level)
     m0: float               # initial momentum
     price_distortion: float # initial p0 = v0 - distortion
-    mu_v: float             # drift of fundamental
-    sigma_v: float          # vol of fundamental
+    mu_v: float             # log-drift of fundamental (geometric GRW)
+    sigma_v: float          # log-vol of fundamental
 
-    # Fundamental trader parameters
-    kappa: float
-    delta: float   # dead-band half-width around fundamental value
+    # Fundamental trader
+    kappa: float            # mean-reversion speed (volume mode only)
+    delta: float            # dead-band half-width (log units in log mode)
 
-    # Momentum trader parameters
+    # Momentum trader
     alpha: float            # EWMA weight for momentum
-    beta: float
-    gamma: float
+    beta: float             # momentum impact coefficient
+    gamma: float            # fundamental pull coefficient
 
-    # Noise trader parameters
-    sigma_n: float          # base order size
-    p_noise: float          # per-step participation probability (replaces 1/n_noise)
+    # Noise trader
+    sigma_n: float          # noise shock std (log units in log mode)
+    p_noise: float          # per-step participation probability
     noise_size_dist: str    # "geometric" | "poisson" | "fixed"
-    noise_size_param: float # p for geometric, lam for poisson, ignored for fixed
+    noise_size_param: float # distribution parameter
+
+    # Mode switch
+    # True  -> log-price mode: agents output log-price increments (KF-consistent)
+    # False -> volume mode:    agents output order volumes (legacy)
+    # The downstream margin/CCP framework works identically in both modes.
+    log_price_mode: bool = True
 
 
 class GlobalState:
     """
-    Holds global model parameters and the fundamental value process.
+    Fundamental value process.
+
+    log_price_mode=True  -> geometric random walk:
+        v_{t+1} = v_t * exp(mu_v + sigma_v * Z),  Z ~ N(0,1)
+    log_price_mode=False -> arithmetic walk (legacy):
+        v_{t+1} = v_t + mu_v + sigma_v * Z
     """
 
     def __init__(self, params: ModelParams, seed: Optional[int] = None):
         self.params = params
         self.rng = np.random.default_rng(seed)
-        self.v = params.v0        # current fundamental value
-        self.t = 0                # time index
+        self.v = params.v0
+        self.t = 0
 
     def step_fundamental(self):
-        """
-        Advance the fundamental value one step.
-        This is a placeholder; later we can replace with Heston or
-        a data-driven process.
-        """
-        dv = self.params.mu_v + self.params.sigma_v * self.rng.normal()
-        self.v += dv
+        if self.params.log_price_mode:
+            log_shock = self.params.mu_v + self.params.sigma_v * self.rng.normal()
+            self.v = self.v * np.exp(log_shock)
+        else:
+            dv = self.params.mu_v + self.params.sigma_v * self.rng.normal()
+            self.v += dv
         self.t += 1
