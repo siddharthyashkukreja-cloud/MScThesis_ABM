@@ -26,7 +26,7 @@ class Simulation:
         self.lob = LOB(params.tick_size, params.order_ttl)
         self.traders = traders
 
-        # Seed the LOB with a valid mid-price so the first tick has quotes
+        # Seed the LOB with a valid mid-price so tick 0 has a price reference
         self.lob.mid_price = params.v0
         self.lob.best_bid = params.v0 - params.tick_size
         self.lob.best_ask = params.v0 + params.tick_size
@@ -38,11 +38,13 @@ class Simulation:
         }
 
     def step(self) -> dict:
-        mid = self.lob.mid_price if not np.isnan(self.lob.mid_price) else self.gs.v
-        vol_proxy = 1.0  # replaced by stochastic vol in Stage 2 Gao extension
-
         for trader in self.traders:
-            trader.submit_orders(self.lob, mid, self.gs.v, 0.0, vol_proxy)
+            trader.submit_orders(
+                lob=self.lob,
+                params=self.params,
+                fundamental=self.gs.v,
+                tick=self.gs.t,
+            )
 
         fills = self.lob.match()
         self.lob.age_orders()

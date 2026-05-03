@@ -19,27 +19,35 @@ class ModelParams:
     order_ttl: int          # steps before unmatched limit order expires (ODD: 1-10)
 
     # ── ZI Cont-Stoikov parameters ────────────────────────────────────────────
-    # Calibrated from daily BuyVol / SellVol imbalance data.
-    # lambda_lo: limit order arrival rate (per side, per step)
-    # mu_mo:     market order arrival rate (per side, per step)
-    # delta_co:  cancellation rate (per step per resting order)
-    # depth_k, depth_alpha: power-law depth: lambda(i) = depth_k * i^(-depth_alpha)
-    lambda_lo: float        # limit order rate (best quote distance 1)
-    mu_mo: float            # market order arrival rate
-    delta_co: float         # cancellation rate per resting order per step
-    depth_k: float          # power-law scale for depth
-    depth_alpha: float      # power-law exponent for depth
+    # Calibrated from E-mini order-flow data (Vytelingum et al. 2025, s.3.3.1).
+    # alpha: probability a ZI trader submits a limit order each tick
+    # mu:    probability a ZI trader submits a market order each tick
+    # delta: relative depth offset for limit price; also used as per-order cancellation prob
+    zi_alpha: float         # limit order submission probability   (ODD default: 0.15)
+    zi_mu: float            # market order submission probability  (ODD default: 0.025)
+    zi_delta: float         # cancellation prob / depth offset     (ODD default: 0.025)
 
     # ── ZI order sizing ───────────────────────────────────────────────────
     zi_qty_min: int         # minimum order quantity (units)
     zi_qty_max: int         # maximum order quantity (ODD: Discrete[1, 10])
 
-    # ── Fundamental process (GBM; used from Stage 2) ────────────────────────
+    # ── Fundamental trader parameters (Stage 2+) ─────────────────────────
+    # kappa: demand sensitivity to price-fundamental mispricing
+    # sigma: price volatility estimate used to scale private valuation offset
+    ft_kappa: float = 0.1   # mean-reversion strength toward fundamental
+    ft_sigma: float = 1.0   # volatility scaling for private z-score offset
+
+    # ── Momentum trader parameters (Stage 2+) ────────────────────────────
+    # beta:  demand scaling for tanh(momentum) signal
+    # sigma: same role as ft_sigma but for momentum agents
+    mt_beta: float = 0.05   # momentum demand scale
+    mt_sigma: float = 1.0   # volatility scaling for private z-score offset
+
+    # ── Fundamental process (GBM; replaced by data signal Stage 2) ───────
     mu_v: float = 0.0       # drift per step
     sigma_v: float = 0.01   # vol per step (calibrated later)
 
-    # ── Placeholder slots for Gao volatility extension (Stage 2+) ───────────────
-    # These are read by agents once the stochastic vol layer is added.
+    # ── Placeholder slots for Gao stochastic vol extension (Stage 2+) ────
     kappa_v: float = 0.0    # vol mean-reversion speed
     theta_v: float = 0.0    # long-run variance
     xi_v: float = 0.0       # vol-of-vol
@@ -48,8 +56,8 @@ class ModelParams:
 class GlobalState:
     """
     Tracks simulation time and the fundamental value process.
-    Fundamental follows GBM; per-step shock is drawn here so every
-    agent sees the same v_t without re-drawing.
+    Fundamental follows GBM per step; all agents read self.v each tick
+    so the same fundamental is shared without re-drawing.
     """
 
     def __init__(self, params: ModelParams, seed: Optional[int] = None):

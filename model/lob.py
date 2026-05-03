@@ -16,7 +16,7 @@ Extension hooks
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict, Optional
 import numpy as np
 
 
@@ -43,8 +43,9 @@ class LOB:
         self.tick_size = tick_size
         self.order_ttl = order_ttl
 
-        self._bids: dict = {}   # price -> [Order]
-        self._asks: dict = {}
+        self._bids: Dict[float, List[Order]] = {}
+        self._asks: Dict[float, List[Order]] = {}
+        self._order_index: Dict[int, tuple] = {}  # oid -> (side, price) for cancel
 
         self.mid_price: float = np.nan
         self.best_bid: float = np.nan
@@ -62,6 +63,7 @@ class LOB:
         order = Order(oid, agent_id, side, price, qty, self.order_ttl)
         book = self._bids if side == 1 else self._asks
         book.setdefault(price, []).append(order)
+        self._order_index[oid] = (side, price)
         return oid
 
     def add_market(self, agent_id: int, side: int, qty: int) -> List[Fill]:
@@ -81,6 +83,7 @@ class LOB:
                     o.qty -= traded
                     remaining -= traded
                     if o.qty == 0:
+                        self._order_index.pop(o.order_id, None)
                         queue.pop(i)
                     else:
                         i += 1
@@ -99,6 +102,7 @@ class LOB:
                     o.qty -= traded
                     remaining -= traded
                     if o.qty == 0:
+                        self._order_index.pop(o.order_id, None)
                         queue.pop(i)
                     else:
                         i += 1
@@ -106,6 +110,17 @@ class LOB:
                     del self._bids[px]
         self.step_fills.extend(fills)
         return fills
+
+    def cancel(self, order_id: int):
+        """Remove a resting limit order by ID. No-op if already filled/expired."""
+        if order_id not in self._order_index:
+            return
+        side, price = self._order_index.pop(order_id)
+        book = self._bids if side == 1 else self._asks
+        if price in book:
+            book[price] = [o for o in book[price] if o.order_id != order_id]
+            if not book[price]:
+                del book[price]
 
     # -- Call auction -----------------------------------------------------
 
@@ -131,10 +146,12 @@ class LOB:
             b.qty -= traded
             a.qty -= traded
             if b.qty == 0:
+                self._order_index.pop(b.order_id, None)
                 bid_queue.pop(0)
                 if not bid_queue:
                     del self._bids[best_bid_px]
             if a.qty == 0:
+                self._order_index.pop(a.order_id, None)
                 ask_queue.pop(0)
                 if not ask_queue:
                     del self._asks[best_ask_px]
@@ -153,11 +170,13 @@ class LOB:
                     o.ttl -= 1
                     if o.ttl > 0:
                         surviving.append(o)
+                    else:
+                        self._order_index.pop(o.order_id, None)
                 if surviving:
                     book[px] = surviving
                 else:
                     del book[px]
-                    
+
     # -- Observables ------------------------------------------------------
 
     def snapshot(self) -> dict:
