@@ -19,7 +19,7 @@ def build_zi_traders(params: ModelParams, n: int, seed: int) -> list:
 
 def main():
     params = ModelParams(
-        n_zi=10,
+        n_zi=100,
         n_fundamental=0,
         n_momentum=0,
         v0=4500.0,          # approximate E-mini level (calibrate later)

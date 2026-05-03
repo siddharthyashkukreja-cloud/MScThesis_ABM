@@ -146,18 +146,18 @@ class LOB:
     # -- Expiry -----------------------------------------------------------
 
     def age_orders(self):
-        """Decrement TTL; remove expired orders from both sides."""
         for book in (self._bids, self._asks):
-            expired_prices = []
             for px in list(book):
-                book[px] = [o for o in book[px] if o.ttl - 1 > 0]
+                surviving = []
                 for o in book[px]:
                     o.ttl -= 1
-                if not book[px]:
-                    expired_prices.append(px)
-            for px in expired_prices:
-                del book[px]
-
+                    if o.ttl > 0:
+                        surviving.append(o)
+                if surviving:
+                    book[px] = surviving
+                else:
+                    del book[px]
+                    
     # -- Observables ------------------------------------------------------
 
     def snapshot(self) -> dict:

@@ -1,101 +1,136 @@
-"""
-Agent definitions.
-
-Stage 1: ZeroIntelligenceTrader only.
-Stage 2+ hooks: BaseTrader balance-sheet fields and abstract observe/decide
-interface remain unchanged so FundamentalTrader and MomentumTrader can be
-added without touching the LOB or simulation wiring.
-
-ZI parametrisation follows Cont-Stoikov (2008):
-  lambda_lo  : limit order arrival rate at best-quote distance 1
-  depth(i)   : lambda_lo * depth_k * i^(-depth_alpha)   i >= 1
-  mu_mo      : market order rate per side per step
-  delta_co   : cancellation prob per resting order per step
-
-The vol_proxy slot on ZeroIntelligenceTrader is intentionally left for the
-Gao (2023) extension where ZI order size scales with stochastic variance.
-"""
+# agents.py
 
 import numpy as np
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Tuple, Optional
 
-from .globals import ModelParams
-from .lob import LOB
+OrderSide = str  # "buy" or "sell"
+
+@dataclass
+class Order:
+    side: OrderSide
+    price: float
+    quantity: int
+    agent_id: int
+    expiry: int  # tick at which order expires
+
+@dataclass
+class BaseTrader:
+    agent_id: int
+    cash: float
+    inventory: int = 0
+    pnl: float = 0.0
+    margin_posted: float = 0.0
+    im_rate: float = 0.10
+    defaulted: bool = False
+
+    def update_pnl(self, price: float):
+        self.pnl = self.inventory * price
+
+    @property
+    def equity(self) -> float:
+        return self.cash + self.pnl - self.margin_posted
 
 
 @dataclass
-class BalanceSheet:
-    cash: float
-    inventory: int       # signed position in asset units
-    margin_posted: float = 0.0
-    margin_called: bool = False
-    defaulted: bool = False
+class FundamentalTrader(BaseTrader):
+    kappa: float = 0.1       # demand sensitivity to mispricing
+    z_score: float = 0.0     # private valuation offset (drawn at init)
+    sigma: float = 1.0       # price volatility estimate
 
-    def mark_to_market(self, price: float) -> float:
-        return self.cash + self.inventory * price
-
-
-class BaseTrader:
-    def __init__(self, params: ModelParams, rng: np.random.Generator,
-                 agent_id: int, agent_type: str):
-        self.params = params
-        self.rng = rng
-        self.agent_id = agent_id
-        self.agent_type = agent_type
-        self.bs = BalanceSheet(cash=0.0, inventory=0)
-
-    def submit_orders(self, lob: LOB, mid_price: float,
-                      fundamental: float, momentum: float,
-                      vol_proxy: float) -> None:
-        raise NotImplementedError
+    def orders(self, mid_price: float, fundamental: float, tick: int) -> List[Order]:
+        demand = self.kappa * (fundamental - mid_price)
+        if abs(demand) < 1e-6:
+            return []
+        side = "buy" if demand > 0 else "sell"
+        # limit price offset by private z_score * sigma from fundamental
+        limit_price = fundamental + self.z_score * self.sigma
+        limit_price = max(limit_price, 1e-4)
+        qty = max(1, int(abs(demand)))
+        return [Order(side=side, price=limit_price, quantity=qty,
+                      agent_id=self.agent_id, expiry=tick + 10)]
 
 
-class ZeroIntelligenceTrader(BaseTrader):
+@dataclass
+class MomentumTrader(BaseTrader):
+    beta: float = 0.05
+    z_score: float = 0.0
+    sigma: float = 1.0
+
+    def orders(self, mid_price: float, fundamental: float,
+               momentum: float, tick: int) -> List[Order]:
+        demand = self.beta * np.tanh(momentum)
+        if abs(demand) < 1e-6:
+            return []
+        side = "buy" if demand > 0 else "sell"
+        limit_price = mid_price + self.z_score * self.sigma * np.sign(demand)
+        limit_price = max(limit_price, 1e-4)
+        qty = max(1, int(abs(demand)))
+        return [Order(side=side, price=limit_price, quantity=qty,
+                      agent_id=self.agent_id, expiry=tick + 10)]
+
+
+@dataclass
+class NoiseTrader(BaseTrader):
     """
-    Generates stochastic limit and market orders independent of fundamentals.
-    Order arrival follows Cont-Stoikov Poisson rates; sizes are uniform [min, max].
+    ZI trader following Vytelingum et al. (2025) eq. (4) for limit price,
+    parameterised by Cont-Stoikov alpha/mu/delta (ODD Section Calibration).
 
-    vol_proxy hook: when a Gao-style stochastic variance is available, pass
-    it as vol_proxy and the order size will scale proportionally. Currently
-    vol_proxy=1.0 keeps behaviour stable until Stage 2.
+    alpha: probability of submitting a limit order each tick
+    mu:    probability of submitting a market order each tick
+    delta: relative depth offset for limit price AND cancellation rate proxy
     """
+    alpha: float = 0.15
+    mu: float = 0.025
+    delta: float = 0.025
+    _queued_order_ids: List[int] = field(default_factory=list)
 
-    def __init__(self, params: ModelParams, rng: np.random.Generator,
-                 agent_id: int):
-        super().__init__(params, rng, agent_id, "zi")
-        self._depth_rates_cache: Optional[np.ndarray] = None
+    def orders(self, best_bid: Optional[float], best_ask: Optional[float],
+               fundamental: float, tick: int) -> Tuple[List[Order], List[int]]:
+        """
+        Returns (new_orders, cancel_ids).
+        Uses best_bid/best_ask when available; falls back to fundamental.
+        Equation (4) from Vytelingum et al.:
+            buy  limit price = ask * (1 + delta)   [or fundamental * (1+delta)]
+            sell limit price = bid * (1 - delta)   [or fundamental * (1-delta)]
+        """
+        new_orders: List[Order] = []
+        cancel_ids: List[int] = []
 
-    def _depth_rates(self, n_levels: int = 10) -> np.ndarray:
-        if self._depth_rates_cache is None:
-            i = np.arange(1, n_levels + 1, dtype=float)
-            self._depth_rates_cache = (
-                self.params.lambda_lo * self.params.depth_k * i ** (-self.params.depth_alpha)
-            )
-        return self._depth_rates_cache
+        # cancellations: each queued order cancelled independently with prob delta
+        surviving = []
+        for oid in self._queued_order_ids:
+            if np.random.random() < self.delta:
+                cancel_ids.append(oid)
+            else:
+                surviving.append(oid)
+        self._queued_order_ids = surviving
 
-    def submit_orders(self, lob: LOB, mid_price: float,
-                      fundamental: float, momentum: float,
-                      vol_proxy: float = 1.0) -> None:
-        p = self.params
-        rng = self.rng
+        # reference prices — fall back to fundamental if LOB empty
+        ref_ask = best_ask if best_ask is not None else fundamental
+        ref_bid = best_bid if best_bid is not None else fundamental
 
-        # Limit orders: Poisson rate per level, power-law decay with depth
-        depth_rates = self._depth_rates()
-        for side in (1, -1):
-            for i, rate in enumerate(depth_rates, start=1):
-                if rng.random() < rate:
-                    qty = max(1, round(int(rng.integers(p.zi_qty_min, p.zi_qty_max + 1)) * vol_proxy))
-                    if side == 1:
-                        ref = lob.best_ask if not np.isnan(lob.best_ask) else mid_price
-                        price = ref - i * p.tick_size
-                    else:
-                        ref = lob.best_bid if not np.isnan(lob.best_bid) else mid_price
-                        price = ref + i * p.tick_size
-                    lob.add_limit(self.agent_id, side, price, qty)
+        side = "buy" if np.random.random() < 0.5 else "sell"
+        qty = np.random.randint(1, 11)
 
-        # Market orders
-        for side in (1, -1):
-            if rng.random() < p.mu_mo:
-                qty = max(1, round(int(rng.integers(p.zi_qty_min, p.zi_qty_max + 1)) * vol_proxy))
-                lob.add_market(self.agent_id, side, qty)
+        # limit order submission
+        if np.random.random() < self.alpha:
+            if side == "buy":
+                price = ref_ask * (1 + self.delta)
+            else:
+                price = ref_bid * (1 - self.delta)
+            price = max(price, 1e-4)
+            order = Order(side=side, price=price, quantity=qty,
+                          agent_id=self.agent_id, expiry=tick + 10)
+            new_orders.append(order)
+            self._queued_order_ids.append(id(order))
+
+        # market order submission (separate draw, can co-occur)
+        if np.random.random() < self.mu:
+            # market orders: priced aggressively to guarantee fill
+            price = ref_ask * 1.05 if side == "buy" else ref_bid * 0.95
+            price = max(price, 1e-4)
+            new_orders.append(Order(side=side, price=price, quantity=qty,
+                                    agent_id=self.agent_id, expiry=tick + 1))
+
+        return new_orders, cancel_ids
