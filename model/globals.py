@@ -39,8 +39,15 @@ class ModelParams:
     # Mode switch
     # True  -> log-price mode: agents output log-price increments (KF-consistent)
     # False -> volume mode:    agents output order volumes (legacy)
-    # The downstream margin/CCP framework works identically in both modes.
     log_price_mode: bool = True
+
+    # ── Balance-sheet / margin parameters ──────────────────────────────────
+    # These are per-agent defaults; individual agents can override post-init.
+    initial_wealth: float = 1_000.0   # starting equity (same units as price)
+    im_rate: float = 0.10             # initial margin as fraction of notional
+    #   Justification: 10% IM is the EMIR-mandated floor for equity derivatives
+    #   (ESMA RTS 2016/2251).  Reasonable for a stylised CCP model.
+    vm_floor: float = 0.0             # variation margin floor (0 = full MtM loss)
 
 
 class GlobalState:
