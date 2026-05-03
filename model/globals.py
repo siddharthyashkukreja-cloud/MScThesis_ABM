@@ -1,45 +1,55 @@
-# mscthesis_abm/model/globals.py
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import numpy as np
 
 
 @dataclass
 class ModelParams:
-    # Population
-    n_noise: int
-    n_fundamental: int
-    n_momentum: int
+    # ── Population ───────────────────────────────────────────────────────
+    n_zi: int               # ZI (noise) traders
+    n_fundamental: int      # to be added Stage 2+
+    n_momentum: int         # to be added Stage 2+
 
-    # Price impact and fundamental process
-    lambda_: float          # price impact coefficient λ
-    v0: float               # initial fundamental value
-    m0: float               # initial momentum
-    price_distortion: float # initial p0 = v0 - distortion
-    mu_v: float             # log-drift of fundamental (geometric GRW)
-    sigma_v: float          # log-vol of fundamental
+    # ── Market / asset ────────────────────────────────────────────────────
+    v0: float               # initial fundamental price
+    tick_size: float        # minimum price increment (e.g. 0.25 for E-mini)
+    dt_minutes: float       # simulation step in real minutes (e.g. 5)
 
-    # Fundamental trader parameters (linear for now, can add cubic later)
-    kappa: float
-    # kappa_3: float
+    # ── LOB / order expiry ──────────────────────────────────────────────
+    order_ttl: int          # steps before unmatched limit order expires (ODD: 1-10)
 
-    # Momentum trader
-    alpha: float            # EWMA weight for momentum
-    beta: float             # momentum impact coefficient
-    gamma: float            # fundamental pull coefficient
+    # ── ZI Cont-Stoikov parameters ────────────────────────────────────────────
+    # Calibrated from daily BuyVol / SellVol imbalance data.
+    # lambda_lo: limit order arrival rate (per side, per step)
+    # mu_mo:     market order arrival rate (per side, per step)
+    # delta_co:  cancellation rate (per step per resting order)
+    # depth_k, depth_alpha: power-law depth: lambda(i) = depth_k * i^(-depth_alpha)
+    lambda_lo: float        # limit order rate (best quote distance 1)
+    mu_mo: float            # market order arrival rate
+    delta_co: float         # cancellation rate per resting order per step
+    depth_k: float          # power-law scale for depth
+    depth_alpha: float      # power-law exponent for depth
 
-    # Noise trader parameter
-    sigma_n: float          # order size
+    # ── ZI order sizing ───────────────────────────────────────────────────
+    zi_qty_min: int         # minimum order quantity (units)
+    zi_qty_max: int         # maximum order quantity (ODD: Discrete[1, 10])
+
+    # ── Fundamental process (GBM; used from Stage 2) ────────────────────────
+    mu_v: float = 0.0       # drift per step
+    sigma_v: float = 0.01   # vol per step (calibrated later)
+
+    # ── Placeholder slots for Gao volatility extension (Stage 2+) ───────────────
+    # These are read by agents once the stochastic vol layer is added.
+    kappa_v: float = 0.0    # vol mean-reversion speed
+    theta_v: float = 0.0    # long-run variance
+    xi_v: float = 0.0       # vol-of-vol
 
 
 class GlobalState:
     """
-    Fundamental value process.
-
-    log_price_mode=True  -> geometric random walk:
-        v_{t+1} = v_t * exp(mu_v + sigma_v * Z),  Z ~ N(0,1)
-    log_price_mode=False -> arithmetic walk (legacy):
-        v_{t+1} = v_t + mu_v + sigma_v * Z
+    Tracks simulation time and the fundamental value process.
+    Fundamental follows GBM; per-step shock is drawn here so every
+    agent sees the same v_t without re-drawing.
     """
 
     def __init__(self, params: ModelParams, seed: Optional[int] = None):
@@ -48,11 +58,7 @@ class GlobalState:
         self.v = params.v0
         self.t = 0
 
-    def step_fundamental(self):
-        if self.params.log_price_mode:
-            log_shock = self.params.mu_v + self.params.sigma_v * self.rng.normal()
-            self.v = self.v * np.exp(log_shock)
-        else:
-            dv = self.params.mu_v + self.params.sigma_v * self.rng.normal()
-            self.v += dv
+    def step(self):
+        shock = self.params.mu_v + self.params.sigma_v * self.rng.standard_normal()
+        self.v *= np.exp(shock)
         self.t += 1

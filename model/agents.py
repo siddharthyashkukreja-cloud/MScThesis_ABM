@@ -1,173 +1,101 @@
-# mscthesis_abm/model/agents.py
 """
-Agent definitions for the Extended Chiarella-Iori ABM.
+Agent definitions.
 
-All agents return (side: int, magnitude: float) regardless of mode.
+Stage 1: ZeroIntelligenceTrader only.
+Stage 2+ hooks: BaseTrader balance-sheet fields and abstract observe/decide
+interface remain unchanged so FundamentalTrader and MomentumTrader can be
+added without touching the LOB or simulation wiring.
 
-  LOG-PRICE MODE (params.log_price_mode=True):
-    magnitude = absolute log-price increment this agent contributes.
-    FundamentalTrader: gamma * |log(v/p)|
-    MomentumTrader:    beta  * tanh(|m|)
-    NoiseTrader:       |sigma_n * N(0,1)|
+ZI parametrisation follows Cont-Stoikov (2008):
+  lambda_lo  : limit order arrival rate at best-quote distance 1
+  depth(i)   : lambda_lo * depth_k * i^(-depth_alpha)   i >= 1
+  mu_mo      : market order rate per side per step
+  delta_co   : cancellation prob per resting order per step
 
-  VOLUME MODE (params.log_price_mode=False):
-    magnitude = order volume (units of stock, legacy behaviour).
-
-Balance sheet per agent
------------------------
-  equity        = initial_wealth + cumulative_pnl
-  margin_posted = collateral locked at CCP (IM + VM calls)
-  margin_called : bool flag set each step when a margin shortfall exists
-  defaulted     : bool flag -- equity < 0, position force-closed by CCP
-
-All balance-sheet state is updated by Simulation.step(), not here,
-so agents remain stateless w.r.t. market clearing (clean separation).
+The vol_proxy slot on ZeroIntelligenceTrader is intentionally left for the
+Gao (2023) extension where ZI order size scales with stochastic variance.
 """
-from dataclasses import dataclass
-from typing import Tuple
+
 import numpy as np
+from dataclasses import dataclass
+from typing import Optional
 
-from model.market import MarketState
-from model.globals import ModelParams
+from .globals import ModelParams
+from .lob import LOB
 
 
 @dataclass
-class TraderState:
-    pass
+class BalanceSheet:
+    cash: float
+    inventory: int       # signed position in asset units
+    margin_posted: float = 0.0
+    margin_called: bool = False
+    defaulted: bool = False
+
+    def mark_to_market(self, price: float) -> float:
+        return self.cash + self.inventory * price
 
 
 class BaseTrader:
     def __init__(self, params: ModelParams, rng: np.random.Generator,
-                 agent_id: int = 0, agent_type: str = "base"):
-        self.params      = params
-        self.rng         = rng
-        self.state       = TraderState()
-        self.agent_id    = agent_id
-        self.agent_type  = agent_type    # "fundamental" | "momentum" | "noise"
+                 agent_id: int, agent_type: str):
+        self.params = params
+        self.rng = rng
+        self.agent_id = agent_id
+        self.agent_type = agent_type
+        self.bs = BalanceSheet(cash=0.0, inventory=0)
 
-        # ── Position accounting ───────────────────────────────────────────
-        self.inventory    = 0.0          # net position (log-increment units)
-        self.cash         = params.initial_wealth  # starts fully in cash
-        self.entry_price  = params.v0   # VWAP entry price (updated on trades)
-        self.realised_pnl = 0.0         # closed P&L
-        self.mtm_pnl      = 0.0         # open mark-to-market P&L
-
-        # ── Balance sheet ─────────────────────────────────────────────────
-        self.initial_wealth  = params.initial_wealth
-        self.equity          = params.initial_wealth   # cash + unrealised PnL
-        self.im_rate         = params.im_rate          # initial margin rate
-        self.margin_posted   = 0.0      # collateral currently posted at CCP
-        self.margin_called   = False    # received a margin call this step?
-        self.defaulted       = False    # equity < 0 => CCP closed position
-
-    def observe(self, market_state: MarketState) -> None:
-        raise NotImplementedError
-
-    def decide(self, market_state: MarketState) -> Tuple[int, float]:
+    def submit_orders(self, lob: LOB, mid_price: float,
+                      fundamental: float, momentum: float,
+                      vol_proxy: float) -> None:
         raise NotImplementedError
 
 
-class FundamentalTrader(BaseTrader):
+class ZeroIntelligenceTrader(BaseTrader):
     """
-    Fundamental-value trader: mean-reversion towards v_t with
-    linear and cubic demand in mispricing (kappa, kappa_3), only linear for now.
-    """
+    Generates stochastic limit and market orders independent of fundamentals.
+    Order arrival follows Cont-Stoikov Poisson rates; sizes are uniform [min, max].
 
-    def __init__(self, params: ModelParams, rng: np.random.Generator,
-                 agent_id: int = 0):
-        super().__init__(params, rng, agent_id=agent_id,
-                         agent_type="fundamental")
-        self.log_mispricing = 0.0
-        self.mispricing     = 0.0
-
-    def observe(self, market_state: MarketState) -> None:
-        # v_t - p_t
-        self.mispricing = market_state.fundamental - market_state.price
-
-    def decide(self, market_state: MarketState) -> Tuple[int, float]:
-        x = self.mispricing
-        # Linear demand: q_f = kappa * (v_t - p_t)
-        q = self.params.kappa * x
-
-        if q == 0.0:
-            return 0, 0.0
-
-        side = +1 if q > 0 else -1
-        volume = abs(q)
-        return side, volume
-
-
-class MomentumTrader(BaseTrader):
-    """
-    LOG MODE:  dp = beta * tanh(momentum)  (direct KF momentum term)
-    VOL MODE:  same formula treated as order volume (legacy)
+    vol_proxy hook: when a Gao-style stochastic variance is available, pass
+    it as vol_proxy and the order size will scale proportionally. Currently
+    vol_proxy=1.0 keeps behaviour stable until Stage 2.
     """
 
     def __init__(self, params: ModelParams, rng: np.random.Generator,
-                 agent_id: int = 0):
-        super().__init__(params, rng, agent_id=agent_id,
-                         agent_type="momentum")
-        self.momentum = 0.0
+                 agent_id: int):
+        super().__init__(params, rng, agent_id, "zi")
+        self._depth_rates_cache: Optional[np.ndarray] = None
 
-    def observe(self, market_state: MarketState) -> None:
-        self.momentum = market_state.momentum
+    def _depth_rates(self, n_levels: int = 10) -> np.ndarray:
+        if self._depth_rates_cache is None:
+            i = np.arange(1, n_levels + 1, dtype=float)
+            self._depth_rates_cache = (
+                self.params.lambda_lo * self.params.depth_k * i ** (-self.params.depth_alpha)
+            )
+        return self._depth_rates_cache
 
-    def decide(self, market_state: MarketState) -> Tuple[int, float]:
-        m = self.momentum
-        if m == 0.0:
-            return 0, 0.0
-        mag = self.params.beta * np.tanh(abs(m))
-        if mag <= 0.0:
-            return 0, 0.0
-        side = +1 if m > 0 else -1
-        return side, mag
+    def submit_orders(self, lob: LOB, mid_price: float,
+                      fundamental: float, momentum: float,
+                      vol_proxy: float = 1.0) -> None:
+        p = self.params
+        rng = self.rng
 
+        # Limit orders: Poisson rate per level, power-law decay with depth
+        depth_rates = self._depth_rates()
+        for side in (1, -1):
+            for i, rate in enumerate(depth_rates, start=1):
+                if rng.random() < rate:
+                    qty = max(1, round(int(rng.integers(p.zi_qty_min, p.zi_qty_max + 1)) * vol_proxy))
+                    if side == 1:
+                        ref = lob.best_ask if not np.isnan(lob.best_ask) else mid_price
+                        price = ref - i * p.tick_size
+                    else:
+                        ref = lob.best_bid if not np.isnan(lob.best_bid) else mid_price
+                        price = ref + i * p.tick_size
+                    lob.add_limit(self.agent_id, side, price, qty)
 
-class NoiseTrader(BaseTrader):
-    """
-    Zero-intelligence / noise trader.
-
-    - Trades with small participation probability each step.
-    - Order size scales with current volatility: σ_n * f(vol_t).
-
-    Here we take vol_t from market_state if available, otherwise
-    fall back to the fundamental vol parameter sigma_v.
-    """
-
-    def __init__(
-        self,
-        params: ModelParams,
-        rng: np.random.Generator,
-        participation_prob: float,
-        vol_scale: float = 1.0,
-    ):
-        super().__init__(params, rng)
-        self.participation_prob = participation_prob
-        self.vol_scale = vol_scale
-
-    def observe(self, market_state: MarketState) -> None:
-        # Noise trader ignores information for direction, but we may
-        # use volatility proxy in decide()
-        self._last_market_state = market_state
-
-    def decide(self, market_state: MarketState) -> Tuple[int, float]:
-        # Participation
-        if self.rng.random() > self.participation_prob:
-            return 0, 0.0
-
-        # Volatility proxy:
-        # - if MarketState has attribute 'vol', use it
-        # - else fall back to sigma_v from params
-        vol = getattr(market_state, "vol", self.params.sigma_v)
-        vol = max(vol, 1e-8)  # avoid zero
-
-        # Scale noise order with volatility: σ_n * vol_scale * vol
-        base = self.params.sigma_n
-        volume = base * self.vol_scale * vol
-
-        if volume <= 0.0:
-            return 0, 0.0
-
-        # Random side
-        side = +1 if self.rng.random() < 0.5 else -1
-        return side, volume
+        # Market orders
+        for side in (1, -1):
+            if rng.random() < p.mu_mo:
+                qty = max(1, round(int(rng.integers(p.zi_qty_min, p.zi_qty_max + 1)) * vol_proxy))
+                lob.add_market(self.agent_id, side, qty)

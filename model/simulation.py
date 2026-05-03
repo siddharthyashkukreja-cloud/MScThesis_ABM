@@ -1,71 +1,65 @@
-# mscthesis_abm/model/simulation.py
-from typing import List, Dict, Any
+"""
+Simulation driver -- Stage 1 (LOB + ZI only).
+
+Step sequence mirrors the Simudyne ODD:
+  1. ZI traders submit limit orders (depth-rate Poisson draws).
+  2. ZI traders submit market orders.
+  3. Call auction: LOB.match() clears at best available prices.
+  4. LOB ages surviving orders (TTL decrement / expiry).
+  5. Record snapshot.
+  6. GlobalState advances fundamental (no-op in Stage 1, active Stage 2+).
+"""
+
+from typing import List, Dict
 import numpy as np
 
 from .globals import ModelParams, GlobalState
-from .market import Market, MarketState
-from .agents import BaseTrader
+from .lob import LOB
+from .agents import ZeroIntelligenceTrader
 
 
 class Simulation:
-    """
-    Top-level simulation driver for the trading model.
-    """
-
-    def __init__(
-        self,
-        params: ModelParams,
-        traders: List[BaseTrader],
-        seed: int = 42,
-    ):
+    def __init__(self, params: ModelParams, traders: List[ZeroIntelligenceTrader],
+                 seed: int = 42):
         self.params = params
-        self.globals = GlobalState(params, seed=seed)
-        self.market = Market(params, self.globals)
+        self.gs = GlobalState(params, seed=seed)
+        self.lob = LOB(params.tick_size, params.order_ttl)
         self.traders = traders
 
-        # Simple containers for recording; you can replace with pandas later
-        self.history: Dict[str, List[float]] = {
-            "t": [],
-            "price": [],
+        # Seed the LOB with a valid mid-price so the first tick has quotes
+        self.lob.mid_price = params.v0
+        self.lob.best_bid = params.v0 - params.tick_size
+        self.lob.best_ask = params.v0 + params.tick_size
+
+        self.history: Dict[str, List] = {
+            "t": [], "mid_price": [], "spread": [],
+            "bid_depth": [], "ask_depth": [], "volume": [],
             "fundamental": [],
-            "momentum": [],
-            "excess_demand": [],
         }
 
-    def step(self) -> None:
-        """
-        Run one simulation step.
-        """
-        market_state = self.market.get_state()
+    def step(self) -> dict:
+        mid = self.lob.mid_price if not np.isnan(self.lob.mid_price) else self.gs.v
+        vol_proxy = 1.0  # replaced by stochastic vol in Stage 2 Gao extension
 
-        # Traders observe current market
         for trader in self.traders:
-            trader.observe(market_state)
+            trader.submit_orders(self.lob, mid, self.gs.v, 0.0, vol_proxy)
 
-        # Traders decide orders
-        orders = []
-        for trader in self.traders:
-            side, volume = trader.decide(market_state)
-            if side != 0 and volume > 0:
-                orders.append((side, volume))
+        fills = self.lob.match()
+        self.lob.age_orders()
+        snap = self.lob.snapshot()
 
-        # Market clears
-        stats = self.market.step(orders)
+        self.history["t"].append(self.gs.t)
+        self.history["mid_price"].append(snap["mid_price"])
+        self.history["spread"].append(snap["spread"])
+        self.history["bid_depth"].append(snap["bid_depth"])
+        self.history["ask_depth"].append(snap["ask_depth"])
+        self.history["volume"].append(snap["volume"])
+        self.history["fundamental"].append(self.gs.v)
 
-        # Record
-        self.history["t"].append(self.globals.t)
-        self.history["price"].append(self.market.price)
-        self.history["fundamental"].append(self.globals.v)
-        self.history["momentum"].append(self.market.momentum)
-        self.history["excess_demand"].append(self.market.excess_demand)
+        self.gs.step()
+        return snap
 
-        # Advance fundamental process
-        self.globals.step_fundamental()
-
-    def run(self, n_steps: int) -> Dict[str, List[float]]:
-        """
-        Run the simulation for n_steps and return the recorded history.
-        """
+    def run(self, n_steps: int) -> Dict[str, List]:
         for _ in range(n_steps):
             self.step()
         return self.history
