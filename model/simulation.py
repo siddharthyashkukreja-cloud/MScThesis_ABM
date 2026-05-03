@@ -5,7 +5,7 @@ import numpy as np
 from .globals import ModelParams, GlobalState
 from .market import Market, MarketState
 from .agents import BaseTrader
-from .margin import MarginEngine
+from .margin import MarginEngine 
 
 
 class Simulation:
