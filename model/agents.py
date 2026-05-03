@@ -28,48 +28,49 @@ class BaseTrader:
 @dataclass
 class ZeroIntelligenceTrader(BaseTrader):
     """
-    ZI trader following Vytelingum et al. (2025) eq. (4) for limit price.
-    Parameters (alpha, mu, delta) are read from ModelParams -- not stored here.
-    Only z_score is per-agent (drawn once at init from N(0,1)).
+    Zero-intelligence noise trader.
 
-    Limit price (Vytelingum et al. eq. 4):
-        buy  limit = ask * (1 + delta)   [fallback: fundamental * (1 + delta)]
-        sell limit = bid * (1 - delta)   [fallback: fundamental * (1 - delta)]
-    Market orders are priced aggressively (5% through best quote) to guarantee fill.
+    Order-event rates (alpha, mu, delta) per simulation step follow
+    Cont & Stoikov (2008) §3.1; per-resting-order cancellation interpretation
+    matches Farmer-Daniels (2003).
+
+    Limit-price placement: depth k ticks from the opposite best quote
+    (Cont-Stoikov 2008, depth-from-opposite anchor), with k drawn uniformly
+    over {1, ..., zi_offset_max} as a Farmer-Daniels (2003) simplification
+    of the empirical depth profile. Empty-book fallback: anchor on
+    fundamental. Market orders execute at the prevailing best opposite
+    quote inside LOB.match() / LOB.add_market(); price arg unused.
     """
     _queued_order_ids: List[int] = field(default_factory=list)
 
     def submit_orders(self, lob: LOB, params: ModelParams,
-                      fundamental: float, tick: int):
-        """
-        Resolve cancellations, then submit limit and/or market orders
-        directly into the LOB.
-        """
-        # cancellations: each resting order cancelled independently with prob delta
+                      fundamental: float, tick: int,
+                      rng: np.random.Generator):
+        # cancellations: each resting order independently with prob delta
         surviving = []
         for oid in self._queued_order_ids:
-            if np.random.random() < params.zi_delta:
+            if rng.random() < params.zi_delta:
                 lob.cancel(oid)
             else:
                 surviving.append(oid)
         self._queued_order_ids = surviving
 
-        # reference prices -- fall back to fundamental if LOB is empty
-        ref_ask = lob.best_ask if not np.isnan(lob.best_ask) else fundamental
-        ref_bid = lob.best_bid if not np.isnan(lob.best_bid) else fundamental
+        side = 1 if rng.random() < 0.5 else -1
+        qty = int(rng.integers(params.zi_qty_min, params.zi_qty_max + 1))
+        k = int(rng.integers(1, params.zi_offset_max + 1))
 
-        side = 1 if np.random.random() < 0.5 else -1
-        qty = np.random.randint(params.zi_qty_min, params.zi_qty_max + 1)
-
-        if np.random.random() < params.zi_alpha:
-            price = ref_ask * (1 + params.zi_delta) if side == 1 else ref_bid * (1 - params.zi_delta)
+        if rng.random() < params.zi_alpha:
+            if side == 1:
+                anchor = lob.best_ask if not np.isnan(lob.best_ask) else fundamental
+                price = anchor - k * params.tick_size
+            else:
+                anchor = lob.best_bid if not np.isnan(lob.best_bid) else fundamental
+                price = anchor + k * params.tick_size
             price = max(price, params.tick_size)
             oid = lob.add_limit(self.agent_id, side, price, qty)
             self._queued_order_ids.append(oid)
 
-        if np.random.random() < params.zi_mu:
-            price = ref_ask * 1.05 if side == 1 else ref_bid * 0.95
-            price = max(price, params.tick_size)
+        if rng.random() < params.zi_mu:
             lob.add_market(self.agent_id, side, qty)
 
 

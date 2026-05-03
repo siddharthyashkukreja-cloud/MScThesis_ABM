@@ -1,17 +1,15 @@
 """
 Simulation driver -- Stage 1 (LOB + ZI only).
 
-Step sequence mirrors the Simudyne ODD:
-  1. ZI traders submit limit orders (depth-rate Poisson draws).
-  2. ZI traders submit market orders.
-  3. Call auction: LOB.match() clears at best available prices.
-  4. LOB ages surviving orders (TTL decrement / expiry).
-  5. Record snapshot.
-  6. GlobalState advances fundamental (no-op in Stage 1, active Stage 2+).
+Step sequence follows the Simudyne ODD §Step Sequence (Stage 1 subset):
+  1. ZI traders cancel resting orders + submit new limit / market orders.
+  2. MatchingEngine: call-auction LOB.match() clears crossed quotes.
+  3. LOB.age_orders(): TTL decrement / expiry.
+  4. Record snapshot.
+  5. GlobalState advances fundamental (frozen in Stage 1: sigma_v=0).
 """
 
 from typing import List, Dict
-import numpy as np
 
 from .globals import ModelParams, GlobalState
 from .lob import LOB
@@ -26,11 +24,6 @@ class Simulation:
         self.lob = LOB(params.tick_size, params.order_ttl)
         self.traders = traders
 
-        # Seed the LOB with a valid mid-price so tick 0 has a price reference
-        self.lob.mid_price = params.v0
-        self.lob.best_bid = params.v0 - params.tick_size
-        self.lob.best_ask = params.v0 + params.tick_size
-
         self.history: Dict[str, List] = {
             "t": [], "mid_price": [], "spread": [],
             "bid_depth": [], "ask_depth": [], "volume": [],
@@ -44,9 +37,10 @@ class Simulation:
                 params=self.params,
                 fundamental=self.gs.v,
                 tick=self.gs.t,
+                rng=self.gs.rng,
             )
 
-        fills = self.lob.match()
+        self.lob.match()
         self.lob.age_orders()
         snap = self.lob.snapshot()
 
