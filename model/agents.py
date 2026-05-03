@@ -13,9 +13,15 @@ All agents return (side: int, magnitude: float) regardless of mode.
   VOLUME MODE (params.log_price_mode=False):
     magnitude = order volume (units of stock, legacy behaviour).
 
-Inventory accounting in simulation.py uses  inventory += side * magnitude
-in both modes.  In log mode, magnitude acts as a stylised position size
-proportional to price impact, sufficient for margin/CCP accounting.
+Balance sheet per agent
+-----------------------
+  equity        = initial_wealth + cumulative_pnl
+  margin_posted = collateral locked at CCP (IM + VM calls)
+  margin_called : bool flag set each step when a margin shortfall exists
+  defaulted     : bool flag -- equity < 0, position force-closed by CCP
+
+All balance-sheet state is updated by Simulation.step(), not here,
+so agents remain stateless w.r.t. market clearing (clean separation).
 """
 from dataclasses import dataclass
 from typing import Tuple
@@ -31,14 +37,28 @@ class TraderState:
 
 
 class BaseTrader:
-    def __init__(self, params: ModelParams, rng: np.random.Generator):
+    def __init__(self, params: ModelParams, rng: np.random.Generator,
+                 agent_id: int = 0, agent_type: str = "base"):
         self.params      = params
         self.rng         = rng
         self.state       = TraderState()
-        self.inventory   = 0.0
-        self.cash        = 0.0
-        self.entry_price = params.v0
-        self.mtm_pnl     = 0.0
+        self.agent_id    = agent_id
+        self.agent_type  = agent_type    # "fundamental" | "momentum" | "noise"
+
+        # ── Position accounting ───────────────────────────────────────────
+        self.inventory    = 0.0          # net position (log-increment units)
+        self.cash         = params.initial_wealth  # starts fully in cash
+        self.entry_price  = params.v0   # VWAP entry price (updated on trades)
+        self.realised_pnl = 0.0         # closed P&L
+        self.mtm_pnl      = 0.0         # open mark-to-market P&L
+
+        # ── Balance sheet ─────────────────────────────────────────────────
+        self.initial_wealth  = params.initial_wealth
+        self.equity          = params.initial_wealth   # cash + unrealised PnL
+        self.im_rate         = params.im_rate          # initial margin rate
+        self.margin_posted   = 0.0      # collateral currently posted at CCP
+        self.margin_called   = False    # received a margin call this step?
+        self.defaulted       = False    # equity < 0 => CCP closed position
 
     def observe(self, market_state: MarketState) -> None:
         raise NotImplementedError
@@ -53,8 +73,10 @@ class FundamentalTrader(BaseTrader):
     VOL MODE:  Poisson volume proportional to |v - p| (legacy)
     """
 
-    def __init__(self, params: ModelParams, rng: np.random.Generator):
-        super().__init__(params, rng)
+    def __init__(self, params: ModelParams, rng: np.random.Generator,
+                 agent_id: int = 0):
+        super().__init__(params, rng, agent_id=agent_id,
+                         agent_type="fundamental")
         self.log_mispricing = 0.0
         self.mispricing     = 0.0
 
@@ -90,8 +112,10 @@ class MomentumTrader(BaseTrader):
     VOL MODE:  same formula treated as order volume (legacy)
     """
 
-    def __init__(self, params: ModelParams, rng: np.random.Generator):
-        super().__init__(params, rng)
+    def __init__(self, params: ModelParams, rng: np.random.Generator,
+                 agent_id: int = 0):
+        super().__init__(params, rng, agent_id=agent_id,
+                         agent_type="momentum")
         self.momentum = 0.0
 
     def observe(self, market_state: MarketState) -> None:
@@ -114,8 +138,10 @@ class NoiseTrader(BaseTrader):
     VOL MODE:  discrete volume from geometric/Poisson/fixed (legacy)
     """
 
-    def __init__(self, params: ModelParams, rng: np.random.Generator):
-        super().__init__(params, rng)
+    def __init__(self, params: ModelParams, rng: np.random.Generator,
+                 agent_id: int = 0):
+        super().__init__(params, rng, agent_id=agent_id,
+                         agent_type="noise")
 
     def observe(self, market_state: MarketState) -> None:
         pass
