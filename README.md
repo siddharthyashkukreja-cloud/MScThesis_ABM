@@ -70,7 +70,7 @@ The model covers 3 stages, and parameters are calibrated on S\&P E-mini futures 
 ## Financial Market Simulation
 
 Choices to be made:
-1. LOB or no?
+1. LOB or no? - I think it is needed, a solely Price Impact model will need a lot of proxy components and CCP questions can't fully be answered. Redoing it to LOB later would require massive changes, as limit orders would be added and demand functions are very different. 
 2. FV signal: calibrated as a parameter or externally fed jump diffusion?
 3. Market making agent?
 4. Almgren-Chriss execution?
