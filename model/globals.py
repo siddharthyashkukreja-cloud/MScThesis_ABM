@@ -12,32 +12,24 @@ class ModelParams:
     n_momentum: int
 
     # Price impact and fundamental process
-    lambda_: float          # permanent price impact (volume mode only)
-    lambda_tran: float      # transitory impact (volume mode only)
-    rho_tran: float         # transient mean-reversion (volume mode only)
-    v0: float               # initial fundamental value (price level)
+    lambda_: float          # price impact coefficient λ
+    v0: float               # initial fundamental value
     m0: float               # initial momentum
     price_distortion: float # initial p0 = v0 - distortion
     mu_v: float             # log-drift of fundamental (geometric GRW)
     sigma_v: float          # log-vol of fundamental
 
-    # Fundamental trader
-    kappa: float            # mean-reversion speed (volume mode only)
-    delta: float            # dead-band half-width (log units in log mode)
+    # Fundamental trader parameters (linear for now, can add cubic later)
+    kappa: float
+    # kappa_3: float
 
     # Momentum trader
     alpha: float            # EWMA weight for momentum
     beta: float             # momentum impact coefficient
     gamma: float            # fundamental pull coefficient
 
-    # Noise trader
-    sigma_n: float          # noise shock std (log units in log mode)
-    p_noise: float          # per-step participation probability
-    noise_size_dist: str    # "geometric" | "poisson" | "fixed"
-    noise_size_param: float # distribution parameter
-
-
-
+    # Noise trader parameter
+    sigma_n: float          # order size
 
 
 class GlobalState:

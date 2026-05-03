@@ -16,38 +16,17 @@ class MarketState:
 
 class Market:
     """
-    Centralised market / auctioneer.
-
-    Two clearing modes controlled by params.log_price_mode:
-
-    LOG-PRICE MODE (True)  -- KF-consistent
-        Agents submit (side, magnitude) where magnitude is a
-        log-price increment.  Net log-price change:
-            log(p_{t+1}) = log(p_t) + sum_i  side_i * magnitude_i
-        This directly implements the Majewski/Chiarella-Iori
-        KF state equation without a lambda middleman.
-
-    VOLUME MODE (False)  -- legacy, unchanged
-        dp = lambda_ * net_order_flow + transitory component.
-
-    CCP / MARGIN COMPATIBILITY
-        Both modes expose identical outputs:
-        price, momentum, vol, excess_demand.
-        Trader inventory/mtm_pnl updated in simulation.py
-        via the same (side, magnitude) convention.
+    Centralised market/auctioneer implementing linear price impact,
+    EWMA momentum, and EWMA volatility.
     """
 
     def __init__(self, params: ModelParams, globals_: GlobalState):
-        self.params  = params
+        self.params = params
         self.globals = globals_
 
-        self.log_price  = np.log(max(params.v0 - params.price_distortion, 1e-10))
-        self.perm_price = params.v0 - params.price_distortion
-        self.transient  = 0.0
-        self.price      = np.exp(self.log_price)
+        self.price = params.v0 - params.price_distortion
+        self.momentum = params.m0
         self.last_price = self.price
-        self.momentum   = params.m0
-
         self.excess_demand      = 0.0
         self.cum_abs_demand     = 0.0
         self.cum_excess_demand  = 0.0
@@ -55,16 +34,20 @@ class Market:
         self.vol_ewma  = params.sigma_v ** 2
         self.vol_alpha = 0.05
 
+        # Demand stats
+        self.excess_demand = 0.0
+        self.cum_abs_demand = 0.0
+
     def current_vol(self) -> float:
         return max(self.vol_ewma ** 0.5, 1e-8)
 
     def get_state(self) -> MarketState:
         return MarketState(
-            price       = self.price,
-            fundamental = self.globals.v,
-            momentum    = self.momentum,
-            vol         = self.current_vol(),
-            t           = self.globals.t,
+            price=self.price,
+            fundamental=self.globals.v,
+            momentum=self.momentum,
+            vol=self.current_vol(),
+            t=self.globals.t,
         )
 
     # ------------------------------------------------------------------
@@ -126,6 +109,13 @@ class Market:
     # ------------------------------------------------------------------
 
     def step(self, orders: Iterable[Tuple[int, float]]) -> Dict[str, float]:
+        """
+        Perform one market clearing step.
+
+        orders: iterable of (side, volume)
+          side   in {+1 (buy), -1 (sell)}
+          volume >= 0
+        """
         demand = 0.0
         supply = 0.0
 
@@ -138,8 +128,8 @@ class Market:
                 supply += volume
 
         excess = demand - supply
-        self.excess_demand      = excess
-        self.cum_abs_demand    += demand + supply
+        self.excess_demand = excess
+        self.cum_abs_demand += demand + supply
         self.cum_excess_demand += excess
 
         self.perm_price = max(0.0, self.perm_price + self.params.lambda_ * excess)
@@ -152,8 +142,15 @@ class Market:
         self.price      = max(0.0, self.perm_price + self.transient)
         self.log_price  = np.log(max(self.price, 1e-10))
 
+        # Price impact
+        self.last_price = self.price
+        delta_p = self.params.lambda_ * excess
+        self.price = max(0.0, self.price + delta_p)
+
+        # Momentum update (EWMA of price changes)
+
         dp = self.price - self.last_price
-        a  = self.params.alpha
+        a = self.params.alpha
         self.momentum = a * dp + (1.0 - a) * self.momentum
 
         self.vol_ewma = (
@@ -169,3 +166,16 @@ class Market:
             "momentum"      : self.momentum,
             "vol"           : self.current_vol(),
         }
+
+        # Volatility update (EWMA of squared returns)
+        self.vol_ewma = self.vol_alpha * (dp ** 2) + (1.0 - self.vol_alpha) * self.vol_ewma
+
+        return {
+            "demand": demand,
+            "supply": supply,
+            "excess_demand": excess,
+            "price": self.price,
+            "momentum": self.momentum,
+            "vol": self.current_vol(),
+        }
+

@@ -69,8 +69,8 @@ class BaseTrader:
 
 class FundamentalTrader(BaseTrader):
     """
-    LOG MODE:  dp = gamma * log(v/p)  (direct KF mean-reversion term)
-    VOL MODE:  Poisson volume proportional to |v - p| (legacy)
+    Fundamental-value trader: mean-reversion towards v_t with
+    linear and cubic demand in mispricing (kappa, kappa_3), only linear for now.
     """
 
     def __init__(self, params: ModelParams, rng: np.random.Generator,
@@ -81,29 +81,20 @@ class FundamentalTrader(BaseTrader):
         self.mispricing     = 0.0
 
     def observe(self, market_state: MarketState) -> None:
-        p = max(market_state.price, 1e-10)
-        v = max(market_state.fundamental, 1e-10)
-        self.log_mispricing = np.log(v) - np.log(p)
-        self.mispricing     = v - p
+        # v_t - p_t
+        self.mispricing = market_state.fundamental - market_state.price
 
     def decide(self, market_state: MarketState) -> Tuple[int, float]:
-        if self.params.log_price_mode:
-            x = self.log_mispricing
-            if abs(x) <= self.params.delta:
-                return 0, 0.0
-            mag  = self.params.gamma * abs(x)
-            side = +1 if x > 0 else -1
-            return side, mag
-        else:
-            x = self.mispricing
-            if abs(x) <= self.params.delta:
-                return 0, 0.0
-            lam    = self.params.kappa * abs(x)
-            volume = float(self.rng.poisson(lam))
-            if volume == 0:
-                return 0, 0.0
-            side = +1 if x > 0 else -1
-            return side, volume
+        x = self.mispricing
+        # Linear demand: q_f = kappa * (v_t - p_t)
+        q = self.params.kappa * x
+
+        if q == 0.0:
+            return 0, 0.0
+
+        side = +1 if q > 0 else -1
+        volume = abs(q)
+        return side, volume
 
 
 class MomentumTrader(BaseTrader):
@@ -134,42 +125,49 @@ class MomentumTrader(BaseTrader):
 
 class NoiseTrader(BaseTrader):
     """
-    LOG MODE:  dp ~ N(0, sigma_n)  (direct KF noise term)
-    VOL MODE:  discrete volume from geometric/Poisson/fixed (legacy)
+    Zero-intelligence / noise trader.
+
+    - Trades with small participation probability each step.
+    - Order size scales with current volatility: σ_n * f(vol_t).
+
+    Here we take vol_t from market_state if available, otherwise
+    fall back to the fundamental vol parameter sigma_v.
     """
 
-    def __init__(self, params: ModelParams, rng: np.random.Generator,
-                 agent_id: int = 0):
-        super().__init__(params, rng, agent_id=agent_id,
-                         agent_type="noise")
+    def __init__(
+        self,
+        params: ModelParams,
+        rng: np.random.Generator,
+        participation_prob: float,
+        vol_scale: float = 1.0,
+    ):
+        super().__init__(params, rng)
+        self.participation_prob = participation_prob
+        self.vol_scale = vol_scale
 
     def observe(self, market_state: MarketState) -> None:
-        pass
-
-    def _draw_size_legacy(self) -> float:
-        dist = self.params.noise_size_dist
-        p    = self.params.noise_size_param
-        if dist == "geometric":
-            n = self.rng.geometric(p)
-        elif dist == "poisson":
-            n = max(self.rng.poisson(p), 1)
-        else:
-            n = 1
-        return float(n) * self.params.sigma_n
+        # Noise trader ignores information for direction, but we may
+        # use volatility proxy in decide()
+        self._last_market_state = market_state
 
     def decide(self, market_state: MarketState) -> Tuple[int, float]:
-        if self.params.log_price_mode:
-            if self.rng.random() > self.params.p_noise:
-                return 0, 0.0
-            shock = self.rng.normal() * self.params.sigma_n
-            if shock == 0.0:
-                return 0, 0.0
-            return (+1 if shock > 0 else -1), abs(shock)
-        else:
-            if self.rng.random() > self.params.p_noise:
-                return 0, 0.0
-            volume = self._draw_size_legacy()
-            if volume <= 0.0:
-                return 0, 0.0
-            side = +1 if self.rng.random() < 0.5 else -1
-            return side, volume
+        # Participation
+        if self.rng.random() > self.participation_prob:
+            return 0, 0.0
+
+        # Volatility proxy:
+        # - if MarketState has attribute 'vol', use it
+        # - else fall back to sigma_v from params
+        vol = getattr(market_state, "vol", self.params.sigma_v)
+        vol = max(vol, 1e-8)  # avoid zero
+
+        # Scale noise order with volatility: σ_n * vol_scale * vol
+        base = self.params.sigma_n
+        volume = base * self.vol_scale * vol
+
+        if volume <= 0.0:
+            return 0, 0.0
+
+        # Random side
+        side = +1 if self.rng.random() < 0.5 else -1
+        return side, volume
