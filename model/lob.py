@@ -156,7 +156,7 @@ class LOB:
                 if not ask_queue:
                     del self._asks[best_ask_px]
 
-        self.step_fills = fills
+        self.step_fills.extend(fills)
         self._update_quotes()
         return fills
 

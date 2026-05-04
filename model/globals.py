@@ -5,10 +5,10 @@ import numpy as np
 
 @dataclass
 class ModelParams:
-    # ── Population ───────────────────────────────────────────────────────
-    n_zi: int               # ZI (noise) traders
-    n_fundamental: int      # FT (Stage 2+, Chiarella fundamental traders)
-    n_momentum: int         # MT (Stage 2+, Chiarella momentum traders)
+    # ── Population: direct (non-cleared) market participants ────────────
+    n_zi: int               # ZI (noise) traders, direct
+    n_fundamental: int      # FT direct (zero in Stage 3 baseline; use BCM)
+    n_momentum: int         # MT direct (zero in Stage 3 baseline)
 
     # ── Market / asset ────────────────────────────────────────────────────
     v0: float               # initial fundamental price
@@ -75,6 +75,33 @@ class ModelParams:
     kappa_v: float = 0.0    # CIR mean-reversion speed
     theta_v: float = 0.0    # CIR long-run variance
     xi_v: float = 0.0       # vol-of-vol
+
+    # ── Clearing Members (Stage 3+) ──────────────────────────────────────
+    # Banking CMs trade as FundamentalTraders on own account and may
+    # additionally clear for client traders; Non-Banking CMs do NOT trade,
+    # they clear for clients only. Client book composition is hardcoded
+    # at 1 FT + 1 MT + 1 ZI per CM-with-clients (3 clients each).
+    n_bcm: int = 0                 # Banking CMs: trade + may clear
+    n_nbcm: int = 0                # Non-Banking CMs: passive, clear only
+    n_bcm_with_clients: int = 0    # how many BCMs have a client book
+
+
+@dataclass
+class SimContext:
+    """Per-step state passed to every trader's submit_orders.
+
+    Carries the fundamental V_t, the post-match mid-price from the
+    previous step (NaN before the book has cleared at least once), the
+    EWMA log-return momentum signal, and a traders_by_id directory for
+    Clearing Members to look up their clients' inventory when computing
+    capital ratios. Traders pick the fields they need; the unified
+    signature keeps the dispatch loop clean.
+    """
+    v: float
+    mid_price: float
+    momentum: float
+    tick: int
+    traders_by_id: Optional[dict] = None
 
 
 class GlobalState:
