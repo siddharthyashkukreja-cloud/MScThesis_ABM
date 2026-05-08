@@ -55,7 +55,7 @@ Step 2 reads from `output/calibrated_params.csv`. If calibration has already bee
 
 ## Model Description
 
-The model covers 3 stages, and parameters are calibrated on S\&P E-mini futures data. The three stages are:
+The model covers 3 stages, and parameters are calibrated on SPY data. The three stages are:
 
  1. Financial Market Simulation
 
@@ -69,43 +69,43 @@ The model covers 3 stages, and parameters are calibrated on S\&P E-mini futures 
 
 ## Financial Market Simulation
 
-Choices to be made:
-1. LOB or no? - I think it is needed, a solely Price Impact model will need a lot of proxy components and CCP questions can't fully be answered. Redoing it to LOB later would require massive changes, as limit orders would be added and demand functions are very different. 
-2. FV signal: calibrated as a parameter or externally fed jump diffusion?
-3. Market making agent?
-4. Almgren-Chriss execution?
-5. Calibration: Kalman-Filter + EM (Bouchaud), EM based on surrogate modelling (minimising distance to stylised facts) like Gao Deep Hedging or ABM Liquidity Risk by Krishnen
 
 ### Agents
 
-Three heterogeneous trader types (+ possible Market Maker):
+#### Four Trader Types: 
 
-**Fundamental Trader**
-
-
-**Momentum Trader**
+**Fundamental Trader (Count: )**
 
 
-**Noise Trader**
+**Momentum Trader (Count: )**
 
 
-One Market Engine/CCP:
+**Noise Trader with Vol. Scaling (Count: )**
+
+
+**Market Marker (Count: )**
+
+
+#### One LOB/Market Engine/CCP:
 
 
 
 
-Two types of clearing members:
+#### Two types of clearing members:
 
-**Bank Clearing Member**
+**Bank Clearing Member (Count: )**
 
 
-**Non-Bank Clearing Member**
+**Non-Bank Clearing Member (Count: )**
 
 
 ### Market Clearing
 
 
 ### Fundamental Value Process
+
+
+### Calibration
 
 --- 
 

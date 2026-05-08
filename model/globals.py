@@ -19,14 +19,15 @@ class ModelParams:
     order_ttl: int          # steps before unmatched limit order expires (ODD: 1-10)
 
     # ── ZI Cont-Stoikov / Farmer parameters ──────────────────────────────
-    # Order-event rates per simulation step (Cont & Stoikov 2008 §3.1 style;
-    # ODD §Calibration values; Farmer-Daniels 2003 ZI placement geometry).
-    # alpha: probability each ZI submits a limit order this step
-    # mu:    probability each ZI submits a market order this step
-    # delta: per-resting-order cancellation probability this step
-    zi_alpha: float         # limit submission probability         (ODD default: 0.15)
-    zi_mu: float            # market submission probability        (ODD default: 0.025)
-    zi_delta: float         # per-order cancellation probability   (ODD default: 0.025)
+    # Rates are per minute (Cont & Stoikov 2008 continuous-time semantics).
+    # ZI.submit_orders scales by dt_minutes: arrivals via Poisson(rate*dt),
+    # cancellations via per-resting Bernoulli with prob 1-exp(-delta*dt).
+    # Defaults match ODD §Calibration (originally given as Bernoulli prob
+    # per 1-min step; numerically identical when dt_minutes=1 and rates are
+    # small).
+    zi_alpha: float         # limit-arrival rate / minute / ZI    (ODD: 0.15)
+    zi_mu: float            # market-arrival rate / minute / ZI   (ODD: 0.025)
+    zi_delta: float         # cancel rate / minute / resting-order (ODD: 0.025)
 
     # ── ZI / FT / MT order sizing ────────────────────────────────────────
     # ODD §Stochasticity: order quantity ~ Discrete[1, 10] each step;
@@ -34,28 +35,31 @@ class ModelParams:
     zi_qty_min: int         # minimum order quantity (units)
     zi_qty_max: int         # maximum order quantity (ODD: Discrete[1, 10])
 
-    # ── ZI limit-price placement ─────────────────────────────────────────
-    # Buy limits placed k ticks below best ask; sell limits k ticks above
-    # best bid. Cont & Stoikov 2008 use an empirical depth profile; we use
-    # a Farmer-Daniels uniform draw k ~ U{1, zi_offset_max} as a baseline
-    # simplification, to be replaced by an empirically fitted profile when
-    # tick-level order-flow data is available. Empty-book fallback: anchor
-    # on fundamental.
-    zi_offset_max: int = 5  # max placement depth from opposite best (ticks)
+    # ── ZI limit-price placement: exponential (Geometric) depth ──────────
+    # k ~ Geometric(zi_offset_p) capped at zi_offset_max ticks. Cont &
+    # Stoikov 2008 fit an exponentially-decaying empirical depth profile
+    # lambda(i); Geometric(p) is its discrete-tick analog.
+    #   default p=0.5 -> P(k=1)=.5, P(k=2)=.25, mean=2 ticks, p99 ~7 ticks
+    # Empty-book fallback: anchor on fundamental V instead of best-opposite.
+    zi_offset_p: float = 0.5     # Geometric parameter (decay); higher = tighter
+    zi_offset_max: int = 20      # cap on Geometric tail (ticks)
 
     # ── Fundamental trader parameters (Stage 2+) ─────────────────────────
-    # ODD §Prediction: limit_price = V + z * sigma_F, with z ~ N(0,1) drawn
-    # once per agent at init (heterogeneous private valuation; ODD Mech #1).
-    # Side = sign(reservation - mid_price); qty ~ Uniform{1, zi_qty_max}.
-    ft_sigma: float = 0.5   # std-dev (price units) of private valuation offset
+    # ODD §Prediction-style placement, but with V-RELATIVE scaling so the
+    # parameter is regime-invariant:
+    #   reservation = V * (1 + z * ft_sigma_rel)
+    # ft_sigma_rel is the per-agent reservation spread as a FRACTION of V
+    # (e.g., 0.005 = 0.5%). z ~ N(0,1) fixed at agent init (ODD Mech #1).
+    # Side = sign(reservation - mid); qty ~ Uniform{1, zi_qty_max}.
+    ft_sigma_rel: float = 0.005   # fraction of V (= 50 bps default)
 
     # ── Momentum trader parameters (Stage 2+) ────────────────────────────
     # Direction from EWMA log-return signal (Majewski et al. 2018):
     #   M_t = lambda_ewma * M_{t-1} + (1 - lambda_ewma) * (log P_t - log P_{t-1})
-    # Placement uses ODD §Prediction scheme with V anchor + private z*sigma_M
-    # offset. This grafts ODD's heterogeneity formula onto a Chiarella-style
-    # direction signal -- explicit Stage 2 extension (ODD has no MT).
-    mt_sigma: float = 0.5         # std-dev of MT private valuation offset
+    # Placement uses V-relative offset (Stage 8 calibration upgrade):
+    #   price = V * (1 + z * mt_sigma_rel)
+    # Direction comes from sign(M_t); placement spread is z*sigma_rel of V.
+    mt_sigma_rel: float = 0.005   # fraction of V
     mt_lambda_ewma: float = 0.95  # EWMA decay (Majewski 2018; tune at Stage 8)
     mt_threshold: float = 1e-4    # min |M_t| to act (avoid zero-crossing noise)
 
@@ -71,37 +75,71 @@ class ModelParams:
     jump_mean: float = 0.0     # ODD §Stochasticity
     jump_std: float = 0.01     # ODD §Stochasticity
 
-    # ── Placeholder slots for Gao (2023) stochastic-vol extension ────────
-    kappa_v: float = 0.0    # CIR mean-reversion speed
-    theta_v: float = 0.0    # CIR long-run variance
-    xi_v: float = 0.0       # vol-of-vol
+    # ── CIR stochastic volatility (Gao 2023 / Heston-style) ─────────────
+    # Variance v_var follows discrete CIR per step:
+    #   v_var_{t+1} = max(0, v_var_t + kappa_v * (theta_v - v_var_t)
+    #                          + xi_v * sqrt(v_var_t) * Z_2)
+    # Price diffusion uses sigma_t = sqrt(v_var_t) instead of constant
+    # sigma_v. xi_v=0 disables CIR and falls back to constant sigma_v
+    # (variance stays at sigma_v^2). Initial variance: theta_v if
+    # active, else sigma_v^2. Z_2 is independent of the price-diffusion
+    # Brownian increment (no leverage effect; rho=0 simplification).
+    # Calibration target: kappa_v sets mean-reversion speed of vol bursts;
+    # theta_v anchors long-run vol; xi_v controls vol-of-vol amplitude.
+    kappa_v: float = 0.0    # CIR mean-reversion speed (per step)
+    theta_v: float = 0.0    # CIR long-run variance (per step)
+    xi_v: float = 0.0       # vol-of-vol (per step); 0 disables CIR
 
     # ── Clearing Members (Stage 3+) ──────────────────────────────────────
-    # Banking CMs trade as FundamentalTraders on own account and may
-    # additionally clear for client traders; Non-Banking CMs do NOT trade,
-    # they clear for clients only. Client book composition is hardcoded
-    # at 1 FT + 1 MT + 1 ZI per CM-with-clients (3 clients each).
-    n_bcm: int = 0                 # Banking CMs: trade + may clear
-    n_nbcm: int = 0                # Non-Banking CMs: passive, clear only
-    n_bcm_with_clients: int = 0    # how many BCMs have a client book
+    # Banking CMs trade on own account in two flavours:
+    #   - market_maker (MM): post symmetric bid+ask quotes, provide liquidity
+    #   - fundamental (FT-style): trade on V+z*sigma reservation
+    # The first n_bcm_mm of n_bcm BCMs run as MMs; remaining are FT-prop.
+    # The first n_bcm_with_clients of n_bcm BCMs carry a client book. These
+    # two flags are independent: MMs CAN have clients (matches real exchange
+    # bank-MM-prime-broker tier where Goldman/JPM both market-make AND clear
+    # for clients). Non-Banking CMs are passive; they clear for clients only
+    # and never trade. Client book composition is configurable via
+    # clients_per_book and client_type_mix.
+    n_bcm: int = 0                 # Banking CMs total
+    n_bcm_mm: int = 0              # of those, how many run as market makers
+    n_bcm_with_clients: int = 0    # of the n_bcm BCMs, how many carry clients
+    n_nbcm: int = 0                # Non-Banking CMs (all carry clients)
+    clients_per_book: int = 6      # clients per CM-with-clients
+    # Client type composition: (n_FT, n_MT, n_ZI) per book; must sum to clients_per_book
+    client_book_ft: int = 2
+    client_book_mt: int = 2
+    client_book_zi: int = 2
+
+    # ── Market-maker quoting: Stoikov 2008 with V-relative scales ────────
+    # MM cancels its previous quotes each step and posts fresh symmetric
+    # quotes around mid, skewed by inventory. All scales are basis points
+    # of mid so they're regime-invariant:
+    #   shift  = -mm_inventory_skew_bps * inventory * 1e-4
+    #   bid    = mid * (1 + shift - mm_half_spread_bps * 1e-4)
+    #   ask    = mid * (1 + shift + mm_half_spread_bps * 1e-4)
+    # Quote size is mm_qty per side. Long inventory shifts both quotes
+    # down (encourages selling); short shifts up.
+    mm_half_spread_bps: float = 30.0       # basis points above/below mid
+    mm_qty: int = 50                       # quote size per side (units)
+    mm_inventory_skew_bps: float = 0.5     # bps of price skew per unit inventory
 
 
 @dataclass
 class SimContext:
     """Per-step state passed to every trader's submit_orders.
 
-    Carries the fundamental V_t, the post-match mid-price from the
-    previous step (NaN before the book has cleared at least once), the
-    EWMA log-return momentum signal, and a traders_by_id directory for
-    Clearing Members to look up their clients' inventory when computing
-    capital ratios. Traders pick the fields they need; the unified
-    signature keeps the dispatch loop clean.
+    Carries the fundamental V_t, prev-step post-match mid (NaN before
+    first clear), EWMA log-return momentum signal, traders_by_id for
+    CMs to look up client inventory, and the current CIR variance state
+    v_var (used by ZI vol scaling per Gao 2023 noise-demand spec).
     """
     v: float
     mid_price: float
     momentum: float
     tick: int
     traders_by_id: Optional[dict] = None
+    v_var: float = 0.0   # current CIR variance state; 0 means use sigma_v^2 fallback
 
 
 class GlobalState:
@@ -117,10 +155,24 @@ class GlobalState:
         self.rng = np.random.default_rng(seed)
         self.v = params.v0
         self.t = 0
+        # Variance state: anchor at theta_v if CIR active, else sigma_v^2
+        if params.xi_v > 0.0:
+            self.v_var = params.theta_v if params.theta_v > 0.0 else params.sigma_v ** 2
+        else:
+            self.v_var = params.sigma_v ** 2
 
     def step(self):
         p = self.params
-        diffusion = (p.mu_v - 0.5 * p.sigma_v ** 2) + p.sigma_v * self.rng.standard_normal()
+        # CIR variance update (only if xi_v > 0)
+        if p.xi_v > 0.0:
+            z2 = self.rng.standard_normal()
+            new_var = (self.v_var
+                       + p.kappa_v * (p.theta_v - self.v_var)
+                       + p.xi_v * float(np.sqrt(max(0.0, self.v_var))) * z2)
+            self.v_var = max(0.0, new_var)
+
+        sigma_t = float(np.sqrt(self.v_var))
+        diffusion = (p.mu_v - 0.5 * sigma_t ** 2) + sigma_t * self.rng.standard_normal()
         if p.jump_lambda > 0.0:
             n_jumps = int(self.rng.poisson(p.jump_lambda))
             jump = (p.jump_mean * n_jumps

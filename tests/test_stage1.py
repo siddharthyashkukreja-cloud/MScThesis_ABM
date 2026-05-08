@@ -23,8 +23,9 @@ def _build_params(**overrides):
     base = dict(
         n_zi=10, n_fundamental=0, n_momentum=0,
         v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
-        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
-        zi_qty_min=1, zi_qty_max=10, zi_offset_max=5,
+        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,   # per-minute rates
+        zi_qty_min=1, zi_qty_max=10,
+        zi_offset_p=0.5, zi_offset_max=20,
         sigma_v=0.0,
     )
     base.update(overrides)
@@ -92,15 +93,14 @@ class TestStage1(unittest.TestCase):
     def test_bounded_spread(self):
         """Spread stays bounded under ZI-only flow.
 
-        Each ZI buy is placed at best_ask - k*tick (k in {1,..,K}); each
-        sell at best_bid + k*tick. New orders narrow the spread, but TTL
-        aging of the inside layer can transiently widen it before fresh
-        orders arrive. Empirical bound used here: 4 * zi_offset_max ticks
-        -- well above observed maxima, well below run-away. Stage 2+
-        Chiarella + CM flow tightens this further.
+        Under Geometric(zi_offset_p) depth capped at zi_offset_max,
+        spread can transiently reach ~ 2 * zi_offset_max ticks when
+        only deep-tail orders survive on both sides. Empirical bound:
+        3 * zi_offset_max -- well above observed maxima, well below
+        run-away.
         """
         params = _build_params()
-        max_spread_ticks = 4 * params.zi_offset_max
+        max_spread_ticks = 3 * params.zi_offset_max
         sim = StepInvariantSimulation(params, _build_traders(params.n_zi, 21), seed=21)
         sim.run(300)
         warmed = sim.invariants[20:]

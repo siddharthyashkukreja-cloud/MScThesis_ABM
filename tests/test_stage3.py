@@ -29,15 +29,18 @@ from run_simulation import build_traders
 
 def _params(**overrides):
     base = dict(
-        n_zi=10, n_fundamental=0, n_momentum=0,
-        n_bcm=10, n_nbcm=10, n_bcm_with_clients=3,
+        n_zi=0, n_fundamental=0, n_momentum=0,
+        n_bcm=15, n_bcm_mm=8, n_bcm_with_clients=8, n_nbcm=5,
+        clients_per_book=6, client_book_ft=2, client_book_mt=2, client_book_zi=2,
         v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
         zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
-        zi_qty_min=1, zi_qty_max=10, zi_offset_max=5,
-        ft_sigma=0.5,
-        mt_sigma=0.5, mt_lambda_ewma=0.95, mt_threshold=1e-4,
+        zi_qty_min=1, zi_qty_max=10,
+        zi_offset_p=0.5, zi_offset_max=20,
+        ft_sigma_rel=0.005,
+        mt_sigma_rel=0.005, mt_lambda_ewma=0.95, mt_threshold=1e-4,
         mu_v=0.0, sigma_v=0.001,
         jump_lambda=0.0, jump_mean=0.0, jump_std=0.01,
+        mm_half_spread_bps=30.0, mm_qty=50, mm_inventory_skew_bps=0.5,
     )
     base.update(overrides)
     return ModelParams(**base)
@@ -136,6 +139,56 @@ class TestStage3(unittest.TestCase):
         expected = nbcm.cash / clients
         actual = nbcm.capital_ratio(mid, by_id)
         self.assertAlmostEqual(actual, expected, places=8)
+
+    def test_bcm_mm_posts_two_sided_quotes(self):
+        """MM-mode BCM posts a bid and an ask each step (after warm-up)."""
+        p = _params(n_zi=0, n_fundamental=0, n_momentum=0,
+                    n_bcm=2, n_bcm_mm=2, n_bcm_with_clients=0, n_nbcm=0)
+        traders = build_traders(p, 41)
+        sim = Simulation(p, traders, seed=41)
+        sim.run(20)
+        # After warm-up the LOB should have both bid and ask depth from MM quotes
+        post = [s for s in zip(sim.history["bid_depth"], sim.history["ask_depth"])][5:]
+        two_sided = sum(1 for b, a in post if b > 0 and a > 0)
+        self.assertGreater(two_sided / max(len(post), 1), 0.8,
+                           "MM not maintaining two-sided book")
+
+    def test_bcm_mm_inventory_skew(self):
+        """Long inventory shifts both quotes down; short shifts up."""
+        p = _params()
+        traders = build_traders(p, 51)
+        mm = next(t for t in traders if isinstance(t, BankingClearingMember)
+                  and t.mode == "market_maker")
+        from model.lob import LOB
+        from model.globals import SimContext
+        import numpy as np
+
+        rng = np.random.default_rng(0)
+        # Use a price-scale (V=100) where bps shifts are within tick precision
+        # at sufficient inventory. mm_inventory_skew_bps default = 0.5 -> need
+        # at least 1 unit of inventory to shift > tick_size=0.01 at V=100
+        # (1 unit -> 0.5bps = 0.005 which rounds to tick_size). Use 1000+ for
+        # clear directional shift.
+        ctx = SimContext(v=100.0, mid_price=100.0, momentum=0.0, tick=0,
+                         traders_by_id={mm.agent_id: mm})
+
+        def quote_prices(inv):
+            lob = LOB(p.tick_size, p.order_ttl)
+            mm.inventory = inv
+            mm._mm_order_ids = []
+            mm.submit_orders(lob, p, ctx, rng)
+            lob.match()
+            return float(lob.best_bid), float(lob.best_ask)
+
+        bid_zero, ask_zero = quote_prices(0)
+        bid_long, ask_long = quote_prices(10000)   # large inventory for visible shift
+        bid_short, ask_short = quote_prices(-10000)
+
+        self.assertLess(bid_long, bid_zero, "long inventory should lower bid")
+        self.assertLess(ask_long, ask_zero, "long inventory should lower ask")
+        self.assertGreater(bid_short, bid_zero, "short inventory should raise bid")
+        self.assertGreater(ask_short, ask_zero, "short inventory should raise ask")
+        mm.inventory = 0
 
     def test_bcm_fire_sale_liquidates(self):
         """Manually-stressed BCM (low cash, large position) liquidates inventory.

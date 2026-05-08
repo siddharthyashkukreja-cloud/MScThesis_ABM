@@ -49,6 +49,7 @@ class Simulation:
             momentum=self.momentum,
             tick=self.gs.t,
             traders_by_id=self.traders_by_id,
+            v_var=self.gs.v_var,
         )
 
         for trader in self.traders:

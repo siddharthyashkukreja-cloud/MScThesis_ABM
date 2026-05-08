@@ -27,9 +27,10 @@ def _params(**overrides):
         n_zi=10, n_fundamental=10, n_momentum=10,
         v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
         zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
-        zi_qty_min=1, zi_qty_max=10, zi_offset_max=5,
-        ft_sigma=0.5,
-        mt_sigma=0.5, mt_lambda_ewma=0.95, mt_threshold=1e-4,
+        zi_qty_min=1, zi_qty_max=10,
+        zi_offset_p=0.5, zi_offset_max=20,
+        ft_sigma_rel=0.005,
+        mt_sigma_rel=0.005, mt_lambda_ewma=0.95, mt_threshold=1e-4,
         mu_v=0.0, sigma_v=0.001,
         jump_lambda=0.0, jump_mean=0.0, jump_std=0.01,
     )
@@ -85,9 +86,10 @@ class TestStage2(unittest.TestCase):
                          if not np.isnan(m)])
         self.assertGreater(len(mids), 0)
         max_dev = float(np.max(np.abs(mids - p.v0)))
+        bound = 4.0 * p.ft_sigma_rel * p.v0  # ft reservation spans ~4 sigma
         self.assertLessEqual(
-            max_dev, 4.0 * p.ft_sigma,
-            f"mid wandered {max_dev:.3f} from V (bound 4*ft_sigma={4*p.ft_sigma})"
+            max_dev, bound,
+            f"mid wandered {max_dev:.3f} from V (bound 4*ft_sigma_rel*V={bound:.3f})"
         )
 
     def test_mt_trend_following(self):
@@ -130,6 +132,33 @@ class TestStage2(unittest.TestCase):
         sim = Simulation(p, _build(p, 1), seed=1)
         sim.run(50)
         self.assertTrue(all(v == p.v0 for v in sim.history["fundamental"]))
+
+    def test_cir_disabled_when_xi_zero(self):
+        """xi_v=0 -> v_var stays at sigma_v^2 throughout (constant vol fallback)."""
+        p = _params(xi_v=0.0, sigma_v=0.001)
+        sim = Simulation(p, _build(p, 1), seed=1)
+        sim.run(50)
+        self.assertAlmostEqual(sim.gs.v_var, 0.001 ** 2, places=10)
+
+    def test_cir_active_long_run_mean(self):
+        """xi_v>0 -> v_var fluctuates; long-run average should approach theta_v.
+
+        Uses kappa_v=0.5 (fast mean reversion) and 5000 steps, then checks
+        the rolling mean of v_var converges to theta_v within +/- 30%.
+        """
+        target_var = 1e-6
+        p = _params(sigma_v=0.0, mu_v=0.0, jump_lambda=0.0,
+                    kappa_v=0.5, theta_v=target_var, xi_v=5e-4)
+        sim = Simulation(p, _build(p, 5), seed=5)
+        v_history = []
+        for _ in range(5000):
+            sim.step()
+            v_history.append(sim.gs.v_var)
+        empirical_mean = float(np.mean(v_history[1000:]))   # post burn-in
+        self.assertGreater(empirical_mean, target_var * 0.7)
+        self.assertLess(empirical_mean, target_var * 1.3)
+        # All v_var values stay non-negative
+        self.assertGreaterEqual(min(v_history), 0.0)
 
     def test_jump_diffusion_jumps_on(self):
         """jump_lambda>0 produces non-zero log-return jumps in V."""

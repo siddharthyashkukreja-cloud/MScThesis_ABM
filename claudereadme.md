@@ -91,7 +91,8 @@ All share signature `submit_orders(lob, params, ctx, rng)`.
 | `ZeroIntelligenceTrader` | uniform 50/50 | best opposite ± k·tick (k ~ U{1, zi_offset_max}) | U{1, zi_qty_max} | Cont-Stoikov 2008 + Farmer-Daniels 2003. Submits limit (α), market (μ), cancels (per-resting δ). Empty-book fallback: anchor on V. |
 | `FundamentalTrader` | sign(reservation − mid) | reservation = V + z·σ_F | U{1, zi_qty_max} | ODD §Prediction. z ~ N(0,1) drawn once at init. |
 | `MomentumTrader` | sign(M_t) above threshold | V + z·σ_M | U{1, zi_qty_max} | EWMA momentum (Majewski 2018). Placement is ODD-style on V (deliberate Stage 2 extension; ODD has no MT). |
-| `BankingClearingMember` | extends FT | V + z·σ_F | U{1, zi_qty_max} | Has cash (ODD ~U[5B,10B]), client_ids list, mode='fundamental' (or 'market_maker' Stage 4+). cap_ratio = cash / (own + Σ client) · mid. Breach → fire-sale market orders. |
+| `BankingClearingMember` (FT-prop) | extends FT | V·(1 + z·ft_sigma_rel) | U{1, zi_qty_max} | mode='fundamental'. May carry clients. |
+| `BankingClearingMember` (MM)      | mid (with inv skew) | mid·(1 + skew_frac ± half_spread_bps·1e-4) | mm_qty | mode='market_maker'. V-relative quotes; cancels and re-posts each step. No clients in baseline. |
 | `NonBankingClearingMember` | does not trade | — | — | Pure structural/clearing entity. cash ~U[5M,10M]. cap_ratio = cash / Σ client · mid. Stop-out enforced at Stage 4 margin layer. |
 
 Common balance-sheet fields on `BaseTrader`: `cash`, `inventory`, `pnl`,
@@ -113,13 +114,30 @@ Per-step sequence (ODD §Step Sequence subset):
 ### 2.6 Population builder (`run_simulation.py`)
 Stage 3 default (all counts in `ModelParams`):
 - 10 ZI direct
-- 10 BCM, 3 of which have a client book attached
+- 10 BCM total split into:
+  - **4 MMs** (mode='market_maker', no clients, pure liquidity providers)
+  - **6 FT-prop** (mode='fundamental'); 3 of these carry a client book
 - 10 NBCM, all of which have a client book
 - Each client book = 1 FT + 1 MT + 1 ZI (cleared via that CM)
 - **Total: 30 direct + 39 clients = 69 agents.**
 
 ID assignment: deterministic, sequential, in order: ZI direct → FT direct
 → MT direct → (BCM, then its clients) → (NBCM, then its clients).
+
+### 2.7 Topology — exchange access vs CCP clearing tier
+
+Two distinct relationships, easy to conflate:
+
+| Layer | Relationship | Population |
+|---|---|---|
+| **Exchange access** | Submits orders directly to LOB | All 69 agents (every trader's `submit_orders` writes to the LOB) |
+| **CCP clearing — direct** | Posts margin / DF to CCP directly | 10 BCM + 10 NBCM = 20 direct CMs |
+| **CCP clearing — indirect** | Posts margin to a CM, who passes it to CCP | 39 clients (3 each via 13 CMs-with-clients) |
+| **CCP clearing — none** | Exogenous noise per ODD; no CCP relationship modelled | 10 direct ZI |
+
+In the real-world / FCM-tier sense: clients are *trading-direct, clearing-indirect* — they hit the LOB on their own behalf but their post-trade clearing flows through their CM. This becomes load-bearing at Stage 4 when margin is enforced.
+
+The 10 direct ZI mirror the ODD's 10 ZIs: pure exogenous liquidity providers without an explicit clearing layer. Adding a clearing relationship for them is a Stage 4+ extension if needed for waterfall realism.
 
 ---
 
@@ -137,15 +155,16 @@ field-ordering errors).
 | `tick_size` | float | Min price increment ($0.01 SPY) | NYSE rule |
 | `dt_minutes` | float | Step length (5.0) | computational tractability vs ODD's 1-min |
 | `order_ttl` | int | Steps before expiry (2 = 10-min, equivalent to ODD's 10×1-min) | ODD §Mech #7 |
-| `zi_alpha`, `zi_mu`, `zi_delta` | float | ZI rates per step (defaults 0.15 / 0.025 / 0.025) | ODD §Calibration; Cont-Stoikov 2008 |
+| `zi_alpha`, `zi_mu`, `zi_delta` | float | ZI **rates per minute** (defaults 0.15 / 0.025 / 0.025); ZI.submit_orders draws Poisson(rate × dt_minutes) for arrivals + Bernoulli with prob 1−exp(−delta·dt) per resting order for cancellation | ODD §Calibration; Cont-Stoikov 2008 |
 | `zi_qty_min`, `zi_qty_max` | int | Order qty range (1, 10) | ODD §Stochasticity |
 
 ### Defaults / Stage 2+
 | Name | Default | Source |
 |---|---|---|
-| `zi_offset_max` | 5 ticks | Farmer-Daniels uniform-offset simplification of Cont-Stoikov empirical λ(i) |
-| `ft_sigma` | 0.5 ($0.50 = 50 ticks) | placeholder; calibrate Stage 8 |
-| `mt_sigma` | 0.5 | same |
+| `zi_offset_p` | 0.5 (Geometric param) | Cont-Stoikov 2008 exponential-decay depth profile, discrete-tick analog |
+| `zi_offset_max` | 20 ticks | Truncation cap on Geometric tail |
+| `ft_sigma_rel` | 0.005 (= 50 bps of V) | V-relative offset; regime-invariant; calibrate Stage 8 |
+| `mt_sigma_rel` | 0.005 | same |
 | `mt_lambda_ewma` | 0.95 | Majewski 2018; calibrate later |
 | `mt_threshold` | 1e-4 | min \|M_t\| to act |
 | `mu_v` | 0.0 | per-step drift, ~0 for short horizons |
@@ -154,7 +173,11 @@ field-ordering errors).
 | `jump_mean`, `jump_std` | 0.0, 0.01 | ODD §Stochasticity |
 | `kappa_v`, `theta_v`, `xi_v` | 0.0 | reserved for Gao 2023 stoch-vol extension |
 | `n_bcm`, `n_nbcm` | 0 | activated at Stage 3 (10 each) |
-| `n_bcm_with_clients` | 0 | how many BCMs hold a client book (default 3 at Stage 3) |
+| `n_bcm_mm` | 0 | of n_bcm, how many run in market-maker mode (default 4 at Stage 3.5) |
+| `n_bcm_with_clients` | 0 | of the FT-prop BCMs, how many hold a client book (default 3) |
+| `mm_half_spread_bps` | 30.0 (bps of mid) | MM half-spread; V-relative (Stoikov 2008) |
+| `mm_qty` | 50 | MM quote size per side |
+| `mm_inventory_skew_bps` | 0.5 (bps/unit of mid) | per-unit-inventory quote shift; bps of mid per unit |
 
 ---
 
@@ -165,11 +188,12 @@ field-ordering errors).
 | 1 | ✅ done | ZI only (10) | 6 / 6 pass — determinism, midprice formula, no-crossed-book, bounded spread, two-sided depth, no-negative-qty |
 | 2 | ✅ done | + 10 FT + 10 MT (no CMs) | 6 / 6 pass — determinism, FT mean-reversion, MT trend-following, full-run sanity, jump-diffusion off/on |
 | 3 | ✅ done | + 10 BCM + 10 NBCM + 39 clients | 8 / 8 pass — determinism, inventory + cash conservation, NBCM never trades, BCM/NBCM cap_ratio formulas, BCM fire-sale liquidates, client linkage integrity |
+| 8a | ✅ done | direct calibration (sigma_v from data) + indirect grid search | calibrate.py works; 12-point grid found vol-clustering params |
 | 4 | pending | + IM + VM margin call (60-tick / 12-step cadence) | — |
 | 5 | pending | + Default fund (Cover-2 EMIR) | — |
 | 6 | pending | + 5-level default waterfall + position auction | — |
 | 7 | pending | + Almgren-Chriss distressed liquidation | — |
-| 8 | pending | + Stressed data; calibration | — |
+| 8b | pending | + Kalman-Filter + EM comparison; final parameter selection on stressed data | — |
 
 ### 4.1 Stage 1 annual run (78 × 252 = 19,656 steps, ZI only, sigma_v=0)
 - Mid range [449.84, 450.17], drift ≈ 0.001, std 0.029
@@ -192,6 +216,70 @@ field-ordering errors).
 
 ---
 
+## 4b · Calibration (Stage 8, run BEFORE Stage 4 margin per project plan)
+
+`calibrate.py` does direct + indirect calibration:
+
+### Direct (data-derived parameters)
+
+| Parameter | Source | Calibrated value (calm) |
+|---|---|---|
+| `v0` | mean OPrice across calm dataset | 178.82 |
+| `mu_v` (per 5-min) | mean of log(DPrice/OPrice) / 78 | ~4.2e-6 (≈ 0) |
+| `sigma_v` (per 5-min) | empirical OC daily std / sqrt(78) | 6.52e-4 |
+
+`calibrate.py verify` cross-checks WRDS `IVol_t_m` units against three hypotheses (per-second RV, daily IV, per-bar var). Best fit (log-ratio metric) is **H1: per-second RV**, giving an implied 5-min std of 1.46e-3 — about **2.24× the empirical-OC-derived value of 6.52e-4**. This is a known microstructure-noise overshoot in high-frequency RV estimators for SPY. We use the empirical-OC value as primary (`source='empirical'` in `extract_direct_params`) and treat IVol as a secondary cross-check.
+
+### Indirect (stylized-fact minimization, Krishnen + Gao 2023)
+
+Targets from WRDS calm-regime daily log-returns (Cont 2001 facts):
+
+| Moment | Empirical |
+|---|---|
+| `ret_std` | 0.0070 |
+| `ret_kurtosis_excess` | +1.31 |
+| `ACF(r, 1)` | −0.051 |
+| `ACF(r, 5)` | −0.062 |
+| `ACF(|r|, 1)` | +0.164 |
+| `ACF(|r|, 5)` | +0.060 |
+| `ACF(|r|, 20)` | −0.059 |
+
+Grid search (12-point: `ft_sigma ∈ {0.1, 0.5}`, `mt_sigma ∈ {0.1, 1.0}`, `mt_lambda_ewma ∈ {0.7, 0.9, 0.95}`, `n_steps = 78×30`, `n_runs = 2`):
+
+**Best fit:** `ft_sigma=0.5, mt_sigma=0.1, mt_lambda=0.9` (loss 1.20)
+- `ret_std`: 0.005 (slightly under target 0.007 — sim mid is smoother than V; bumping `sigma_v` to 9.1e-4 closes the gap)
+- `kurt`: +2.29 (target +1.31; mild overshoot)
+- `ACF(r,1)`: −0.006 ✓ (target ~0)
+- `ACF(|r|,1)`: +0.127 ✓ (target +0.164) — **vol clustering achieved**
+- `ACF(|r|,5)`: +0.052 ✓ (target +0.060) — **slow decay**
+
+This is the first parameter set where Cont 2001 fact #3 (vol clustering) holds. The Stage 3 default (`mt_sigma=0.5, mt_lambda=0.95`) had `ACF(|r|,1)≈0`. Calibration was the missing piece.
+
+To use the calibrated params in a sim, pass them explicitly to `ModelParams(...)` in `run_simulation.py`. The current globals.py defaults are still the pre-calibration baseline; once you're satisfied with calibration, update them.
+
+### Recalibration after BCM-MM hybrid (Stage 3.5)
+
+Adding 4 MMs (mode='market_maker') changed the dynamics enough that the calibrated grid search shifted:
+
+| Top result by criterion | params | ret_std | kurt | ACF(\|r\|, 1) | ACF(\|r\|, 5) | loss |
+|---|---|---|---|---|---|---|
+| Lowest loss | `ft=0.1, mt=0.1, λ=0.7` | 0.0063 | +0.68 | −0.05 | +0.03 | 0.51 |
+| Best vol clustering | `ft=0.5, mt=0.1, λ=0.95` | 0.0057 | +0.28 | **+0.27** | −0.01 | 1.24 |
+
+MMs damp directional flow at the inside spread, so vol clustering (ACF\|r\|) becomes harder to elicit — the loss-minimum doesn't coincide with the vol-clustering-maximum any more. Two ways forward depending on user priority:
+- Reweight loss to favour `ACF(|r|)` over `ret_std` exact match.
+- Add a small fast-MT subpopulation (Krishnen high-η) to amplify trend-following without overshooting std.
+
+### Stressed-data caveat — DATA ISSUE
+
+`thesis_data_stressed.csv` is dated **2014-01-02 → 2014-12-31** (252 rows). 2014 was a calm SPY year. Direct calibration shows `σ_v` ratio of just **1.04×** vs calm; the file isn't actually a stressed regime. Project instructions and the ODD reference **2008–2009** GFC data. The stressed-regime calibration framework is in place and runs — but the data file needs to be re-pulled from WRDS TAQ for an actual stress period (2008-Q4, 2020-Q1 COVID, or 2015-Q3 China devaluation) before stress dynamics will show up.
+
+### Kalman + EM comparison (still pending)
+
+User asked to also try Kalman-Filter + EM (Majewski 2018) for comparison. Not yet implemented; meaningful next step once stressed data is corrected.
+
+---
+
 ## 5 · Deviations from ODD (explicit, by design)
 
 | # | Deviation | Reason |
@@ -207,6 +295,12 @@ field-ordering errors).
 | D9 | NBCMs do not trade on own account; ODD describes both as similar traders | User correction (NBCM = clearing-only, no own positions) |
 | D10 | No ft_kappa demand-magnitude scaling (Majewski has it; ODD does not) | ODD-faithful: CMs use fixed Uniform{1,10} qty regardless of mispricing |
 | D11 | Staging order: README/project (ZI→Chiarella→CM→…) used over ODD (ZI+CM in stage 1 itself) | User decision to debug trader behaviour before adding capital constraints |
+| D12 | ZI rates `zi_alpha`/`zi_mu`/`zi_delta` are now **per-minute rates** (Poisson arrivals + per-resting Bernoulli cancellation rescaled by dt_minutes), not Bernoulli probs per step | Cont-Stoikov continuous-time semantics; preserves expected order rate when changing dt_minutes |
+| D13 | ZI limit-price depth uses `Geometric(zi_offset_p)` capped at `zi_offset_max` instead of uniform | Cont-Stoikov 2008 fitted exponential decay |
+| D14 | Calibration ordered before margin (Stage 8 before Stage 4) | Lock down market dynamics before adding capital-constraint feedback |
+| D15 | BCM split into 4 MMs + 6 FT-prop (vs ODD's homogeneous BCM population) | Real bank-tier mix; MMs provide explicit liquidity layer; matches dealer-bank role in market microstructure |
+| D16 | All agent placement scales (`ft_sigma_rel`, `mt_sigma_rel`, `mm_half_spread_bps`, `mm_inventory_skew_bps`) are **V-relative / basis points** rather than absolute dollars | Regime-invariant calibration: same params work for V≈$92 (stressed) and V≈$179 (calm). Fixed the +64% stress amplification observed under absolute-cents scales. |
+| D17 | CIR stochastic volatility (Heston/Gao 2023) added on top of Merton jump-diffusion (`xi_v=0` falls back to constant σ_v) | Stage 8 prep: long-memory vol clustering (Cont 2001 fact #3 at long lags) needs vol-of-vol. Available but typically `xi_v` small for baseline; calibrated by LHS. |
 
 ---
 
@@ -252,6 +346,18 @@ target for `sigma_v`, `Ret_mkt_t` distribution for jump parameters.
 
 ---
 
+## 7b · HFABM (Cao et al. 2024 JASSS) extensions to consider
+
+[High-frequency financial market simulation and flash crash scenarios analysis](https://www.jasss.org/27/2/8.html) (arXiv [2208.13654](https://arxiv.org/abs/2208.13654)) presents a millisecond-cadence ABM for E-mini S&P 500 used to recreate the 2010 Flash Crash. Two design choices differ from ours and are worth flagging as extension options:
+
+**MM inventory limit** (HFABM §3.2, "Market Maker"). In HFABM the MM posts limits during normal trading; **once |inventory| exceeds an absolute limit, MM submits market orders to liquidate**. This is similar in spirit to our BCM `_fire_sale` but tuned for normal flow (not capital-ratio breach). They show in Monte Carlo that the inventory limit is a key driver of mini-flash-crash amplitude. Could add as `mm_inventory_limit` parameter; if `|inventory| > limit`, switch from quote-posting to market-order liquidation.
+
+**Fundamental trader as market-order-only** (HFABM §3.3). Their FT submits market orders only — opposite of our ODD-faithful FT-as-limit-orders. They calibrate FT trading frequency to E-mini bar data. Our design follows ODD §Prediction (limit orders at private valuation); HFABM's design is more HFT-realistic and would interact more aggressively with MM quotes. Worth implementing as an alternative `FundamentalTrader_HFABM` for comparison if Stage 8 calibration struggles.
+
+**ML surrogate calibration** (HFABM §4.2). They calibrate via a neural-network surrogate trained on grid evaluations, reducing thousands of objective evaluations to one neural-network forward pass per candidate. Our LHS approach is simpler; if calibration becomes the bottleneck, this is a documented upgrade path.
+
+---
+
 ## 8 · Roadmap of planned extensions (post-Stage-8)
 
 From README's "Future / Possible Extensions" — preserved here for AI
@@ -286,15 +392,21 @@ python run_simulation.py            # writes output/stage3_run.csv
 python -m unittest tests.test_stage1 tests.test_stage2 tests.test_stage3 -v
 ```
 
-For analysis: `analysis.ipynb` is now Stage-3-aware. It runs a fresh
-Stage 3 simulation inline, captures per-agent inventory + cash at every
-step, and visualises (1) mid vs V, (2) spread evolution + distribution,
-(3) bid/ask depth, (4) EWMA momentum signal, (5) per-step volume,
-(6) Cont 2001 stylised facts (return distribution, ACF(r), ACF(|r|);
-ACF computed inline so statsmodels is not required), (7) end-of-run
-agent state by type, (8) per-CM capital-ratio time series with the 8%
-floor marked, (9) sample agent trajectories per type. Just open and
-run-all.
+For analysis: `analysis.ipynb` is now Stage-8 calibration-progress notebook. It runs the simulation under both calm AND stressed regimes (fix-agents-swap-environment), computes Cont 2001 stylized-fact moments for each, and visualises:
+1. Empirical reference (calm 2013-14 vs stressed Sept 2008 - Mar 2009)
+2. Empirical Cont 2001 target moments
+3. Sim runs under both regimes (60 days × 3 seeds averaged)
+4. **Side-by-side moment comparison** with sim/target ratios — the headline diagnostic
+5. Mid-vs-V plots for both regimes
+6. Return distribution histograms (sim overlaid on empirical)
+7. ACF(r) and ACF(|r|) overlay (sim vs empirical, both regimes, both lags 0-20)
+8. CIR variance trajectory under each regime
+9. MM inventory + quote dynamics (HFABM-style diagnostic)
+10. CM cap_ratio plots (BCM split by mode, NBCM)
+11. End-of-run agent state by type
+12. **Calibration progress**: loads `output/calibration_lhs.csv` if present (created by `python calibrate.py lhs 200 90 3` on user's laptop) and shows loss landscape across the LHS search.
+
+Open and run-all in Jupyter.
 
 ---
 
