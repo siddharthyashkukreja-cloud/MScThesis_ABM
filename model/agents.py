@@ -246,21 +246,27 @@ class NonBankingClearingMember(BaseTrader):
 @dataclass
 class MomentumTrader(BaseTrader):
     """
-    Chiarella-style momentum trader (Majewski et al. 2018 EWMA signal),
-    ODD-style heterogeneous placement.
+    Chiarella-style momentum trader (Majewski 2018 / Krishnen ABM
+    Liquidity Risk EWMA signal), MID-anchored placement.
 
-    Direction is determined by the sign of an EWMA log-return momentum
-    signal M_t maintained in Simulation:
+    Direction = sign of EWMA log-return momentum maintained in Simulation:
         M_t = lambda * M_{t-1} + (1 - lambda) * (log P_t - log P_{t-1}).
-    Below an absolute threshold |M_t| < mt_threshold, the agent stays
-    out (no zero-crossing churn).
+    Skip if |M_t| < mt_threshold (no zero-crossing churn).
 
-    Placement reuses the ODD §Prediction private-valuation formula:
-    price = V_t + z_i * sigma_M, with z_i ~ N(0,1) fixed at init.
-    Anchoring on V (rather than mid) is a deliberate Stage 2 choice to
-    keep a single ODD-faithful placement rule across all non-ZI agents;
-    the ODD itself does not specify MTs (CMs only), so this is an
-    explicit extension. Quantity ~ Uniform{1, zi_qty_max}.
+    Placement is anchored on the OBSERVED mid-price (not the fundamental
+    V), reflecting that momentum traders trade trends in actual prices:
+        price = mid * (1 + z * mt_sigma_rel)
+    where z ~ N(0,1) is fixed per agent at init (heterogeneity).
+    Empty-book fallback (mid=NaN) anchors on V so the very first step
+    still places a sensible quote.
+
+    Mid-anchoring vs V-anchoring (deviation note):
+      - V-anchored (old): MTs always place close to fundamental, regardless
+        of where market is trading. Inherits ODD-FT scheme.
+      - Mid-anchored (current): MTs place around current market level,
+        following price discovery. Closer to Chiarella momentum spec.
+
+    Quantity ~ Uniform{1, zi_qty_max}.
     """
     z_score: float = 0.0
 
@@ -269,8 +275,8 @@ class MomentumTrader(BaseTrader):
         if abs(ctx.momentum) < params.mt_threshold:
             return
         side = 1 if ctx.momentum > 0 else -1
-        # V-relative placement (regime-invariant)
-        price = ctx.v * (1.0 + self.z_score * params.mt_sigma_rel)
+        anchor = ctx.mid_price if not np.isnan(ctx.mid_price) else ctx.v
+        price = anchor * (1.0 + self.z_score * params.mt_sigma_rel)
         price = max(price, params.tick_size)
         qty = int(rng.integers(params.zi_qty_min, params.zi_qty_max + 1))
         lob.add_limit(self.agent_id, side, price, qty)

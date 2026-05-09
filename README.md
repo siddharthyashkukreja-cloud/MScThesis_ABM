@@ -63,8 +63,12 @@ The model covers 3 stages, and parameters are calibrated on SPY data. The three 
 
  3. Default Management Framework
 
+---
 
+### Questions for Krishnen
 
+1. Model calibrated parameters twice - once for calm and once for stressed?
+2. 
 --- 
 
 ## Financial Market Simulation
@@ -72,16 +76,112 @@ The model covers 3 stages, and parameters are calibrated on SPY data. The three 
 
 ### Agents
 
+The model includes trading agents interacting through a limit order book, plus a clearing tier or banks and non-bank clearing members. Bank Clearing Members are also of one of these trader types, and may clear on behalf of other client traders. Non-Bank CMs only clear on behalf of client traders. 
+
 #### Four Trader Types: 
+
+
+**Zero Intelligence (ZI)/Noise Trader with Vol. Scaling (Count: )**
+
+Provide background liquidity and order flow, proxying for other trader types such as retail and corporate traders, and traders with hedging demands.
+
+- **Events per step (length `dt_minutes`):**
+  - Limit orders: `N_limit ~ Poisson(zi_alpha * dt_minutes)`
+  - Market orders: `N_market ~ Poisson(zi_mu * dt_minutes)`
+  - Cancellation: each resting order is cancelled with prob `p_cancel = 1 - exp(-zi_delta * dt_minutes)`
+
+- **Side and size:**
+  - Side is 50/50 buy vs sell.
+  - Size: `q ~ Uniform{zi_qty_min, ..., zi_qty_max}`, optionally scaled up when current variance `v_var` exceeds target `theta_v`.
+
+- **Limit price placement:**
+  - Depth in ticks: `k = min(Geometric(zi_offset_p), zi_offset_max)`
+  - Buy limits: anchored off `best_ask` (or `V_t` if book empty) at  
+    `price = anchor - k * tick_size`
+  - Sell limits: anchored off `best_bid` (or `V_t`) at  
+    `price = anchor + k * tick_size`
+  - Prices are floored at `tick_size` and rounded to the tick grid.
+
+ZI traders carry inventory and cash like other agents but have no strategic beliefs or balance‑sheet constraints.
 
 **Fundamental Trader (Count: )**
 
+Fundamental traders implement a value strategy with heterogeneous private valuations, following the extended Chiarella model and the Simudyne CCP ODD.
+
+**Private valuation**
+
+- Each FT draws a fixed `z_i ~ Normal(0, 1)` at initialisation.
+- With fundamental value `V_t` and relative dispersion `ft_sigma_rel`, the reservation price is
+
+  `r_i,t = V_t * (1 + z_i * ft_sigma_rel)`
+
+**Direction rule**
+
+- Reference price is the midprice if available, otherwise `V_t`.
+- If `r_i,t > ref_price`: submit a **buy** limit at `r_i,t`.
+- If `r_i,t < ref_price`: submit a **sell** limit at `r_i,t`.
+- If equal: no order.
+
+**Order size**
+
+- Size is independent of mispricing:
+
+  `q ~ Uniform{zi_qty_min, ..., zi_qty_max}`
+
+**Notes**
+
+- Offsets are specified as a fraction of `V_t` (basis‑point style), so FT behaviour is invariant to the price level across calm vs stressed regimes.
+- There is no `kappa * (V_t - P_t)` demand‑magnitude term at this stage; that can be added later if needed for calibration, as in Majewski et al. (extended Chiarella).
 
 **Momentum Trader (Count: )**
 
+### Momentum Trader (MT)
 
-**Noise Trader with Vol. Scaling (Count: )**
+### Momentum Trader (MT)
 
+Momentum traders follow an EWMA trend signal on log returns and place limit orders
+relative to the current midprice, with no dependence on fundamental value.
+
+**Momentum signal**
+
+- Global EWMA on log‑returns, updated each step:
+
+  `M_t = mt_lambda_ewma * M_{t-1} + (1 - mt_lambda_ewma) * (log P_t - log P_{t-1})`
+
+- `mt_lambda_ewma` controls memory length; `M_0 = 0`.
+
+**Activation and direction**
+
+- MT acts only when `abs(M_t) >= mt_threshold`.
+- If `M_t > 0`: submit a **buy** limit.
+- If `M_t < 0`: submit a **sell** limit.
+- If `abs(M_t) < mt_threshold`: no order.
+
+**Limit price placement**
+
+- Each MT draws a fixed `z_i ~ Normal(0, 1)` at initialisation.
+- Reference price is the current midprice if available, otherwise last traded price.
+- Buy limit:
+
+  `price = mid_t + z_i * mt_sigma_abs`
+
+- Sell limit:
+
+  `price = mid_t - z_i * mt_sigma_abs`
+
+- `mt_sigma_abs` is an absolute offset in price units (e.g. dollars or ticks).
+- Price is floored at `tick_size` and rounded to the tick grid.
+
+**Order size**
+
+- Size is independent of signal magnitude:
+
+  `q ~ Uniform{zi_qty_min, ..., zi_qty_max}`
+
+**Notes**
+
+- Placing relative to `mid_t` keeps MTs as market‑reactive agents with no fundamental belief, in contrast to FTs. `mt_sigma_abs` controls how aggressively they cross the spread.[cite:203]
+- Signal‑scaled aggressiveness via `tanh(mt_kappa * M_t)` is a natural extension if urgency effects are needed later.
 
 **Market Marker (Count: )**
 
@@ -99,13 +199,11 @@ The model covers 3 stages, and parameters are calibrated on SPY data. The three 
 **Non-Bank Clearing Member (Count: )**
 
 
-### Market Clearing
-
 
 ### Fundamental Value Process
 
 
-### Calibration
+### Parameters and Calibration
 
 --- 
 
@@ -116,6 +214,7 @@ The model covers 3 stages, and parameters are calibrated on SPY data. The three 
 ### Variation Margin
 
 ### Default Fund
+
 
 ---
 

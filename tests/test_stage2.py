@@ -95,18 +95,17 @@ class TestStage2(unittest.TestCase):
     def test_mt_trend_following(self):
         """V trending upward => MT order flow tilts long.
 
-        With sigma_v=0 and a small positive mu_v, V drifts deterministically
-        upward; recent log-returns become positive so EWMA momentum > 0;
-        MT side should be +1 in the majority of triggered submissions.
-        Test reads MT-side bias indirectly via the sign of the cumulative
-        momentum signal post-warmup (which is what determines MT side).
+        Mid-anchored MT placement requires actual price discovery to
+        update its EWMA momentum signal, so we add ZI noise (bootstrap)
+        and FT (forces P -> V tracking) so V's drift is reflected in mid.
+        Then EWMA momentum becomes positive and MTs go long.
         """
-        p = _params(n_zi=0, n_fundamental=0, n_momentum=20,
-                    sigma_v=0.0, mu_v=0.001, jump_lambda=0.0,
+        p = _params(n_zi=5, n_fundamental=30, n_momentum=20,
+                    sigma_v=0.0, mu_v=0.002, jump_lambda=0.0,
                     mt_threshold=0.0)
         sim = Simulation(p, _build(p, 9), seed=9)
-        sim.run(200)
-        post = sim.history["momentum"][50:]
+        sim.run(400)
+        post = sim.history["momentum"][100:]
         positive = sum(1 for m in post if m > 0)
         self.assertGreater(
             positive / len(post), 0.7,
