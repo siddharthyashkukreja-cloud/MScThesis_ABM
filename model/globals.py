@@ -29,11 +29,23 @@ class ModelParams:
     zi_mu: float            # market-arrival rate / minute / ZI   (ODD: 0.025)
     zi_delta: float         # cancel rate / minute / resting-order (ODD: 0.025)
 
-    # ── ZI / FT / MT order sizing ────────────────────────────────────────
-    # ODD §Stochasticity: order quantity ~ Discrete[1, 10] each step;
-    # shared by all submitting agents (ZI, FT, MT) for simplicity.
+    # ── ZI order sizing (Poisson-arrival agents) ─────────────────────────
+    # ZI uses Poisson arrivals scaled by dt_minutes, so order COUNT already
+    # tracks cadence. Per-order qty stays at ODD's Discrete[1, 10] so
+    # per-minute volume is cadence-invariant.
     zi_qty_min: int         # minimum order quantity (units)
     zi_qty_max: int         # maximum order quantity (ODD: Discrete[1, 10])
+
+    # ── Directional-agent order sizing (FT, MT, BCM-FT, clients) ────────
+    # These agents submit at most ONE order per step (deterministic when
+    # triggered), so per-minute volume scales as 1/dt_minutes. To preserve
+    # ODD's per-minute volume target (calibrated at 1-min cadence with
+    # U[1,10] qty), we scale qty by dt_minutes: at dt=5, U[5,50].
+    # Used by FT.submit_orders, MT.submit_orders, BankingClearingMember
+    # FT-prop submission, BCM fire-sale lots, and all client traders that
+    # are FT/MT (not the ZI clients, which keep zi_qty_*).
+    dir_qty_min: int = 5         # minimum directional-agent qty
+    dir_qty_max: int = 50        # maximum (ODD U[1,10] x dt_minutes=5)
 
     # ── ZI limit-price placement: exponential (Geometric) depth ──────────
     # k ~ Geometric(zi_offset_p) capped at zi_offset_max ticks. Cont &

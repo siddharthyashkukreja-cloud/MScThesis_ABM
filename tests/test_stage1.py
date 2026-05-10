@@ -25,6 +25,7 @@ def _build_params(**overrides):
         v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
         zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,   # per-minute rates
         zi_qty_min=1, zi_qty_max=10,
+        dir_qty_min=5, dir_qty_max=50,
         zi_offset_p=0.5, zi_offset_max=20,
         sigma_v=0.0,
     )

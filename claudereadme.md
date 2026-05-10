@@ -101,9 +101,9 @@ All share signature `submit_orders(lob, params, ctx, rng)`.
 | Class | Direction | Limit price | Qty | Notes |
 |---|---|---|---|---|
 | `ZeroIntelligenceTrader` | uniform 50/50 | best opposite ± k·tick, k ~ Geom(zi_offset_p) capped at zi_offset_max | U{1, qty_max_eff} where qty_max_eff = round(zi_qty_max·√(v_var/θ_v)) | Cont-Stoikov 2008 + Farmer-Daniels 2003 + **Gao 2023 vol-scaled qty**. Submits limit (Poisson α·dt arrivals), market (Poisson μ·dt), cancels (per-resting Bernoulli with prob 1−exp(−δ·dt)). Empty-book fallback: anchor on V. |
-| `FundamentalTrader` | sign(reservation − mid) | reservation = V·(1 + z·ft_sigma_rel) | U{1, zi_qty_max} | ODD §Prediction. z ~ N(0,1) drawn once at init. V-relative offset (regime-invariant). |
-| `MomentumTrader` | sign(M_t) above threshold | mid·(1 + z·mt_sigma_rel), V-fallback for empty book | U{1, zi_qty_max} | EWMA momentum (Majewski 2018, Krishnen). **Mid-anchored** — MTs trade trends in observed prices, not fundamentals. |
-| `BankingClearingMember` (FT-prop) | extends FT | V·(1 + z·ft_sigma_rel) | U{1, zi_qty_max} | mode='fundamental'. May carry clients. cap_ratio = cash / (\|own_inv\| + Σ\|client_inv\|)·mid. |
+| `FundamentalTrader` | sign(reservation − mid) | reservation = V·(1 + z·ft_sigma_rel) | U{dir_qty_min, dir_qty_max} | ODD §Prediction. z ~ N(0,1) drawn once at init. V-relative offset (regime-invariant). |
+| `MomentumTrader` | sign(M_t) above threshold | mid·(1 + z·mt_sigma_rel), V-fallback for empty book | U{dir_qty_min, dir_qty_max} | EWMA momentum (Majewski 2018, Krishnen). **Mid-anchored** — MTs trade trends in observed prices, not fundamentals. |
+| `BankingClearingMember` (FT-prop) | extends FT | V·(1 + z·ft_sigma_rel) | U{dir_qty_min, dir_qty_max} | mode='fundamental'. May carry clients. cap_ratio = cash / (\|own_inv\| + Σ\|client_inv\|)·mid. Fire-sale lots also use dir_qty_max. |
 | `BankingClearingMember` (MM) | mid (with inv skew) | bid = mid·(1 + skew_frac − half_bps·1e-4); ask = mid·(1 + skew_frac + half_bps·1e-4) | mm_qty | mode='market_maker'. Cancels prior + reposts each step. **MMs CAN have clients** in current default (matches GS/JPM real-bank-tier model). |
 | `NonBankingClearingMember` | does not trade | — | — | Pure clearing entity. cash ~U[5M,10M]. cap_ratio = cash / Σ\|client_inv\|·mid. Stop-out enforced at Stage 4 margin layer. |
 
@@ -164,13 +164,14 @@ optional / Stage-2/3 defaults at the bottom (Python dataclass field-ordering).
 | `dt_minutes` | float | Step length (5.0) | computational tractability vs ODD's 1-min |
 | `order_ttl` | int | Steps before expiry (2 = 10-min, equivalent to ODD's 10×1-min) | ODD §Mech #7 |
 | `zi_alpha`, `zi_mu`, `zi_delta` | float | ZI **rates per minute** (defaults 0.15 / 0.025 / 0.025); ZI.submit_orders draws Poisson(rate × dt) for arrivals + Bernoulli with prob 1−exp(−δ·dt) per resting order for cancellation | ODD §Calibration; Cont-Stoikov 2008 |
-| `zi_qty_min`, `zi_qty_max` | int | Order qty range (1, 10) | ODD §Stochasticity |
+| `zi_qty_min`, `zi_qty_max` | int | ZI order qty range (1, 10) — Poisson arrivals preserve per-minute volume across dt | ODD §Stochasticity |
 
 ### Defaults / Stage 2+ (V-relative scales)
 | Name | Default | Source |
 |---|---|---|
 | `zi_offset_p` | 0.5 (Geometric param) | Cont-Stoikov 2008 exponential-decay depth profile, discrete-tick analog |
 | `zi_offset_max` | 20 ticks | Truncation cap on Geometric tail |
+| `dir_qty_min`, `dir_qty_max` | 5, 50 | Directional-agent order qty (FT, MT, BCM-FT-prop, BCM fire-sale lots, FT/MT clients). ODD's `U[1,10]` × `dt_minutes=5`. |
 | `ft_sigma_rel` | 0.005 (= 50 bps of V) | V-relative offset; regime-invariant; calibrate Stage 8 |
 | `mt_sigma_rel` | 0.005 | same; mid-anchored placement |
 | `mt_lambda_ewma` | 0.95 | Majewski 2018; calibrate later |
@@ -248,53 +249,51 @@ Mid range [449.84, 450.17], spread mean 3.2 ticks, ACF(|r|) ≈ 0 — no vol clu
 
 ---
 
-## 4b · Calibration (Stage 8a, framework complete; 8b pending)
+## 4b · Calibration — XGBoost surrogate (Stage 8)
 
-`calibrate.py` CLI with four subcommands:
+`calibrate.py` is now a focused 4-step pipeline using **XGBoost as a surrogate** of the simulator-to-moments map (SMAC-style, Hutter et al. 2011 / surrogate-assisted calibration in HFABM Cao 2024 §4.2 / Gao 2023). Replaces the legacy 12-point grid-search and standalone LHS workflows.
 
 ```bash
-python calibrate.py verify      # WRDS IVol_t_m unit hypothesis check
-python calibrate.py direct      # extract v0, sigma_v, mu_v from data
-python calibrate.py calibrate   # 12-point grid search (quick demo)
-python calibrate.py lhs N D R   # Latin Hypercube Sampling: N points, D days/run, R runs/point
+python calibrate.py verify              # WRDS IVol_t_m unit-hypothesis check
+python calibrate.py direct              # data-derived sigma_v, v0, mu_v (both regimes)
+python calibrate.py run [N D R]         # end-to-end (default 200 90 3, ~15 min)
 ```
 
-### Direct (data-derived parameters)
+The `run` subcommand executes:
+1. **LHS training data** — sample N parameter vectors θ from the 5-D search space; for each, simulate both regimes for D days × R seeds; record daily-return moment vector. Saves to `output/calibration_lhs.csv`.
+2. **Train XGBoost surrogate** — one `XGBRegressor(n_estimators=300, max_depth=4, learning_rate=0.05)` per (regime, moment) pair; 14 regressors total (7 moments × 2 regimes). XGBoost handles 200-row training sets well, robust to MC-noisy targets, supports quantile regression for uncertainty estimates.
+3. **Multi-start L-BFGS-B optimisation** — surrogate loss = per-moment-normalised L2 distance, regime-summed; 30 random L-BFGS-B starts on the surrogate (sub-second total). Falls back to dense random search if scipy unavailable.
+4. **Validate** — run actual simulator at θ* and compare predicted vs simulated moments. If close (~5% relative error per moment) the surrogate isn't overfitting.
 
-| Parameter | Source | Calm | Stressed |
-|---|---|---|---|
-| `v0` | mean(OPrice) | 178.82 | 91.60 |
-| `mu_v` (per 5-min) | mean(log(D/O))/78 | ~0 | ~0 |
-| `sigma_v` (per 5-min) | OC daily std / √78 | 6.52e-4 | 3.18e-3 |
+Outputs:
+- `output/calibration_lhs.csv` — raw training data
+- `output/calibrated_params.json` — final calibrated θ + validated moments + all metadata
+- `output/calibration_feature_importance.csv` — per-(regime, moment) param importance ranking
 
-`calibrate.py verify` cross-checks WRDS `IVol_t_m` units against three hypotheses (per-second RV, daily IV, per-bar var). Best fit is **H1: per-second RV**, but the IVol-derived 5-min std overshoots empirical-OC by 2.24× (microstructure-noise bias). Use empirical-OC value as primary; treat IVol as cross-check.
+### Search space (5-D, V-relative)
 
-### Indirect (LHS over 5-D space)
+| Parameter | Bounds | Notes |
+|---|---|---|
+| `ft_sigma_rel` | [0.0005, 0.05] | 5 bps to 500 bps of V |
+| `mt_sigma_rel` | [0.0005, 0.05] | same |
+| `mt_lambda_ewma` | [0.50, 0.99] | EWMA decay |
+| `kappa_v` | [0.001, 1.0] | CIR mean-reversion speed |
+| `log10(xi_v)` | [−7, −3] | xi_v ∈ [1e-7, 1e-3], log-spaced |
 
-Search bounds:
-- `ft_sigma_rel ∈ [0.0005, 0.05]` (5 bps to 500 bps of V)
-- `mt_sigma_rel ∈ [0.0005, 0.05]`
-- `mt_lambda_ewma ∈ [0.50, 0.99]`
-- `kappa_v ∈ [0.001, 1.0]`
-- `log10(xi_v) ∈ [−7, −3]` → xi_v ∈ [1e-7, 1e-3]
+**Per-regime `theta_v` is set directly from each regime's empirical σ_v²** (not in the search space) — this is what makes the calibrated θ regime-invariant. `jump_lambda`/`jump_mean`/`jump_std` are anchored at ODD values (0.0385/0/0.01) and not searched.
 
-Per-regime `theta_v` is set from each regime's direct sigma_v² (not searched).
+### Loss function
 
-**Loss function**: per-moment normalised L2 distance (weight vector emphasises ACF(\|r\|, k) for vol-clustering) summed across calm + stressed regimes. Each candidate evaluated by simulating both regimes for `D days × R runs` and extracting daily-return moments at end-of-day mids.
-
-**Best small-LHS finding** (12 points, 15 days, 2 runs each, ~25s wall):
-- ft_sigma_rel ≈ 0.03, mt_sigma_rel ≈ 0.02, mt_lambda ≈ 0.88, kappa_v ≈ 0.46, xi_v ≈ 7e-5
-- Validation on longer runs shows stress regime within 7% of target std, calm within 54% (LHS overshoots calm because objective dominated by stress)
-- Need bigger LHS budget for tight fit on both regimes
-
-**Recommended: run on laptop**
-```bash
-python calibrate.py lhs 200 90 3   # ~10-15 min, writes output/calibration_lhs.csv
+Per-moment-normalised weighted L2:
+```
+loss = Σ_regime regime_weight × Σ_moment moment_weight × ((sim - target) / max(|target|, 0.05))²
 ```
 
-### Cont 2001 stylised-fact targets (empirical, daily SPY)
+Default moment weights `[1.0, 1.0, 0.5, 0.3, 2.0, 1.5, 1.0]` for `[ret_std, kurt, ACF(r,1), ACF(r,5), ACF(|r|,1), ACF(|r|,5), ACF(|r|,20)]` — emphasises vol-clustering moments (Cont 2001 fact #3). Regime weights default to (1.0, 1.0).
 
-| Moment | Calm (2013-14) | Stressed (Sept 2008–Mar 2009) |
+### Cont 2001 stylized-fact targets (empirical, daily SPY)
+
+| Moment | Calm (2013-14, 503 days) | Stressed (Sept 2008–Mar 2009, 146 days) |
 |---|---|---|
 | `ret_std` | 0.0070 | 0.0340 |
 | `ret_kurtosis_excess` | +1.31 | +0.74 |
@@ -303,11 +302,47 @@ python calibrate.py lhs 200 90 3   # ~10-15 min, writes output/calibration_lhs.c
 | `ACF(\|r\|, 5)` | +0.060 | +0.275 |
 | `ACF(\|r\|, 20)` | −0.059 | +0.076 |
 
-Stressed shows **delayed vol clustering** (lag-5 ACF very high) — characteristic of GFC where vol regimes persisted multi-day. CIR helps capture this; jumps help capture kurtosis.
+Stressed shows **delayed vol clustering** (lag-5 ACF dominates over lag-1) — characteristic of GFC where vol regimes persisted multi-day. CIR captures this; jumps capture the kurtosis component.
 
-### Kalman + EM comparison (still pending Stage 8b)
+### Why XGBoost (vs alternatives)
 
-User asked to also try Kalman-Filter + EM (Majewski 2018) for comparison vs LHS surrogate matching. Not yet implemented; meaningful next step after first big LHS finalises.
+| Method | Sims needed | Quality | Interpretability | Status |
+|---|---|---|---|---|
+| LHS pick-best (legacy) | 200 | crude — discrete | low | removed from CLI |
+| **XGBoost surrogate** (current) | **200 + 30s training** | smooth interpolation | **feature importance** | **ready to run** |
+| Bayesian opt (gp_minimize) | 80-120 | smooth, uncertainty-aware | medium | needs `skopt` |
+| ML-NN surrogate (HFABM) | 500+ | flexible, data-hungry | low | Stage 9+ |
+| Kalman + EM (Majewski) | one-shot MLE | rigorous, model-locked | high | Stage 8b |
+
+XGBoost is the same data efficiency as LHS but extracts much more value from those 200 simulator calls — gives you a callable function plus feature importance plus (optionally) quantile uncertainty bands. The L-BFGS-B refinement on the surrogate finds a better optimum than picking the lowest-loss LHS row.
+
+### Dependencies (laptop-side)
+
+The XGBoost path needs `xgboost` and `scipy`. The cowork sandbox doesn't have these, so the `run` subcommand executes on your laptop:
+
+```bash
+pip install xgboost scipy            # one-time
+python calibrate.py run 200 90 3     # ~15 min
+```
+
+`verify` and `direct` don't need any extra packages and run anywhere.
+
+### Active learning / Bayesian-opt loop (Stage 8b extension)
+
+Form 1 (above) is "train once, optimise once." A natural follow-on is **active-learning iteration**:
+
+```
+Repeat for K rounds:
+  1. Train XGBoost on accumulated (θ, m) pairs
+  2. Surrogate-optimise to propose N_iter candidates
+  3. Run actual simulator at candidates; append to training set
+```
+
+This converges in 60-80% fewer simulator calls than blind LHS. Optional Stage 8b extension; current Form 1 framework is the foundation.
+
+### Kalman + EM comparison (Stage 8b extension)
+
+Majewski 2018-style joint state-space estimation (V latent + behavioural params) remains an open task — useful as an independent methodology to validate the XGBoost surrogate's calibrated θ.
 
 ---
 
@@ -336,6 +371,7 @@ User asked to also try Kalman-Filter + EM (Majewski 2018) for comparison vs LHS 
 | D19 | ZI order quantity scaled by current vol per Gao 2023: `qty_max_eff = round(zi_qty_max · √(v_var/θ_v))`, capped at 10× | Gao 2023 noise-demand spec `D_N = σ · ζ`; amplifies Cont fact #3 in high-vol regimes; no-op when CIR disabled |
 | D20 | ODD-faithful jumps **enabled by default**: jump_lambda = 0.0385 (= 3/78), jump_mean = 0, jump_std = 0.01 | ODD §Stochasticity (3 jumps per 510-tick day = 3/78 per 5-min step); applies to both regimes |
 | D21 | Variable client-book composition + heterogeneous client cash (institutional FT/MT vs retail ZI) | Real-exchange tiering: dealer banks clear for both institutional (~$1-10M cash) and retail (~$10-100k cash) |
+| D22 | Order-quantity range **split** between agent types: `zi_qty ∈ U[1,10]` (Poisson cadence-invariant) but `dir_qty ∈ U[5,50]` (= ODD U[1,10] × dt_minutes=5) for FT/MT/BCM-FT/clients | FT/MT/CMs are deterministic 1-order-per-step submitters, so per-minute volume scales as 1/dt_minutes. To preserve ODD's per-minute volume target (calibrated at 1-min cadence), directional-agent qty is multiplied by dt_minutes. ZI doesn't need this because Poisson(α·dt) arrivals already preserve per-minute order count. |
 
 ---
 
@@ -408,13 +444,17 @@ python run_simulation.py            # writes output/stage*_run.csv
 # Tests
 python -m unittest tests.test_stage1 tests.test_stage2 tests.test_stage3 -v
 
-# Calibration pipeline
+# Calibration (XGBoost surrogate)
 python calibrate.py verify          # WRDS unit-hypothesis sanity check
 python calibrate.py direct          # v0, sigma_v, mu_v from data
-python calibrate.py calibrate       # 12-point coarse grid (~25s)
-python calibrate.py lhs 200 90 3    # 200-point LHS, 90 days/run, 3 seeds (~15 min)
-                                    # writes output/calibration_lhs.csv
+python calibrate.py run 200 90 3    # end-to-end: LHS + XGB + L-BFGS + validate
+                                    # ~15 min on laptop; writes
+                                    #   output/calibration_lhs.csv
+                                    #   output/calibrated_params.json
+                                    #   output/calibration_feature_importance.csv
 ```
+
+`run` requires `pip install xgboost scipy` on your laptop. `verify` and `direct` work without these.
 
 `analysis.ipynb` is the Stage-8 calibration-progress notebook (26 cells). Open in Jupyter and run-all. It runs the simulation under both calm AND stressed regimes (fix-agents-swap-environment), computes Cont 2001 stylized-fact moments for each, and visualises:
 
@@ -429,7 +469,7 @@ python calibrate.py lhs 200 90 3    # 200-point LHS, 90 days/run, 3 seeds (~15 m
 9. MM inventory + quote dynamics (HFABM-style)
 10. CM cap_ratio plots (BCM split by mode, NBCM)
 11. End-of-run agent state by type
-12. **Calibration progress** — auto-loads `output/calibration_lhs.csv` if present, shows loss landscape across the 5-D LHS search.
+12. **Calibration progress** — auto-loads `output/calibration_lhs.csv` (LHS training data) and `output/calibration_feature_importance.csv` (XGBoost per-(regime, moment) importance heatmap) if present. Cell 1 also auto-loads `output/calibrated_params.json` so the rest of the notebook simulates at the calibrated θ rather than pre-calibration defaults.
 
 ---
 

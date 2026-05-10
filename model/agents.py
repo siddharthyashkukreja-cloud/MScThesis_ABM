@@ -129,7 +129,7 @@ class FundamentalTrader(BaseTrader):
         else:
             return
         price = max(reservation, params.tick_size)
-        qty = int(rng.integers(params.zi_qty_min, params.zi_qty_max + 1))
+        qty = int(rng.integers(params.dir_qty_min, params.dir_qty_max + 1))
         lob.add_limit(self.agent_id, side, price, qty)
 
 
@@ -182,10 +182,10 @@ class BankingClearingMember(FundamentalTrader):
 
     def _fire_sale(self, lob: LOB, params: ModelParams):
         if self.inventory > 0:
-            qty = min(self.inventory, params.zi_qty_max)
+            qty = min(self.inventory, params.dir_qty_max)
             lob.add_market(self.agent_id, -1, qty)
         elif self.inventory < 0:
-            qty = min(-self.inventory, params.zi_qty_max)
+            qty = min(-self.inventory, params.dir_qty_max)
             lob.add_market(self.agent_id, 1, qty)
 
     def _market_make(self, lob: LOB, params: ModelParams, ref: float):
@@ -266,7 +266,8 @@ class MomentumTrader(BaseTrader):
       - Mid-anchored (current): MTs place around current market level,
         following price discovery. Closer to Chiarella momentum spec.
 
-    Quantity ~ Uniform{1, zi_qty_max}.
+    Quantity ~ Uniform{dir_qty_min, dir_qty_max} — directional-agent qty
+    scaled by dt_minutes (deterministic 1-order-per-step).
     """
     z_score: float = 0.0
 
@@ -278,5 +279,5 @@ class MomentumTrader(BaseTrader):
         anchor = ctx.mid_price if not np.isnan(ctx.mid_price) else ctx.v
         price = anchor * (1.0 + self.z_score * params.mt_sigma_rel)
         price = max(price, params.tick_size)
-        qty = int(rng.integers(params.zi_qty_min, params.zi_qty_max + 1))
+        qty = int(rng.integers(params.dir_qty_min, params.dir_qty_max + 1))
         lob.add_limit(self.agent_id, side, price, qty)
