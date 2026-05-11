@@ -32,16 +32,14 @@ def _params(**overrides):
         n_zi=0, n_fundamental=0, n_momentum=0,
         n_bcm=15, n_bcm_mm=8, n_bcm_with_clients=8, n_nbcm=5,
         clients_per_book=6, client_book_ft=2, client_book_mt=2, client_book_zi=2,
-        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
-        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
+        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=1,
+        zi_alpha=0.15, zi_mu=0.025,
         zi_qty_min=1, zi_qty_max=10,
         dir_qty_min=5, dir_qty_max=50,
-        zi_offset_p=0.5, zi_offset_max=20,
-        ft_sigma_rel=0.005,
-        mt_sigma_rel=0.005, mt_lambda_ewma=0.95, mt_threshold=1e-4,
+        mt_lambda_ewma=0.95, mt_threshold=1e-4,
         mu_v=0.0, sigma_v=0.001,
         jump_lambda=0.0, jump_mean=0.0, jump_std=0.01,
-        mm_half_spread_bps=30.0, mm_qty=50, mm_inventory_skew_bps=0.5,
+        mm_n_levels=4, mm_qty=50, mm_inventory_limit=1000,
     )
     base.update(overrides)
     return ModelParams(**base)
@@ -154,9 +152,10 @@ class TestStage3(unittest.TestCase):
         self.assertGreater(two_sided / max(len(post), 1), 0.8,
                            "MM not maintaining two-sided book")
 
-    def test_bcm_mm_inventory_skew(self):
-        """Long inventory shifts both quotes down; short shifts up."""
-        p = _params()
+    def test_bcm_mm_ladder_posts_n_levels(self):
+        """HFABM-style MM posts mm_n_levels bid+ask quotes per step."""
+        p = _params(n_zi=0, n_fundamental=0, n_momentum=0,
+                    n_bcm=1, n_bcm_mm=1, n_bcm_with_clients=0, n_nbcm=0)
         traders = build_traders(p, 51)
         mm = next(t for t in traders if isinstance(t, BankingClearingMember)
                   and t.mode == "market_maker")
@@ -165,31 +164,48 @@ class TestStage3(unittest.TestCase):
         import numpy as np
 
         rng = np.random.default_rng(0)
-        # Use a price-scale (V=100) where bps shifts are within tick precision
-        # at sufficient inventory. mm_inventory_skew_bps default = 0.5 -> need
-        # at least 1 unit of inventory to shift > tick_size=0.01 at V=100
-        # (1 unit -> 0.5bps = 0.005 which rounds to tick_size). Use 1000+ for
-        # clear directional shift.
         ctx = SimContext(v=100.0, mid_price=100.0, momentum=0.0, tick=0,
-                         traders_by_id={mm.agent_id: mm})
+                         traders_by_id={mm.agent_id: mm}, v_var=1e-6)
 
-        def quote_prices(inv):
-            lob = LOB(p.tick_size, p.order_ttl)
-            mm.inventory = inv
-            mm._mm_order_ids = []
-            mm.submit_orders(lob, p, ctx, rng)
-            lob.match()
-            return float(lob.best_bid), float(lob.best_ask)
+        lob = LOB(p.tick_size, p.order_ttl)
+        mm.submit_orders(lob, p, ctx, rng)
 
-        bid_zero, ask_zero = quote_prices(0)
-        bid_long, ask_long = quote_prices(10000)   # large inventory for visible shift
-        bid_short, ask_short = quote_prices(-10000)
+        # Count bids and asks at distinct prices
+        n_bid_levels = sum(1 for q in lob._bids.values() if q)
+        n_ask_levels = sum(1 for q in lob._asks.values() if q)
+        self.assertEqual(n_bid_levels, p.mm_n_levels)
+        self.assertEqual(n_ask_levels, p.mm_n_levels)
 
-        self.assertLess(bid_long, bid_zero, "long inventory should lower bid")
-        self.assertLess(ask_long, ask_zero, "long inventory should lower ask")
-        self.assertGreater(bid_short, bid_zero, "short inventory should raise bid")
-        self.assertGreater(ask_short, ask_zero, "short inventory should raise ask")
-        mm.inventory = 0
+    def test_bcm_mm_inventory_limit_liquidates(self):
+        """When |inv| > mm_inventory_limit, MM submits market liquidation."""
+        p = _params(n_zi=0, n_fundamental=0, n_momentum=0,
+                    n_bcm=1, n_bcm_mm=1, n_bcm_with_clients=0, n_nbcm=0)
+        traders = build_traders(p, 53)
+        mm = next(t for t in traders if isinstance(t, BankingClearingMember)
+                  and t.mode == "market_maker")
+        # Inject pre-existing book to absorb market-order liquidation
+        from model.lob import LOB
+        from model.globals import SimContext
+        lob = LOB(p.tick_size, p.order_ttl)
+        # Add a deep bid book so MM can sell into it
+        lob.add_limit(99999, +1, 99.0, 5000)
+
+        rng = np.random.default_rng(0)
+        ctx = SimContext(v=100.0, mid_price=99.5, momentum=0.0, tick=0,
+                         traders_by_id={mm.agent_id: mm}, v_var=1e-6)
+
+        # Force inventory above limit
+        mm.inventory = p.mm_inventory_limit + 500
+        start_inv = mm.inventory
+        mm.submit_orders(lob, p, ctx, rng)
+        lob.match()
+        # MM should have submitted a sell-market and reduced inventory
+        # apply fill to mm.inventory: simulate fill semantics
+        for f in lob.step_fills:
+            if f.seller_id == mm.agent_id:
+                mm.inventory -= f.qty
+        self.assertLess(mm.inventory, start_inv,
+                        "MM did not liquidate inventory when over limit")
 
     def test_bcm_fire_sale_liquidates(self):
         """Manually-stressed BCM (low cash, large position) liquidates inventory.

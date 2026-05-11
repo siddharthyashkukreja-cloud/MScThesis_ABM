@@ -22,11 +22,10 @@ from model.simulation import Simulation
 def _build_params(**overrides):
     base = dict(
         n_zi=10, n_fundamental=0, n_momentum=0,
-        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
-        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,   # per-minute rates
+        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=1,
+        zi_alpha=0.15, zi_mu=0.025,
         zi_qty_min=1, zi_qty_max=10,
         dir_qty_min=5, dir_qty_max=50,
-        zi_offset_p=0.5, zi_offset_max=20,
         sigma_v=0.0,
     )
     base.update(overrides)
@@ -94,14 +93,14 @@ class TestStage1(unittest.TestCase):
     def test_bounded_spread(self):
         """Spread stays bounded under ZI-only flow.
 
-        Under Geometric(zi_offset_p) depth capped at zi_offset_max,
-        spread can transiently reach ~ 2 * zi_offset_max ticks when
-        only deep-tail orders survive on both sides. Empirical bound:
-        3 * zi_offset_max -- well above observed maxima, well below
-        run-away.
+        Under V-relative ODD-style placement V*(1 + z*sqrt(nu_t)) with
+        sigma_v=0 (test config), reservation collapses to V exactly.
+        Spread is then determined by mid lookup vs incoming reservations
+        and is bounded by tick precision (1-2 ticks typically).
+        Generous bound to absorb book bootstrap effects.
         """
         params = _build_params()
-        max_spread_ticks = 3 * params.zi_offset_max
+        max_spread_ticks = 100   # generous; sigma_v=0 makes spread very tight
         sim = StepInvariantSimulation(params, _build_traders(params.n_zi, 21), seed=21)
         sim.run(300)
         warmed = sim.invariants[20:]

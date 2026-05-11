@@ -25,13 +25,11 @@ from model.simulation import Simulation
 def _params(**overrides):
     base = dict(
         n_zi=10, n_fundamental=10, n_momentum=10,
-        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
-        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
+        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=1,
+        zi_alpha=0.15, zi_mu=0.025,
         zi_qty_min=1, zi_qty_max=10,
         dir_qty_min=5, dir_qty_max=50,
-        zi_offset_p=0.5, zi_offset_max=20,
-        ft_sigma_rel=0.005,
-        mt_sigma_rel=0.005, mt_lambda_ewma=0.95, mt_threshold=1e-4,
+        mt_lambda_ewma=0.95, mt_threshold=1e-4,
         mu_v=0.0, sigma_v=0.001,
         jump_lambda=0.0, jump_mean=0.0, jump_std=0.01,
     )
@@ -75,22 +73,24 @@ class TestStage2(unittest.TestCase):
         """FT-only with frozen V: P_mid stays close to V after warmup.
 
         V is constant at v0. FTs with z ~ N(0,1) have reservations spread
-        around V, so the marketable side flips as P drifts away from V,
-        keeping mid bounded around V0. Bound: |mid - V| <= 4 * ft_sigma
-        (covers ~4-sigma tail of reservation distribution) post-warmup.
+        around V by z*sqrt(nu_t). With sigma_v=0.001, daily-scale spread
+        is z*sqrt(78)*sigma_v*V ~ 0.009*V. Bound: 4 sigma tail of reservation
+        distribution post-warmup, scaled to per-step nu_t.
         """
         p = _params(n_zi=5, n_fundamental=20, n_momentum=0,
-                    sigma_v=0.0, mu_v=0.0, jump_lambda=0.0)
+                    sigma_v=0.001, mu_v=0.0, jump_lambda=0.0)
         sim = Simulation(p, _build(p, 7), seed=7)
         sim.run(300)
         mids = np.array([m for m in sim.history["mid_price"][50:]
                          if not np.isnan(m)])
         self.assertGreater(len(mids), 0)
         max_dev = float(np.max(np.abs(mids - p.v0)))
-        bound = 4.0 * p.ft_sigma_rel * p.v0  # ft reservation spans ~4 sigma
+        # FT reservation = V*(1 + z*sigma_t). With z up to 4 (rare tail) and
+        # sigma_t = 0.001 per step, max_dev <= 4*sigma_t*V = 0.004*V
+        bound = 4.0 * p.sigma_v * p.v0
         self.assertLessEqual(
             max_dev, bound,
-            f"mid wandered {max_dev:.3f} from V (bound 4*ft_sigma_rel*V={bound:.3f})"
+            f"mid wandered {max_dev:.4f} from V (bound 4*sigma_v*V={bound:.4f})"
         )
 
     def test_mt_trend_following(self):

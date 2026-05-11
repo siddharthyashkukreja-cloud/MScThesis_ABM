@@ -4,6 +4,27 @@ Agent-based simulation of a CCP-cleared financial market, built to study systemi
 
 ---
 
+## Next Steps
+
+- Redo order scaling logic, currently parameters zi_qty_min and zi_qty_min uniform [1,10] but instead of 1 min steps we have 5 min steps
+- Depth of limit order for noise trader is geometric offset(discrete time exponential), perhaps dosent need maximum but does need to be calibrated from data
+- ft_sigma_rel for fundamental sigma offset is currently calibrated, shoudl just be sigma of fundamental
+- Exact volatility scaling process from Gao, perhaps for later?
+- Intraday data for calibration? - L2 book for noise trader limit offset, calibrating Cont-Stoikov; for FV signal drift and diffusion and jumps 
+- FT, MT and MM order cancellation after 10 ticks (maybe 3 as we have 10 min), if new order sent last order cancelled, also overrules zi_delta so maybe just remove that 
+- CHange limit price for MT and FT to offset by sigma_fundamental or sigma_momentum
+- Change market maker to match Krishnen paper, and change claude documentation to amke it different trader type
+- Fix parameters to fix, calibrate on empirical data, or calibrate using surrogate modelling 
+
+---
+
+## Questions for Krishnen
+
+- 
+
+
+---
+
 ## Overview
 
 This project implements a heterogeneous agent-based model (HABM), calibrated to real market data. The simulation reproduces stylised facts of financial markets — fat-tailed returns, volatility clustering, autocorrelation structure — and overlays a CCP margin and default framework to study how clearing mechanics interact with price dynamics under stress. The model can be thought of as an extension to the Deloitte-Simudyne CCP Risk Model with client tiers and a richer market environment.
@@ -204,6 +225,22 @@ relative to the current midprice, with no dependence on fundamental value.
 
 
 ### Parameters and Calibration
+
+**ZI/Noise/Vol. Trader**
+
+zi_alpha (α): limit order arrival rate
+zi_mu (μ): market order arrival rate 
+zi_delta (δ): order cancellation rate (can maybe be deleted if orders removed every 3 steps regardless)
+
+Limit orders placed at mid price + exponential(geometric for discrete) depth 
+
+All can be estimated from L2 order book data
+
+Order size range: scaled with volatality signal (Gao Deep Hedging) which follows Heston process interacted with GBM for Wts with is correlated with variance with rho - price and volatility have negative correlation 
+
+**Heston Volatility Process**
+
+
 
 --- 
 

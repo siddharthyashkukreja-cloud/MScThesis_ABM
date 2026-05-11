@@ -120,16 +120,17 @@ def main():
         n_zi=0, n_fundamental=0, n_momentum=0,                     # no direct
         n_bcm=15, n_bcm_mm=8, n_bcm_with_clients=8, n_nbcm=5,      # 8 MM-clearing, 7 FT-prop, 5 NBCM
         clients_per_book=6, client_book_ft=2, client_book_mt=2, client_book_zi=2,
-        v0=450.0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
-        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,   # rates / minute
-        zi_qty_min=1, zi_qty_max=10,                  # ZI: ODD U[1,10] (Poisson handles cadence)
-        dir_qty_min=5, dir_qty_max=50,                # FT/MT/CMs: U[5,50] = ODD U[1,10] x dt_minutes
-        zi_offset_p=0.5, zi_offset_max=20,
-        ft_sigma_rel=0.005,
-        mt_sigma_rel=0.005, mt_lambda_ewma=0.95, mt_threshold=1e-4,
+        v0=450.0, tick_size=0.01, dt_minutes=5.0,
+        order_ttl=1,                                  # limit orders don't rest
+        zi_alpha=0.15, zi_mu=0.025,                   # ODD per-step Bernoulli
+        zi_qty_min=1, zi_qty_max=10,                  # ODD U[1,10]
+        dir_qty_min=5, dir_qty_max=50,                # FT/MT/CMs: U[5,50] = ODD x dt
+        mt_lambda_ewma=0.95, mt_threshold=1e-4,
         mu_v=0.0, sigma_v=0.001,
-        jump_lambda=0.0385, jump_mean=0.0, jump_std=0.01,   # ODD: 3 jumps/day = 3/78 per 5-min
-        mm_half_spread_bps=30.0, mm_qty=50, mm_inventory_skew_bps=0.5,
+        kappa_v=0.0, theta_v=0.0, xi_v=0.0,           # CIR off until calibrated
+        rho_v=-0.7,                                   # Heston leverage default
+        jump_lambda=0.0385, jump_mean=0.0, jump_std=0.01,   # ODD jumps
+        mm_n_levels=4, mm_qty=50, mm_inventory_limit=1000,  # HFABM Cao 2024 ladder
     )
 
     traders = build_traders(params, seed=42)
