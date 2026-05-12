@@ -178,3 +178,144 @@ relative to the current midprice, with no dependence on fundamental value.
 - If `M_t < 0`: submit a **sell** limit.
 - If `abs(M_t) < mt_threshold`: no order.
 
+**Limit price placement**
+
+- Each MT draws a fixed `z_i ~ Normal(0, 1)` at initialisation.
+- Reference price is the current midprice if available, otherwise last traded price.
+- Buy limit:
+
+  `price = mid_t + z_i * mt_sigma_abs`
+
+- Sell limit:
+
+  `price = mid_t - z_i * mt_sigma_abs`
+
+- `mt_sigma_abs` is an absolute offset in price units (e.g. dollars or ticks).
+- Price is floored at `tick_size` and rounded to the tick grid.
+
+**Order size**
+
+- Size is independent of signal magnitude:
+
+  `q ~ Uniform{zi_qty_min, ..., zi_qty_max}`
+
+**Notes**
+
+- Placing relative to `mid_t` keeps MTs as market‑reactive agents with no fundamental belief, in contrast to FTs. `mt_sigma_abs` controls how aggressively they cross the spread.[cite:203]
+- Signal‑scaled aggressiveness via `tanh(mt_kappa * M_t)` is a natural extension if urgency effects are needed later.
+
+**Market Marker (Count: )**
+
+
+#### One LOB/Market Engine/CCP:
+
+
+
+
+#### Two types of clearing members:
+
+**Bank Clearing Member (Count: )**
+
+
+**Non-Bank Clearing Member (Count: )**
+
+
+
+### Fundamental Value Process
+
+
+### Parameters and Calibration
+
+**ZI/Noise/Vol. Trader**
+
+zi_alpha (α): limit order arrival rate
+zi_mu (μ): market order arrival rate 
+zi_delta (δ): order cancellation rate (can maybe be deleted if orders removed every 3 steps regardless)
+
+Limit orders placed at mid price + exponential(geometric for discrete) depth 
+
+All can be estimated from L2 order book data
+
+Order size range: scaled with volatality signal (Gao Deep Hedging) which follows Heston process interacted with GBM for Wts with is correlated with variance with rho - price and volatility have negative correlation 
+
+**Heston Volatility Process**
+
+
+
+--- 
+
+## Margin Call 
+
+### Initial Margin
+
+### Variation Margin
+
+### Default Fund
+
+
+---
+
+## Default Management Framework 
+
+--- 
+
+## Calibration
+
+
+---
+
+## Step Sequence
+
+
+---
+
+## Staged Development Plan
+
+The model is being built incrementally to isolate bugs at each layer before adding complexity:
+
+| Stage | What is added | Validation target |
+|---|---|---|
+| 1 | Baseline market + ZI noise only | Price discovery, return distribution |
+| 2 | + Fundamental and momentum traders | Stylised facts: fat tails, vol clustering, ACF |
+| 3 | + Balance sheets and IM/VM margin (current) | Cash depletion dynamics, margin call frequency |
+| 4 | + Default fund | Default fund adequacy under stress |
+| 5 | + Full CCP waterfall + fire-sale contagion | Cascade absorption, margin spiral |
+| 6 | + Almgren-Chriss distressed liquidation | Price impact from forced sales |
+| 7 | Stressed data | Stressed default probability, procyclicality |
+
+---
+
+## Future/Possible Extensions
+
+The following are on the roadmap but not yet implemented:
+
+- **Volatility traders** — Heston-style demand proportional to $\nu_t$ (stochastic variance), as in Gao et al. (2023). Demand: $\Delta \log P \propto \zeta \cdot \nu_t$, where $\nu_t$ follows a CIR mean-reverting process.
+- **Almgren-Chriss liquidation** — distressed agents (capital ratio ≤ 8%) slice positions optimally, generating measurable temporary price impact haircuts.
+- **Basel III deleveraging** — bank CMs deleverage when capital ratio approaches 8% floor; non-bank CMs freeze order submission.
+- **Client clearing delay** — non-bank CMs face a one-step delay in passing margin calls to clients, creating transient funding gaps.
+- **Strategy switching** — agents switch between fundamental, momentum, and noise strategies based on recent performance, following the reinforcement learning framework in Gao et al. (2023).
+- **Cover-2 default fund** — DF sized to cover the two largest member defaults (EMIR Art. 42); contributions proportional to exposure; recalculated daily.
+- **LOB / market maker** — optional limit order book with a market-making agent to provide liquidity between call auctions.
+
+---
+
+## Research Questions/Hypotheses
+
+1. Is Cover-2 sufficient to absorb a stressed default scenario calibrated to 2008-2009 data?
+2. Do bank CMs that clear for clients face higher default probability than proprietary traders under margin spirals?
+3. How does trade concentration (crowded positions) amplify contagion through the CCP waterfall?
+4. What is the conditional probability of a second default given a first?
+5. Does CoMargin (correlated margin) reduce procyclicality relative to individual SPAN-style IM?
+6. How does CCP fire-sale price impact differ between calm and stressed regimes?
+
+---
+
+## References
+
+- Majewski, A., Ciliberti, S., & Bouchaud, J.-P. (2018). *Co-existence of Trend and Value in Financial Markets: Estimating an Extended Chiarella Model.* arXiv:1807.11751.
+- Almgren, R. & Chriss, N. (2000). *Optimal Execution of Portfolio Transactions.* Journal of Risk.
+- Gao, X. et al. (2023). *Deeper Hedging: A New Agent-based Model for Effective Deep Hedging.* arXiv:2310.18755.
+- Bookstaber, R., Paddrik, M. & Tivnan, B. (2014). *An Agent-based Model for Financial Vulnerability.* OFR Working Paper 2014-05.
+- Kyle, A.S. (1985). *Continuous Auctions and Insider Trading.* Econometrica, 53(6), 1315–1335.
+- CPMI-IOSCO (2012). *Principles for Financial Market Infrastructures.*
+- ESMA (2016). *RTS 2016/2251 — Margin Requirements for Non-Centrally Cleared OTC Derivatives.*
