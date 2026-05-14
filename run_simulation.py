@@ -1,51 +1,34 @@
 """
-Entry point for Stage 3: LOB + ZI direct + BCM + NBCM + client-clearing tier.
+Entry point. Real-bank-tier population (98 agents):
+  - 15 BCM: 8 MM-mode (with clients), 7 FT-prop (no clients)
+  - 5  NBCM (all with clients)
+  - 78 clients: 3 FT + 3 ZI per book × 13 books (8 BCM-MM books + 5 NBCM books)
 
-Topology (ODD-faithful + clients extension):
-- 10 ZI direct
-- 10 BCM (FundamentalTrader behaviour, V+z*sigma placement); 3 of 10 have a
-  client book attached.
-- 10 NBCM (passive structural entity; never trades on own account); ALL 10
-  have a client book.
-- Each client book = 1 FT + 1 MT + 1 ZI = 3 clients (cleared via that CM).
+Cash distribution (ODD §Initialization, claudereadme D14):
+  BCM ~ U[5B, 10B]  | NBCM ~ U[5M, 10M]
+  FT client ~ U[1M, 10M]  | ZI client ~ U[10k, 100k]
 
-Cash ranges per ODD §Initialization scaled to SPY-relevant magnitudes:
-BCM ~U[5B, 10B], NBCM ~U[5M, 10M], retail/direct ~U[100k, 1M].
-
-Fundamental V_t evolves under Merton (1976) jump-diffusion; jumps off in
-Stage 3 baseline. Calibration of all parameters lives in the calibration
-stage.
+V_t is exogenous (loaded from params.fv_csv); no in-sim diffusion / jumps.
 """
 
 import os
 import numpy as np
 import pandas as pd
 
-from model.globals import ModelParams
+from model.globals import ModelParams, V0
 from model.agents import (
-    ZeroIntelligenceTrader, FundamentalTrader, MomentumTrader,
+    ZeroIntelligenceTrader, FundamentalTrader,
     BankingClearingMember, NonBankingClearingMember,
 )
 from model.simulation import Simulation
 
 
 def _make_client_book(rng, next_id, clearing_member_id, params):
-    """Per-CM client book: params.client_book_ft FTs + .._mt MTs + .._zi ZIs.
-
-    Cash per client by type:
-      - FT/MT (institutional): U[$1M, $10M]
-      - ZI    (retail):        U[$10k, $100k]
-    """
+    """Per-CM client book: params.client_book_ft FTs + .._zi ZIs."""
     clients = []
     for _ in range(params.client_book_ft):
         cid = next_id()
         clients.append(FundamentalTrader(
-            agent_id=cid, cash=float(rng.uniform(1e6, 1e7)),
-            z_score=float(rng.standard_normal()),
-            clearing_member_id=clearing_member_id))
-    for _ in range(params.client_book_mt):
-        cid = next_id()
-        clients.append(MomentumTrader(
             agent_id=cid, cash=float(rng.uniform(1e6, 1e7)),
             z_score=float(rng.standard_normal()),
             clearing_member_id=clearing_member_id))
@@ -67,31 +50,23 @@ def build_traders(params: ModelParams, seed: int) -> list:
         counter[0] += 1
         return i
 
-    # 1) Direct ZI
+    # 1) Direct ZI (0 by default)
     for _ in range(params.n_zi):
         traders.append(ZeroIntelligenceTrader(
             agent_id=next_id(), cash=float(rng.uniform(1e5, 1e6))))
 
-    # 2) Direct FT / MT (zero by default in Stage 3; kept for flexibility)
+    # 2) Direct FT (0 by default)
     for _ in range(params.n_fundamental):
         traders.append(FundamentalTrader(
             agent_id=next_id(), cash=float(rng.uniform(1e5, 1e6)),
             z_score=float(rng.standard_normal())))
-    for _ in range(params.n_momentum):
-        traders.append(MomentumTrader(
-            agent_id=next_id(), cash=float(rng.uniform(1e5, 1e6)),
-            z_score=float(rng.standard_normal())))
 
-    # 3) Banking CMs (n_bcm_mm and n_bcm_with_clients are independent flags):
-    #    - First n_bcm_mm BCMs run as market makers (mode='market_maker').
-    #    - First n_bcm_with_clients BCMs (regardless of mode) carry clients.
-    #    - Real-bank-tier default: MMs ALSO clear for clients
-    #      (e.g., GS/JPM/Morgan Stanley both market-make and run prime brokerage).
+    # 3) Banking CMs
     for i in range(params.n_bcm):
         is_mm = i < params.n_bcm_mm
         bcm = BankingClearingMember(
             agent_id=next_id(),
-            cash=float(rng.uniform(5e9, 10e9)),     # ODD: ~U[5B, 10B]
+            cash=float(rng.uniform(5e9, 10e9)),
             z_score=float(rng.standard_normal()),
             mode="market_maker" if is_mm else "fundamental",
         )
@@ -101,11 +76,11 @@ def build_traders(params: ModelParams, seed: int) -> list:
             bcm.client_ids.extend(c.agent_id for c in book)
             traders.extend(book)
 
-    # 4) Non-Banking CMs (all carry client books)
+    # 4) Non-Banking CMs (all carry clients)
     for _ in range(params.n_nbcm):
         nbcm = NonBankingClearingMember(
             agent_id=next_id(),
-            cash=float(rng.uniform(5e6, 10e6)),     # ODD: ~U[5M, 10M]
+            cash=float(rng.uniform(5e6, 10e6)),
         )
         traders.append(nbcm)
         book = _make_client_book(rng, next_id, nbcm.agent_id, params)
@@ -116,21 +91,28 @@ def build_traders(params: ModelParams, seed: int) -> list:
 
 
 def main():
+    stressed = False
+    regime = "stressed" if stressed else "calm"
+
     params = ModelParams(
-        n_zi=0, n_fundamental=0, n_momentum=0,                     # no direct
-        n_bcm=15, n_bcm_mm=8, n_bcm_with_clients=8, n_nbcm=5,      # 8 MM-clearing, 7 FT-prop, 5 NBCM
-        clients_per_book=6, client_book_ft=2, client_book_mt=2, client_book_zi=2,
-        v0=450.0, tick_size=0.01, dt_minutes=5.0,
-        order_ttl=1,                                  # limit orders don't rest
-        zi_alpha=0.15, zi_mu=0.025,                   # ODD per-step Bernoulli
-        zi_qty_min=1, zi_qty_max=10,                  # ODD U[1,10]
-        dir_qty_min=5, dir_qty_max=50,                # FT/MT/CMs: U[5,50] = ODD x dt
-        mt_lambda_ewma=0.95, mt_threshold=1e-4,
-        mu_v=0.0, sigma_v=0.001,
-        kappa_v=0.0, theta_v=0.0, xi_v=0.0,           # CIR off until calibrated
-        rho_v=-0.7,                                   # Heston leverage default
-        jump_lambda=0.0385, jump_mean=0.0, jump_std=0.01,   # ODD jumps
-        mm_n_levels=4, mm_qty=50, mm_inventory_limit=1000,  # HFABM Cao 2024 ladder
+        # Direct populations
+        n_zi=0, n_fundamental=0, n_mm=0,
+        # Clearing tier
+        n_bcm=15, n_bcm_mm=8, n_bcm_with_clients=8, n_nbcm=5,
+        clients_per_book=6, client_book_ft=3, client_book_zi=3,
+        # Asset / cadence
+        v0=V0[regime], tick_size=0.25, dt_minutes=5.0, order_ttl=2,
+        # ZI
+        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
+        p_zi=0.30,
+        # FT — ft_alpha=0.5 is a non-degenerate operating point (mid tracks V,
+        #      corr≈0.93); the true value is set by the agent-calibration loop.
+        ft_alpha=0.5, ft_sigma_c=10.0,
+        # MM (HFABM defaults)
+        mm_qty=50, mm_p_edge=4,
+        mm_inventory_limit=1000, mm_inventory_safe=500,
+        # Regime
+        stressed=stressed,
     )
 
     traders = build_traders(params, seed=42)
@@ -138,7 +120,7 @@ def main():
     history = sim.run(n_steps=78)
 
     os.makedirs("output", exist_ok=True)
-    pd.DataFrame(history).to_csv("output/stage3_run.csv", index=False)
+    pd.DataFrame(history).to_csv(f"output/run_{regime}.csv", index=False)
 
 
 if __name__ == "__main__":

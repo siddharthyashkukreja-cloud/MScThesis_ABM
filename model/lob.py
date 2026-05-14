@@ -54,17 +54,24 @@ class LOB:
 
         self._next_id = 0
         self.step_fills: List[Fill] = []
+        self.last_price: float = np.nan   # most recent fill price (mid fallback)
 
     # -- Order submission -------------------------------------------------
 
-    def add_limit(self, agent_id: int, side: int, price: float, qty: int) -> int:
+    def add_limit(self, agent_id: int, side: int, price: float, qty: int,
+                  ttl: Optional[int] = None) -> int:
         price = self._round(price)
         oid = self._next_id; self._next_id += 1
-        order = Order(oid, agent_id, side, price, qty, self.order_ttl)
+        use_ttl = ttl if ttl is not None else self.order_ttl
+        order = Order(oid, agent_id, side, price, qty, use_ttl)
         book = self._bids if side == 1 else self._asks
         book.setdefault(price, []).append(order)
         self._order_index[oid] = (side, price)
         return oid
+
+    def is_resting(self, order_id: int) -> bool:
+        """Returns True if the order is still in the book (not filled / expired / cancelled)."""
+        return order_id in self._order_index
 
     def add_market(self, agent_id: int, side: int, qty: int) -> List[Fill]:
         """Market order executes immediately against resting quotes."""
@@ -192,15 +199,19 @@ class LOB:
         }
 
     def _update_quotes(self):
+        if self.step_fills:
+            self.last_price = self.step_fills[-1].price
         self.best_bid = max(self._bids) if self._bids else np.nan
         self.best_ask = min(self._asks) if self._asks else np.nan
         if not (np.isnan(self.best_bid) or np.isnan(self.best_ask)):
             self.mid_price = (self.best_bid + self.best_ask) / 2
             self.spread = self.best_ask - self.best_bid
-        elif not np.isnan(self.best_bid):
-            self.mid_price = self.best_bid
-        elif not np.isnan(self.best_ask):
-            self.mid_price = self.best_ask
+        else:
+            # One or both sides empty: fall back to the last trade price rather
+            # than teleporting mid to an arbitrary surviving resting limit.
+            if not np.isnan(self.last_price):
+                self.mid_price = self.last_price
+            self.spread = np.nan
 
     def _round(self, price: float) -> float:
         return round(price / self.tick_size) * self.tick_size
