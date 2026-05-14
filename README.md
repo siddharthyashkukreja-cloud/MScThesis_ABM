@@ -20,10 +20,65 @@ Agent-based simulation of a CCP-cleared financial market, built to study systemi
 
 ## Questions for Krishnen
 
-- 
+- Momentum Trader: if places limit orders, how to determine depth? Leave Momentum Trader as placing only market orders? - when momentum signal exceeds some threshold
+- Calibration: Use L2 to calibrate Cont-Stoikov for ZI Trader
+- FT: give some limit order placement probability? Cancellation governed by draw from a uniform
+- FV: calibrate based on price data? Leave jump at 3 a day and just get variances from each regime and drift as 0. Literature shows S&P dosen't see more than a couple jumps a year, leave as GBM? Try Kalman Smoother?
 
 
 ---
+
+## Financial Market Simulation
+
+ZI Trader
+- zi_alpha (limit), zi_mu (market), zi_delta (cancel) - Poisson Distributed
+- Depth: mid +- tick_size . Geometric Depth (p_zi) fitted on data
+- Qty = U[1,10] - maybe change for 5 min
+- Possibly extend: Volatility Scaling using a heston stochastic volatility signal
+
+
+Fundamental Trader
+- ft_alpha (limit)
+- Order Depth: V_t +- z.sigma_fundamental, z ~ N(0,1)
+- Qty = U[1,10]
+- Cancellation: per order TTL U{1,10}
+
+Market Maker
+- Order placed at every step unless inventory breach (mm_limit)
+- Order placed at depth mid +- tick_size.d where d~U[0,p_edge]
+
+Momentum Trader (possibly extend)
+- issues: order placement depth 
+- Possible: if momentum signal beyond threshold, place market order
+
+
+## Parameters
+
+- ZI Trader
+zi_alpha/mu/delta: take from ODD, calibrate from L2
+p_zi: calibrate on L2
+
+- FT
+ft_alpha: 
+sigma_fundamental: from V_t 
+
+- Market Maker
+mm_limit: pick
+mm_safe: pick
+p_edge: take 4 from HFABM?, calibrate on L2
+
+- Momentum trader
+lambda for momentum signal
+Limit price offset from mid?
+
+
+- FV
+jump_lambda: estimate from price data? Leave at 3 a day
+fv_drift_mu: 0? estimate from data
+jump_mean
+jump_std
+diffusion_vol: estimate from data
+
 
 ## Overview
 
@@ -226,23 +281,15 @@ relative to the current midprice, with no dependence on fundamental value.
 
 ### Parameters and Calibration
 
-**ZI/Noise/Vol. Trader**
+FV Signal
+ Kalman Smoother on price data, save as file, feed FV values back to FV traders
 
-zi_alpha (α): limit order arrival rate
-zi_mu (μ): market order arrival rate 
-zi_delta (δ): order cancellation rate (can maybe be deleted if orders removed every 3 steps regardless)
-
-Limit orders placed at mid price + exponential(geometric for discrete) depth 
-
-All can be estimated from L2 order book data
-
-Order size range: scaled with volatality signal (Gao Deep Hedging) which follows Heston process interacted with GBM for Wts with is correlated with variance with rho - price and volatility have negative correlation 
-
-**Heston Volatility Process**
+V_t: CSV with Kalman Smoother Fundamentals on daily prices
+sigma_fundamental_calm: 0.008178 / np.sqrt(78)  = 0.000926
+sigma_fundamental_stressed: 0.048739 / np.sqrt(78) = 0.005521
 
 
 
---- 
 
 ## Margin Call 
 
