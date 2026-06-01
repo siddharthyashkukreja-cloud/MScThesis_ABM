@@ -1,0 +1,37 @@
+{
+  "calm": {
+    "regime": "calm",
+    "n_obs": 102501,
+    "v0": 2463.5,
+    "beta_total": 5.65340278269968e-08,
+    "beta_perm": -4.735537793329076e-09,
+    "beta_temp": 6.126956562032588e-08,
+    "se_total": 1.7348887984628956e-10,
+    "se_perm": 1.594791084898077e-09,
+    "K_lookahead": 30,
+    "eta_temp": 0.0001509375749056728,
+    "eta_temp_raw": 0.0001509375749056728,
+    "gamma_perm": 0.0,
+    "gamma_perm_raw": -1.1665997353866179e-05,
+    "calibration_window": "2019-01-01 \u2192 2019-12-30"
+  },
+  "stressed": {
+    "regime": "stressed",
+    "n_obs": 11416,
+    "v0": 3252.25,
+    "beta_total": 1.7306167326769497e-07,
+    "beta_perm": -4.237065547459812e-08,
+    "beta_temp": 2.1543232874229308e-07,
+    "se_total": 1.9189577942805617e-09,
+    "se_perm": 1.6307430171816904e-08,
+    "K_lookahead": 30,
+    "eta_temp": 0.0007006397911521226,
+    "eta_temp_raw": 0.0007006397911521226,
+    "gamma_perm": 0.0,
+    "gamma_perm_raw": -0.00013779996426726174,
+    "calibration_window": "2020-02-24 \u2192 2020-04-02"
+  },
+  "lambda_risk": 0.001,
+  "ac_horizon": 30,
+  "methodology": "1-min Hasbrouck-Almgren-Chriss linear-impact"
+}

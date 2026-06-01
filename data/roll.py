@@ -1,7 +1,7 @@
 """
 data/roll.py
 Produce a single continuous front-month ES series per period,
-rolled on the CME schedule, resampled to 5-min bars.
+rolled on the CME schedule, at 1-min bars (the simulation cadence).
 """
 
 from pathlib import Path
@@ -39,18 +39,22 @@ def front_month_at(dt: pd.Timestamp) -> str:
     return "ESZ0"  # fallback for late 2020
 
 
-def build_continuous(ohlcv_path: Path, name: str) -> pd.DataFrame:
-    df = pd.read_csv(ohlcv_path, index_col=0, parse_dates=True)
+def _front_month(df: pd.DataFrame) -> pd.DataFrame:
+    """Tag each row with the front-month contract and keep only those rows."""
+    df = df.copy()
     df.index = pd.to_datetime(df.index, utc=True)
-
-    # Tag each row with the front-month contract at that timestamp
     df["front"] = df.index.map(front_month_at)
+    return df[df["symbol"] == df["front"]].drop(columns="front")
 
-    # Keep only rows where symbol matches the front-month
-    df = df[df["symbol"] == df["front"]].drop(columns="front")
 
-    # Resample to 5-min OHLCV
-    df5 = df[["open","high","low","close","volume"]].resample("5min").agg({
+def build_continuous(ohlcv_path: Path, bbo_path: Path, name: str) -> pd.DataFrame:
+    """Rolled front-month 1-min series. `close` is the last trade price
+    (OHLCV feed); `mid` is the end-of-minute (best_bid+best_ask)/2 from the
+    BBO feed — the mid is the price series the agent calibration matches
+    against (it is the simulator's own observable; the trade price carries
+    a bid-ask-bounce component the mid does not)."""
+    ohlcv = _front_month(pd.read_csv(ohlcv_path, index_col=0, parse_dates=True))
+    df1 = ohlcv[["open","high","low","close","volume"]].resample("1min").agg({
         "open":   "first",
         "high":   "max",
         "low":    "min",
@@ -58,13 +62,19 @@ def build_continuous(ohlcv_path: Path, name: str) -> pd.DataFrame:
         "volume": "sum",
     }).dropna(subset=["close"])
 
-    out = PROC_DIR / f"{name}_5m.csv"
-    df5.to_csv(out)
-    print(f"  -> {out}  ({len(df5):,} bars)")
-    return df5
+    bbo = _front_month(pd.read_csv(bbo_path, index_col=0, parse_dates=True))
+    mid = ((bbo["bid_px_00"] + bbo["ask_px_00"]) / 2.0).resample("1min").last()
+    df1["mid"] = mid.reindex(df1.index).ffill().bfill()
+
+    out = PROC_DIR / f"{name}_1m.csv"
+    df1.to_csv(out)
+    print(f"  -> {out}  ({len(df1):,} bars)")
+    return df1
 
 
 print("Building continuous front-month series...")
-calm     = build_continuous(PROC_DIR / "ohlcv_calm.csv",     "ES_front_calm")
-stressed = build_continuous(PROC_DIR / "ohlcv_stressed.csv", "ES_front_stressed")
+calm     = build_continuous(PROC_DIR / "ohlcv_calm.csv",
+                            PROC_DIR / "bbo_calm.csv",     "ES_front_calm")
+stressed = build_continuous(PROC_DIR / "ohlcv_stressed.csv",
+                            PROC_DIR / "bbo_stressed.csv", "ES_front_stressed")
 print("Done.")

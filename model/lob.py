@@ -5,7 +5,7 @@ Design
 ------
 - Single-asset, price-time priority, bids/asks stored as sorted dicts.
 - Call auction: orders accumulate during a step, then clear once.
-- Orders expire after `ttl` steps (ODD: 1-10 steps at 1-min; here 1-2 at 5-min).
+- Orders expire after `ttl` steps (ODD-native 1-min cadence; default ttl 10).
 - Mid-price = (best_bid + best_ask) / 2 after each auction.
 - Spread and depth are outputs, not inputs -- they emerge from order flow.
 

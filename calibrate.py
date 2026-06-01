@@ -1,108 +1,301 @@
 """
-Calibration via XGBoost surrogate (Form 1 — direct surrogate).
+calibrate.py — agent-parameter calibration via two-stage surrogate-assisted
+SMM (HFABM Gao et al. (2022) §4.2 two-stage workflow with HFABM/Franke & Westerhoff
+2012 inverse-bootstrap-variance weights).
 
-Workflow:
-  1. Direct calibration: read v0, mu_v, sigma_v from data.
-  2. LHS over 5-D behavioural+CIR space -> generate (theta, moments) pairs.
-  3. Train XGBoost regressor per moment.
-  4. Multi-start L-BFGS-B on surrogate loss to find theta*.
-  5. Validate by running simulator at theta*; save calibrated params.
+**PER-REGIME CALIBRATION (D18b).** Calm and stressed are calibrated as two
+INDEPENDENT optimisation problems. Every behavioural parameter is regime-
+specific — no shared parameters across regimes. Rationale: the calm/stressed
+regimes are economically distinct (different volatility, different book
+depth, different microstructure), so forcing a shared parameter to fit both
+introduces compromise instead of fit. Independent runs let each regime find
+its own optimum.
+
+Methodology (D18c/D18g — HFABM grouping + Franke & Westerhoff per-moment
+weighting):
+  1. Loss is XGB-Chiarella (Gao et al. 2022 §3.2, eq 6) — the paper's EXACT
+     4 grouped components:
+
+         D(θ) = ΔKS(θ) + ΔV(θ) + ΔACF1(θ) + ΔACF2(θ)
+
+     Each component is the mean Franke-STANDARDISED L1 distance over its
+     moments — every moment difference |m_sim − m_hist| is divided by that
+     moment's empirical block-bootstrap sampling SD s_i before averaging.
+     Standardisation makes each component dimensionless (a count of sampling
+     SDs), so all four carry equal weight and D is comparable across model
+     versions. (NB this is a deliberate improvement on the paper, which uses
+     raw equal weights because its four quantities happen to share a scale.)
+     The grouped moments (matched to the paper):
+         ΔKS    : Kolmogorov-Smirnov 2-sample stat vs the empirical return CDF
+                  (eq 7); target 0, /s_KS. Robust whole-distribution fat-tail
+                  target. NB s_KS is from full-length resamples while the sim
+                  sample is shorter, so ΔKS is somewhat OVER-weighted — watch
+                  the per-component line; size-match s_KS if it dominates.
+         ΔV     : ret_std
+         ΔACF1  : ACF of RETURNS, forward 3-lag avg at centres {1, 10, 20} (§3.2.2)
+         ΔACF2  : ACF of SQUARED returns at lags 1..20 (§3.2.3) — vol clustering
+         ΔHill  : banded Hill tail index (HFABM §4.1.1) — direct tail lever, paired
+                  with KS so both the whole distribution and the tail are matched.
+     KURTOSIS stays a diagnostic only (outlier-dominated → matching it is noise-chasing).
+
+  2. Weights: each moment's empirical sampling SD s_i, computed ONCE per
+     regime by Künsch (1989) moving-block bootstrap on the historical
+     1-min MID log-returns (Franke & Westerhoff 2012; HFABM eq 8). Block
+     size 390 (one RTH day) >> the longest ACF lag (91) so re-ordering
+     preserves the autocorrelation structure. s_i is fixed across the run
+     — the loss is stationary and D(θ) stays comparable when agents change.
+
+  3. Sobol-sample the 6-d behavioural-parameter space (low-discrepancy; beats
+     LHS at small N — XGB-Chiarella §3.3.2); simulate each θ on this regime
+     (n_runs seeds × n_days days, pooled).
+  4. Train a SINGLE XGBoost regressor θ → D(θ) — the scalar loss, not one model
+     per moment (XGB-Chiarella §3.3); labels clipped at the LOSS_CLIP_PCTL
+     percentile (Remark 2). Held-out R² on D is the proxy-accuracy trust check.
+  5. Active-learning refinement (exploration-exploitation, §3.3 Step 4): score
+     a Sobol candidate pool with the surrogate; simulate a ~2:1 EXPLOIT (lowest
+     predicted D) / EXPLORE (random) mix; append; retrain. Repeat n_refine.
+  6. **Stage 1**: POOL ARGMIN — evaluate the D-surrogate over a large Sobol
+     pool and take the minimum. A tree ensemble is piecewise-constant, so
+     gradient optimisers (L-BFGS-B) are ill-suited → θ*_s.
+  7. **Stage 2** (HFABM §4.2): tight Sobol box within ±STAGE2_BOX_FRAC of bound
+     width around θ*_s, scored on the TRUE simulator. Pick the simulator-
+     evaluated θ with the smallest actual loss as θ*. Corrects for
+     surrogate fitting noise.
+  8. Validate by re-running the simulator at θ* on FRESH seeds (out-of-sample
+     vs the stage-2 selection) and reporting per-moment comparison + grouped
+     Δ contributions + total D(θ).
+
+Data-side parameters (V_t GBM σ/μ and v0 from data/v_gbm.py) live in
+model/globals.py and auto-populate per regime via ModelParams.__post_init__.
+Pinned-structural: ft_sigma_c at √390; order_ttl=10 (D5d); qty_max=10;
+ft_alpha=mt_alpha=1.0 (D36); mt_lambda=0.05 (D44); mt_mu=0 (D40); mm_qty=2
+(D48). The FT has no dead-band (D23); 4 HFABM MMs are live (D48). This script
+calibrates **8 behavioural parameters PER REGIME**: ft_alpha, mt_alpha
+(FT limit / MT limit activation), mt_mu (MT market-order rate — D27),
+depth_mean (shared ZI+MT log-normal placement-depth mean, D20), mt_lambda
+(MT EWMA decay — single-type, D13f), and the three ZI rates
+zi_alpha / zi_mu / zi_delta (limit / market / cancel — D21). FT/MT limit
+orders use replace-on-new order management (D5d). Volatility clustering
+and fat tails come from the Merton jumps in the V_t process (D25), not an
+agent.
+
+Hard requirements: xgboost (with libomp) and scipy. No fallbacks — if a
+required library is missing the run fails loudly. Per-regime LHS training
+data is cached to output/calibration_lhs_{regime}.csv; stage-2 grid output
+to output/calibration_stage2_{regime}.csv. Delete to regenerate.
+
+Moments: Cont 2001 stylised-fact battery (return std; ACF of returns at
+lags {1,5,10}; ACF of |returns| at lags {1,10,30,60,90}) + Hill (1975)
+tail index. Computed on the 1-min MID log-returns in both sim and
+empirical for an apples-to-apples comparison (excess kurtosis is computed
+as a diagnostic but is not a loss moment).
 
 CLI:
-  python calibrate.py verify              # WRDS IVol_t_m unit check
-  python calibrate.py direct              # data-derived sigma_v, v0, mu_v
-  python calibrate.py run [N D R]         # end-to-end (default 200 90 3)
-
-Outputs:
-  output/calibration_lhs.csv              # LHS training data
-  output/calibrated_params.json           # final calibrated parameter set
+  python calibrate.py targets                          # print empirical moment targets
+  python calibrate.py run [N D R Rf K G]               # both regimes; defaults below
+  python calibrate.py run calm [N D R Rf K G]          # calm only
+  python calibrate.py run stressed [N D R Rf K G]      # stressed only
+    N=N_LHS, D=N_DAYS, R=N_RUNS, Rf=N_REFINE, K=N_PER_REFINE, G=N_STAGE2
 """
+
 from __future__ import annotations
-import os, json, time, sys
+import json
+import sys
+import time
 from dataclasses import dataclass, asdict
-from itertools import product
-from typing import Dict, List, Optional
+from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import xgboost as xgb
+from scipy.optimize import minimize
 
-from model.globals import ModelParams
+from model.globals import ModelParams, V0, FV_CSV
 from model.simulation import Simulation
 from run_simulation import build_traders
 
-
-# ─── 1. Empirical / direct calibration ────────────────────────────────
-
-@dataclass
-class DirectParams:
-    v0: float
-    sigma_v_per_5min: float
-    mu_v_per_5min: float
-
-
-def extract_direct_params(csv_path: str) -> DirectParams:
-    """v0, sigma_v, mu_v from WRDS daily aggregates (model-free)."""
-    df = pd.read_csv(csv_path).sort_values("date").reset_index(drop=True)
-    n = df["NObsUsed1"].values
-    log_oc = np.log(df["DPrice"] / df["OPrice"])
-    drift_per_bar = log_oc / n
-    return DirectParams(
-        v0=float(df["OPrice"].mean()),
-        sigma_v_per_5min=float(log_oc.std() / np.sqrt(n.mean())),
-        mu_v_per_5min=float(drift_per_bar.mean()),
-    )
+# ── config ───────────────────────────────────────────────────────────────────
+REPO_DIR = Path(__file__).parent
+OUT_DIR = REPO_DIR / "output"
+PROC_DIR = REPO_DIR / "data" / "processed"
+REGIME_DATA = {
+    "calm":     PROC_DIR / "ES_front_calm_1m.csv",
+    "stressed": PROC_DIR / "ES_front_stressed_1m.csv",
+}
+REGIMES = ("calm", "stressed")
+BARS_PER_DAY = 390   # 6.5-hour RTH day at the 1-min cadence
 
 
-def verify_ivol_units(csv_path: str = "data/thesis_data_calm.csv") -> dict:
-    """Cross-check IVol_t_m units against three hypotheses."""
-    df = pd.read_csv(csv_path).sort_values("date").reset_index(drop=True)
-    log_oc = np.log(df["DPrice"] / df["OPrice"])
-    daily_std_oc = float(log_oc.std())
-    iv = df["IVol_t_m"].values
-    n = df["NObsUsed1"].values
-    sec_per_bar = 5 * 60
-
-    sigmas = {
-        "H1_per_second_RV":   np.sqrt(iv * sec_per_bar),
-        "H2_daily_IV":        np.sqrt(iv / n),
-        "H3_per_bar_var":     np.sqrt(iv),
-    }
-    out = {"empirical_daily_std_oc": daily_std_oc}
-    for name, s in sigmas.items():
-        implied_daily = (s * np.sqrt(n)).mean()
-        out[name] = {
-            "implied_5min_std": float(s.mean()),
-            "implied_daily_std": float(implied_daily),
-            "ratio_to_empirical": float(implied_daily / daily_std_oc),
-        }
-    out["best_hypothesis"] = min(
-        sigmas.keys(),
-        key=lambda h: abs(np.log(out[h]["ratio_to_empirical"]))
-    )
-    return out
+@lru_cache(maxsize=None)
+def _regime_fv_bars(regime: str) -> int:
+    """Bars in the regime's spliced fundamental series (data/fv_{regime}.csv)."""
+    return len(pd.read_csv(REPO_DIR / FV_CSV[regime]))
 
 
-# ─── 2. Moment computation ────────────────────────────────────────────
+def _sim_steps(regime: str, n_days: int) -> int:
+    """Steps to simulate for `regime`. Stressed is a bounded historical episode
+    (the 2020 COVID window, ~29 RTH days): simulate the whole series so the sim
+    and the empirical targets span the same period, and never run past it — past
+    the data Simulation._v_at clamps the fundamental to the last bar (frozen V_t).
+    Calm is a long stationary sample, so subsample to n_days."""
+    full = _regime_fv_bars(regime)
+    return full if regime == "stressed" else min(BARS_PER_DAY * n_days, full)
 
-@dataclass
-class Moments:
-    ret_std: float
-    ret_kurtosis_excess: float
-    acf_r_lag1: float
-    acf_r_lag5: float
-    acf_abs_r_lag1: float
-    acf_abs_r_lag5: float
-    acf_abs_r_lag20: float
+# Fixed population — the flat ODD star topology (see run_simulation.py).
+# 50 agents: 20 FT + 10 MT + 20 ZI, NO MM. The always-quoting MM was removed:
+# it clamped spread variability and suppressed volatility clustering (D37 +
+# the in-sandbox smoke: stressed lag-1 |r| ACF 0.11 -> 0.44 without it).
+# Geometric data-fit placement (globals.P_ZI) supplies near-mid liquidity instead.
+POP = dict(n_fundamental=20, n_momentum=10, n_momentum_long=0,
+           n_mm=0, n_zi=20, n_vt=0, n_ct=0)
 
-    def to_array(self) -> np.ndarray:
-        return np.array([
-            self.ret_std, self.ret_kurtosis_excess,
-            self.acf_r_lag1, self.acf_r_lag5,
-            self.acf_abs_r_lag1, self.acf_abs_r_lag5, self.acf_abs_r_lag20,
-        ])
+# Per-regime calibration loop (D18b). Every parameter is regime-specific.
+# Pinned-structural (NOT calibrated):
+#   ft_sigma_c              → √390  (Chiarella one-daily-V_t-std)
+#   qty_max                 → QTY_MAX[regime]  (10 calm / 5 stressed)
+#   depth_sigma             → 0.3   (log-normal placement-depth shape; D20)
+PARAM_BOUNDS = {
+    "ft_sigma_c": (0.5, 10.0),    # FT belief-width scale; σ_fund = ft_sigma_c·σ_t·v0
+    "zi_alpha":   (0.02, 0.50),   # ZI limit-order arrival per step (D21/D30)
+    "zi_mu":      (0.005, 0.10),  # ZI market-order arrival per step (D21/D30)
+    "zi_delta":   (0.005, 0.50),  # ZI per-resting cancellation per step (D21)
+}
+# Loop is 4-d. ft_sigma_c is UNPINNED (was √390≈19.7, D7b "one daily V_t std"):
+# the in-sandbox sweep showed it is THE lever on the mid tails. √390 gives
+# Hill≈1.5 because the FTs overshoot V_t (they sweep the book to the OUTERMOST
+# reservation V_t + max z·σ_fund), fattening the tails and drowning clustering
+# in i.i.d. bursts; ft_sigma_c≈1 (σ_fund≈3 ticks) gives Hill≈3.0 AND revives
+# long-lag clustering (lag-10 |r| ACF 0.02→0.11) by transmitting V_t faithfully.
+# So FT belief dispersion is now a CALIBRATED microstructure-scale quantity, not
+# a pinned daily-news scale (supersedes D7b). Trade-off: smaller ft_sigma_c →
+# less FT inventory concentration (D6b CCP-layer input) — raise the lower bound
+# if that matters more than the market-layer fit. Placement geometric (data-fit
+# p_zi); MM removed (n_mm=0). FT/MT still trade every step (ft_alpha=mt_alpha=1).
+# Calibrated loop = 6-d (the PARAM_BOUNDS keys above): depth_mean, depth_sigma,
+# zi_alpha, zi_mu, zi_delta, mm_p_edge. Pinned / out of the loop:
+#   ft_alpha = mt_alpha = 1.0 (D36 — FT/MT submit a limit every step, ODD-
+#     faithful §Step Sequence step 3).
+#   mt_mu = 0.0 (D40 — MT limit-only; the D27 market branch was reverted —
+#     trend-direction market flow corrupted the return ACF).
+#   mt_lambda = 0.05 (D44 — pinned; smoke beat the calibrator at this arch).
+#   mm_qty = 2 (D48 — pinned structural; `mm_p_edge` is the calibrated MM dial);
+#     n_mm = 4 HFABM mid-anchored MMs re-introduced (D48) for tail control.
+#   ft_delta/mt_delta (D5d — replace-on-new); k_base (D20 — shared log-normal
+#     depth); vt_*/ct_* (D40/D44 — VolatilityTrader & ContTrader removed).
+# D30 — ZI rate bounds tightened to literature-grounded ranges. The prior
+# (→1.0) bounds let the optimiser run zi_mu to 0.52 / zi_alpha to 0.83 —
+# ~20x / ~5x the Cont-Stoikov-Talreja 2008 / ODD §Calibration baselines (0.025 /
+# 0.15). zi_mu ≈ 0.5 means half of all ZI activity is book-walking market
+# orders → kurtosis ~1200 and a bid-ask bounce. The new caps keep market
+# orders a clear minority of ZI flow: zi_mu ≤ 0.10 (4x baseline), zi_alpha
+# ≤ 0.50 (3.3x baseline). zi_delta (cancellation) left at 0.50.
+PARAM_KEYS = list(PARAM_BOUNDS)
+PARAM_BOUNDS_ARR = np.array([PARAM_BOUNDS[k] for k in PARAM_KEYS])
+
+# Individual moments — surrogate targets and loss inputs. ACF lags are
+# chosen from where the empirical ES 1-min signal actually sits (D18e,
+# revised):
+#   ACF1 (return ACF): centers {1, 5, 10}. The empirical return ACF is
+#     concentrated at the SHORT end — a bid-ask/microstructure term at
+#     lag 1 and a transient-impact mean-reversion peaking near lag ~9 in
+#     the stressed regime. At lags 30/60/90 it is flat (~0) in both
+#     regimes, so the prior {30,60,90} choice carried no information.
+# Loss moments and components — matched to XGB-Chiarella (Gao et al. 2022
+# §3.2, eq 6): D(θ) = ΔKS + ΔV + ΔACF1 + ΔACF2 — the paper's EXACT 4-component
+# loss. Hill is DROPPED from the loss (the model's Hill was unreachable + the
+# 1-min Hill curve is fragile/sloping; KS already targets the whole return
+# distribution incl. tails).
+#   ACF1 = returns ACF at centres {1, 10, 20}, FORWARD 3-lag smoothed
+#          (paper §3.2.2: lag-1 = mean of {1,2,3}, etc.).
+#   ACF2 = ABSOLUTE-returns ACF, forward 3-lag smoothed at short centres
+#          {1,5,10,20} — the volatility-clustering target. |r| (Cont 2001) is
+#          used rather than the paper's r²: r² is outlier-dominated, so its ACF
+#          has a large sampling SD and the clustering miss vanishes under the
+#          standardisation (ΔACF2 was ~1.3 despite reproducing none of it); |r|
+#          is far less noisy, so clustering actually counts. Short lags avoid
+#          diluting the strong lag-1 signal with high-lag noise.
+#   KS   = Kolmogorov-Smirnov 2-sample statistic between simulated and
+#          empirical return CDFs (paper §3.2.4, eq 7) — robust whole-
+#          distribution fat-tail target.
+# hill_tail_index (banded) is BACK in the loss (ΔHill component): KS + Hill together
+# carry the tail — KS the whole-distribution match (XGB-Chiarella §3.2.4), Hill the
+# tail-index (HFABM §4.1.1), and Hill gives the optimiser a direct, reachable lever to
+# thin the tails (the book-density params can then act on it). ret_kurtosis stays a
+# DIAGNOSTIC only — outlier-dominated, so matching it exactly would be noise-chasing.
+ACF1_CENTERS = (1, 10, 20)              # returns ACF, forward 3-lag smoothed
+ACF2_CENTERS = (1, 5, 10, 20)           # |returns| ACF centres, forward 3-lag smoothed
+HILL_FRACS = (0.03, 0.04, 0.05, 0.06, 0.07, 0.08)   # banded-Hill k/n grid
+HILL_FRAC = 0.05                        # single-frac default (band primitive)
+
+ACF1_NAMES = tuple(f"acf_r_{c}" for c in ACF1_CENTERS)
+ACF2_NAMES = tuple(f"acf_absr_{c}" for c in ACF2_CENTERS)
+MOMENT_NAMES = (["ret_std", "ret_kurtosis"]
+                + list(ACF1_NAMES) + list(ACF2_NAMES)
+                + ["hill_tail_index", "ks_stat"])
+
+COMPONENT_NAMES = ("KS", "V", "ACF1", "ACF2", "Hill")   # KS + banded Hill carry the tail
+COMPONENT_MOMENTS = {
+    "KS":   ("ks_stat",),            # ΔKS   (XGB-Chiarella §3.2.4 eq 7; target 0, /s_KS)
+    "V":    ("ret_std",),            # ΔV     (paper eq 8)
+    "ACF1": ACF1_NAMES,              # ΔACF1  (paper eq 9: returns, lags 1/10/20)
+    "ACF2": ACF2_NAMES,              # ΔACF2  (|returns| ACF, short lags — clustering)
+    "Hill": ("hill_tail_index",),    # ΔHill  (HFABM §4.1.1 tail index; direct tail lever)
+}
+
+# Block bootstrap parameters for the per-moment sampling SDs. Block size
+# 390 (one RTH day) >> the longest ACF lag (91) — Künsch (1989) moving-
+# block bootstrap requires the block to exceed the dependence horizon, or
+# block re-ordering destroys the long-lag autocorrelation it is meant to
+# preserve (HFABM uses block 1800 >> lag 90 for the same reason; the prior
+# block 60 was SHORTER than the lag-90 moment — a bug). 200 resamples.
+N_BOOTSTRAP = 200
+BOOTSTRAP_BLOCK = 390
+
+# Defaults — MEDIUM budget, sizes are powers of 2 so the Sobol design is
+# balanced. The 40-sample runs gave weak/negative held-out surrogate R² (the
+# optimiser was near-blind), so this raises N for a learnable surrogate;
+# ~1-1.5 h/regime. Quicker iteration: `run 64 10 3 1 16 16`. Thesis-final:
+# `run 256 30 8 3 64 64`. The LHS cache auto-regenerates on a param/moment change.
+N_LHS = 128
+N_DAYS = 20
+N_RUNS = 4
+N_REFINE = 2
+N_PER_REFINE = 32
+N_CANDIDATE_POOL = 2048
+N_STAGE2 = 32          # HFABM stage-2 refinement size (Sobol in tight box)
+STAGE2_BOX_FRAC = 0.10 # box half-width = STAGE2_BOX_FRAC · (hi - lo) per param
+SEED = 42
+TEST_FRAC = 0.25
+LOSS_CLIP_PCTL = 90    # label-clip percentile for the single-D surrogate — XGB-
+                       # Chiarella Remark 2 (focus the tree on the low-D region;
+                       # the paper clips D to (0,1], we clip at a data percentile
+                       # since our D is in sampling-SD units, not their 0-1 scale)
+
+XGB_KWARGS = dict(n_estimators=300, max_depth=4, learning_rate=0.05,
+                  subsample=0.8, colsample_bytree=0.9, random_state=0)
 
 
-MOMENT_NAMES = list(Moments.__dataclass_fields__.keys())
+# ── moments ──────────────────────────────────────────────────────────────────
+
+# Moments are plain dicts keyed by MOMENT_NAMES — the moment set is now
+# programmatic (20 squared-return ACF lags), so the fixed dataclass is gone.
+# The xgboost surrogate reads the LHS DataFrame columns, not a Moments object,
+# so this change is confined to the moment/loss layer.
+
+def _ks_2samp(a: np.ndarray, b: np.ndarray) -> float:
+    """Two-sample Kolmogorov-Smirnov statistic sup_x |F_a(x) - F_b(x)| (XGB-
+    Chiarella eq 7) — the distance between the simulated and empirical return
+    CDFs; a robust whole-distribution fat-tail measure that complements Hill.
+    Pure-numpy (no scipy) so it is unit-testable in any environment."""
+    a = np.sort(np.asarray(a, float)); a = a[np.isfinite(a)]
+    b = np.sort(np.asarray(b, float)); b = b[np.isfinite(b)]
+    if len(a) == 0 or len(b) == 0:
+        return float("nan")
+    allv = np.concatenate([a, b])
+    cdf_a = np.searchsorted(a, allv, side="right") / len(a)
+    cdf_b = np.searchsorted(b, allv, side="right") / len(b)
+    return float(np.max(np.abs(cdf_a - cdf_b)))
 
 
 def _acf(x: np.ndarray, k: int) -> float:
@@ -110,377 +303,735 @@ def _acf(x: np.ndarray, k: int) -> float:
         return float("nan")
     x = x - x.mean()
     var = float((x * x).sum())
-    if var == 0.0:
-        return 0.0
-    return float((x[:-k] * x[k:]).sum() / var)
+    return 0.0 if var == 0.0 else float((x[:-k] * x[k:]).sum() / var)
 
 
-def compute_moments(log_returns: np.ndarray) -> Moments:
-    r = np.asarray(log_returns)
+def _acf_smoothed_fwd(x: np.ndarray, center_lag: int) -> float:
+    """FORWARD 3-lag smoothing (XGB-Chiarella §3.2.2 / Majewski): the mean of
+    the autocorrelations at lags {center, center+1, center+2} — e.g. lag-1 is
+    the mean of {1,2,3}. Matches the paper (replaces the prior centred form)."""
+    lags = (center_lag, center_lag + 1, center_lag + 2)
+    vals = [_acf(x, l) for l in lags]
+    vals = [v for v in vals if np.isfinite(v)]
+    return float(np.mean(vals)) if vals else float("nan")
+
+
+def _hill_estimator(returns: np.ndarray, frac: float = HILL_FRAC) -> float:
+    """Hill (1975) tail-index estimator on |returns|. Returns the index α
+    such that P(|R| > x) ~ x^(−α) in the upper tail — larger α = lighter
+    tail, smaller α = heavier. Pools both tails via the absolute value
+    (Resnick 2007 §4)."""
+    a = np.abs(np.asarray(returns, dtype=float))
+    a = a[np.isfinite(a) & (a > 0)]
+    n = len(a)
+    if n < 100:
+        return float("nan")
+    k = max(int(frac * n), 20)
+    if k >= n:
+        return float("nan")
+    a_sorted = np.sort(a)[::-1]
+    top_k = a_sorted[:k]
+    threshold = a_sorted[k]
+    if threshold <= 0:
+        return float("nan")
+    xi = float(np.mean(np.log(top_k) - np.log(threshold)))
+    return float(1.0 / xi) if xi > 0 else float("nan")
+
+
+def _hill_banded(returns: np.ndarray, fracs=HILL_FRACS) -> float:
+    """Banded Hill index — mean of the single-frac estimator over k/n in
+    `fracs`. The 1-min ES Hill curve slopes (no plateau), so a single 5% point
+    is fragile and k-sensitive; averaging a band gives a robust, reproducible
+    tail index (still comparable across versions — the fracs are fixed)."""
+    vals = [_hill_estimator(returns, f) for f in fracs]
+    vals = [v for v in vals if np.isfinite(v)]
+    return float(np.mean(vals)) if vals else float("nan")
+
+
+def compute_moments(log_returns: np.ndarray) -> dict:
+    """Moment dict keyed by MOMENT_NAMES from a 1-min log-return series.
+    ACF1 = returns ACF (forward 3-lag smoothed at centres ACF1_CENTERS);
+    ACF2 = |returns| ACF (forward 3-lag smoothed at centres ACF2_CENTERS); Hill banded.
+    `ks_stat` is left NaN here — it is a 2-sample statistic the caller fills
+    against the empirical returns (simulate_moments / empirical_moment_sd); the
+    empirical target sets it to 0. Needs >= 100 obs (covers lag 22)."""
+    r = np.asarray(log_returns, dtype=float)
     r = r[np.isfinite(r)]
-    if len(r) < 10:
-        return Moments(*([float("nan")] * 7))
-    abs_r = np.abs(r)
+    if len(r) < 100:
+        return {m: float("nan") for m in MOMENT_NAMES}
     sd = float(r.std())
     kurt = float((((r - r.mean()) / sd) ** 4).mean() - 3.0) if sd > 0 else 0.0
-    return Moments(
-        ret_std=sd,
-        ret_kurtosis_excess=kurt,
-        acf_r_lag1=_acf(r, 1),
-        acf_r_lag5=_acf(r, 5),
-        acf_abs_r_lag1=_acf(abs_r, 1),
-        acf_abs_r_lag5=_acf(abs_r, 5),
-        acf_abs_r_lag20=_acf(abs_r, 20),
-    )
-
-
-def empirical_moments_daily(csv_path: str) -> Moments:
-    df = pd.read_csv(csv_path).sort_values("date").reset_index(drop=True)
-    log_ret = np.log(df["DPrice"]).diff().dropna().values
-    return compute_moments(log_ret)
-
-
-# ─── 3. Simulation wrappers ───────────────────────────────────────────
-
-def make_params(direct: DirectParams,
-                ft_sigma_rel: float, mt_sigma_rel: float, mt_lambda: float,
-                kappa_v: float, theta_v: float, xi_v: float) -> ModelParams:
-    return ModelParams(
-        n_zi=0, n_fundamental=0, n_momentum=0,
-        n_bcm=15, n_bcm_mm=8, n_bcm_with_clients=8, n_nbcm=5,
-        clients_per_book=6, client_book_ft=2, client_book_mt=2, client_book_zi=2,
-        v0=direct.v0, tick_size=0.01, dt_minutes=5.0, order_ttl=2,
-        zi_alpha=0.15, zi_mu=0.025, zi_delta=0.025,
-        zi_qty_min=1, zi_qty_max=10,
-        dir_qty_min=5, dir_qty_max=50,
-        zi_offset_p=0.5, zi_offset_max=20,
-        ft_sigma_rel=ft_sigma_rel, mt_sigma_rel=mt_sigma_rel,
-        mt_lambda_ewma=mt_lambda, mt_threshold=1e-4,
-        mu_v=direct.mu_v_per_5min, sigma_v=direct.sigma_v_per_5min,
-        kappa_v=kappa_v, theta_v=theta_v, xi_v=xi_v,
-        jump_lambda=0.0385, jump_mean=0.0, jump_std=0.01,
-        mm_half_spread_bps=30.0, mm_qty=50, mm_inventory_skew_bps=0.5,
-    )
-
-
-def _simulate_moments(params: ModelParams, seed: int, n_steps: int,
-                      n_runs: int, bars_per_day: int = 78) -> Moments:
-    """Run simulator n_runs times, extract end-of-day mid prices, compute
-    moments on daily log-returns concatenated across runs."""
-    daily_rs = []
-    for s in range(seed, seed + n_runs):
-        traders = build_traders(params, seed=s)
-        sim = Simulation(params, traders, seed=s)
-        h = sim.run(n_steps)
-        mid = pd.Series(h["mid_price"]).ffill().bfill().values
-        n_days = n_steps // bars_per_day
-        if n_days < 2:
-            continue
-        eod = mid[bars_per_day - 1::bars_per_day][:n_days]
-        daily_rs.append(np.diff(np.log(eod)))
-    if not daily_rs:
-        return Moments(*([float("nan")] * 7))
-    return compute_moments(np.concatenate(daily_rs))
-
-
-def evaluate_theta(theta_vec: np.ndarray,
-                   calm_direct: DirectParams,
-                   stress_direct: DirectParams,
-                   n_steps: int, n_runs: int, seed: int) -> dict:
-    """Simulate calm + stressed regimes at theta; return both moments dicts."""
-    ft, mt, lam, kappa, log10_xi = theta_vec
-    xi = float(10 ** log10_xi)
-    out = {}
-    for label, direct in (("calm", calm_direct), ("stress", stress_direct)):
-        params = make_params(direct, ft, mt, lam, kappa,
-                             direct.sigma_v_per_5min ** 2, xi)
-        m = _simulate_moments(params, seed=seed, n_steps=n_steps, n_runs=n_runs)
-        out[label] = m
+    a = np.abs(r)
+    out = {"ret_std": sd, "ret_kurtosis": kurt,
+           "hill_tail_index": _hill_banded(r), "ks_stat": float("nan")}
+    for c in ACF1_CENTERS:
+        out[f"acf_r_{c}"] = _acf_smoothed_fwd(r, c)        # returns ACF
+    for c in ACF2_CENTERS:
+        out[f"acf_absr_{c}"] = _acf_smoothed_fwd(a, c)     # |returns| ACF (clustering)
     return out
 
 
-# ─── 4. LHS training-data generation ─────────────────────────────────
+_EMP_RETURNS_CACHE: dict = {}
 
-# 5-D search space: ft_sigma_rel, mt_sigma_rel, mt_lambda, kappa_v, log10(xi_v)
-SEARCH_BOUNDS = np.array([
-    [0.0005, 0.05],   # ft_sigma_rel  (5 bps to 500 bps)
-    [0.0005, 0.05],   # mt_sigma_rel
-    [0.50, 0.99],     # mt_lambda_ewma
-    [0.001, 1.0],     # kappa_v
-    [-7.0, -3.0],     # log10(xi_v) -> xi in [1e-7, 1e-3]
-])
-PARAM_NAMES = ["ft_sigma_rel", "mt_sigma_rel", "mt_lambda", "kappa_v", "log10_xi"]
 
+def _empirical_returns(regime: str) -> np.ndarray:
+    """Empirical ES 1-min MID log-returns for a regime, overnight (cross-day)
+    returns dropped. Cached. Serves as both the KS reference sample and the
+    moment-target source — the mid matches the simulator's own observable."""
+    if regime not in _EMP_RETURNS_CACHE:
+        df = pd.read_csv(REGIME_DATA[regime], index_col=0, parse_dates=True)
+        mid = df["mid"].to_numpy(dtype=float)
+        logret = np.diff(np.log(mid))
+        dates = pd.DatetimeIndex(df.index).date
+        _EMP_RETURNS_CACHE[regime] = logret[dates[1:] == dates[:-1]]
+    return _EMP_RETURNS_CACHE[regime]
+
+
+def empirical_targets() -> dict:
+    """Moment-dict targets of the empirical ES 1-min MID log-returns, per
+    regime (overnight returns dropped). `ks_stat` target is 0 — the empirical
+    distribution's KS distance from itself — so the loss measures the sim's KS
+    distance from empirical in s_KS units."""
+    targets = {}
+    for regime in REGIME_DATA:
+        m = compute_moments(_empirical_returns(regime))
+        m["ks_stat"] = 0.0
+        targets[regime] = m
+    return targets
+
+
+# ── simulator wrapper ────────────────────────────────────────────────────────
+
+def _theta_to_params(theta: np.ndarray, regime: str) -> ModelParams:
+    """Build a ModelParams for one regime from the 4-d theta (ft_sigma_c + ZI
+    rates). Pinned-structural (order_ttl, qty_max, p_zi, etc.) and the geometric
+    placement / no-MM population auto-populate from POP + globals."""
+    d = dict(zip(PARAM_KEYS, theta))
+    return ModelParams(
+        **POP,
+        v0=V0[regime], tick_size=0.25, dt_minutes=1.0,
+        # FT/MT trade every step (ft_alpha=mt_alpha=1, D36/D40/D44); placement
+        # geometric (p_zi data-fixed); MM removed (n_mm=0). ft_sigma_c is now
+        # calibrated (the FT-overshoot / tail lever); ZI rates free.
+        ft_sigma_c=float(d["ft_sigma_c"]),
+        zi_alpha=float(d["zi_alpha"]),
+        zi_mu=float(d["zi_mu"]),
+        zi_delta=float(d["zi_delta"]),
+        stressed=(regime == "stressed"),
+    )
+
+
+def simulate_moments(theta: np.ndarray, regime: str,
+                     n_days: int, n_runs: int, seed: int) -> dict:
+    """Run the simulator n_runs times on one regime; return the moment dict of
+    the pooled 1-min mid log-returns. `ks_stat` is the KS distance of the
+    pooled simulated returns from the empirical returns (filled here — it needs
+    both samples)."""
+    params = _theta_to_params(theta, regime)
+    n_steps = _sim_steps(regime, n_days)
+    rets = []
+    for s in range(seed, seed + n_runs):
+        traders = build_traders(params, seed=s)
+        hist = Simulation(params, traders, seed=s).run(n_steps)
+        mid = pd.Series(hist["mid_price"]).ffill().bfill().to_numpy()
+        mid = mid[mid > 0]
+        if len(mid) > 1:
+            rets.append(np.diff(np.log(mid)))
+    if not rets:
+        return {m: float("nan") for m in MOMENT_NAMES}
+    pooled = np.concatenate(rets)
+    m = compute_moments(pooled)
+    m["ks_stat"] = _ks_2samp(pooled, _empirical_returns(regime))
+    return m
+
+
+# ── Latin-hypercube sampling ─────────────────────────────────────────────────
 
 def _lhs(n_samples: int, n_dims: int, rng: np.random.Generator) -> np.ndarray:
-    out = np.zeros((n_samples, n_dims))
+    """Latin-hypercube unit-cube sample (fallback when scipy.stats.qmc absent)."""
+    u = np.zeros((n_samples, n_dims))
     strata = np.arange(n_samples) / n_samples
     for d in range(n_dims):
         col = strata + rng.uniform(0, 1.0 / n_samples, size=n_samples)
         rng.shuffle(col)
-        out[:, d] = col
-    return out
+        u[:, d] = col
+    return u
 
 
-def _u_to_theta(u_row: np.ndarray) -> np.ndarray:
-    return SEARCH_BOUNDS[:, 0] + u_row * (SEARCH_BOUNDS[:, 1] - SEARCH_BOUNDS[:, 0])
+def _sobol(n_samples: int, n_dims: int, rng: np.random.Generator) -> np.ndarray:
+    """Low-discrepancy unit-cube sample — Sobol (XGB-Chiarella §3.3.2 Step 1).
+    Sobol beats LHS on uniformity at SMALL N (Kucherenko et al. 2015), which is
+    the thesis regime: the LOB ABM is far costlier per eval than the paper's
+    1-agent price-impact model, so we cannot match its 16384-point pool and a
+    well-spread small design matters more. Scrambled for randomisation; falls
+    back to LHS if scipy.stats.qmc is unavailable."""
+    try:
+        import warnings
+        from scipy.stats import qmc
+        seed = int(rng.integers(0, 2 ** 31 - 1))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")   # n need not be 2^k — balance is adequate here
+            return qmc.Sobol(d=n_dims, scramble=True, seed=seed).random(n_samples)
+    except Exception:
+        return _lhs(n_samples, n_dims, rng)
 
 
-def run_lhs(n_lhs: int, n_steps: int, n_runs: int, seed: int = 42,
-            calm_csv: str = "data/thesis_data_calm.csv",
-            stress_csv: str = "data/thesis_data_stressed.csv") -> pd.DataFrame:
-    """LHS over 5-D theta; for each, simulate calm + stressed and record moments."""
-    calm_d = extract_direct_params(calm_csv)
-    stress_d = extract_direct_params(stress_csv)
-
+def run_lhs(regime: str, n_lhs: int, n_days: int, n_runs: int,
+            seed: int = SEED) -> pd.DataFrame:
+    """LHS over the 6-d theta space; simulate this regime for each sample
+    and record the moment vector."""
     rng = np.random.default_rng(seed)
-    samples_u = _lhs(n_lhs, 5, rng)
-
+    u = _sobol(n_lhs, len(PARAM_KEYS), rng)
+    thetas = PARAM_BOUNDS_ARR[:, 0] + u * (PARAM_BOUNDS_ARR[:, 1] - PARAM_BOUNDS_ARR[:, 0])
     rows = []
-    for i in range(n_lhs):
-        theta = _u_to_theta(samples_u[i])
-        out = evaluate_theta(theta, calm_d, stress_d, n_steps, n_runs, seed=seed + i)
-        row = {p: float(v) for p, v in zip(PARAM_NAMES, theta)}
-        row["xi_v"] = float(10 ** theta[4])
-        for regime in ("calm", "stress"):
-            for m_name in MOMENT_NAMES:
-                row[f"{regime}_{m_name}"] = float(getattr(out[regime], m_name))
+    for i, theta in enumerate(thetas):
+        row = {k: float(v) for k, v in zip(PARAM_KEYS, theta)}
+        m = simulate_moments(theta, regime, n_days, n_runs, seed=seed + i)
+        for name in MOMENT_NAMES:
+            row[name] = float(m[name])
         rows.append(row)
+        if (i + 1) % 20 == 0:
+            print(f"  LHS {i + 1}/{n_lhs}", flush=True)
     return pd.DataFrame(rows)
 
 
-# ─── 5. XGBoost surrogate ─────────────────────────────────────────────
+# ── XGBoost surrogate ────────────────────────────────────────────────────────
 
-def train_xgb_surrogate(lhs_df: pd.DataFrame) -> dict:
-    """Train one XGBRegressor per (regime, moment) target.
-
-    Returns: dict[(regime, moment_name)] -> trained model
-    Requires xgboost; raises ImportError if unavailable.
-    """
-    import xgboost as xgb
-    X = lhs_df[PARAM_NAMES].values
-    models = {}
-    for regime in ("calm", "stress"):
-        for m in MOMENT_NAMES:
-            col = f"{regime}_{m}"
-            if col not in lhs_df.columns:
-                continue
-            y = lhs_df[col].values
-            mask = np.isfinite(y)
-            if mask.sum() < 10:
-                continue
-            mdl = xgb.XGBRegressor(
-                n_estimators=300, max_depth=4, learning_rate=0.05,
-                subsample=0.8, colsample_bytree=0.9,
-                reg_alpha=0.01, reg_lambda=0.1, random_state=0,
-            )
-            mdl.fit(X[mask], y[mask])
-            models[(regime, m)] = mdl
-    return models
+def _xgb() -> "xgb.XGBRegressor":
+    return xgb.XGBRegressor(**XGB_KWARGS)
 
 
-def surrogate_predict(models: dict, theta: np.ndarray) -> dict:
-    """Predict moments at theta. Returns dict[regime][moment_name] -> value."""
-    X = np.atleast_2d(theta)
-    out = {"calm": {}, "stress": {}}
-    for (regime, m), mdl in models.items():
-        out[regime][m] = float(mdl.predict(X)[0])
+def _loss_column(lhs_df: pd.DataFrame, target: dict, sds: dict) -> np.ndarray:
+    """Scalar loss D(θ) for every LHS row, assembled from the stored moment
+    columns. This is the SINGLE surrogate target (XGB-Chiarella §3.3 regresses
+    θ -> D, not per-moment). Recomputed each run from the current target/sds, so
+    the cached moment table need not store D."""
+    out = np.full(len(lhs_df), np.nan)
+    for i in range(len(lhs_df)):
+        m = {k: float(lhs_df.iloc[i][k]) for k in MOMENT_NAMES if k in lhs_df.columns}
+        d = _true_loss(m, target, sds)
+        out[i] = d if np.isfinite(d) else np.nan
     return out
 
 
-def surrogate_loss(theta: np.ndarray,
-                   models: dict,
-                   target_calm: Moments,
-                   target_stress: Moments,
-                   moment_weights: Optional[np.ndarray] = None,
-                   regime_weights: tuple = (1.0, 1.0),
-                   eps: float = 0.05) -> float:
-    """Weighted, per-moment-normalised L2 loss on surrogate predictions.
+def train_surrogate(lhs_df: pd.DataFrame, target: dict, sds: dict,
+                    test_frac: float = TEST_FRAC, seed: int = 0,
+                    clip_pctl: float = LOSS_CLIP_PCTL):
+    """SINGLE XGBoost regressor θ -> D(θ) — the scalar stylised-facts distance,
+    not one model per moment (XGB-Chiarella Gao et al. 2022 §3.3). A single
+    smooth surface is more learnable than 20+ noisy per-lag moments, and the
+    held-out R² on D IS the proxy-accuracy check the paper relies on. Labels are
+    clipped at the `clip_pctl` percentile (Remark 2) so a few huge-D outliers
+    don't bias the tree toward the bad region. Returns (model, info)."""
+    y = _loss_column(lhs_df, target, sds)
+    X = lhs_df[PARAM_KEYS].to_numpy()
+    ok = np.isfinite(y)
+    info = {"n": int(ok.sum()), "cap": float("nan"),
+            "r2": float("nan"), "corr": float("nan")}
+    if ok.sum() < 20:
+        return None, info
+    Xv, yv = X[ok], y[ok]
+    cap = float(np.percentile(yv, clip_pctl))
+    yc = np.minimum(yv, cap)
+    info["cap"] = cap
+    rng = np.random.default_rng(seed)
+    perm = rng.permutation(len(yc))
+    n_test = max(3, int(test_frac * len(yc)))
+    te, tr = perm[:n_test], perm[n_test:]
+    if len(tr) >= 20 and len(te) >= 3:
+        probe = _xgb(); probe.fit(Xv[tr], yc[tr])
+        pred = probe.predict(Xv[te])
+        ss_res = float(((yc[te] - pred) ** 2).sum())
+        ss_tot = float(((yc[te] - yc[te].mean()) ** 2).sum())
+        info["r2"] = float(1.0 - ss_res / ss_tot) if ss_tot > 1e-12 else float("nan")
+        info["corr"] = (float(np.corrcoef(yc[te], pred)[0, 1])
+                        if len(te) > 1 else float("nan"))
+    model = _xgb(); model.fit(Xv, yc)
+    return model, info
 
-    Higher weights for vol-clustering moments (Cont 2001 fact #3).
-    """
-    if moment_weights is None:
-        moment_weights = np.array([1.0, 1.0, 0.5, 0.3, 2.0, 1.5, 1.0])
-    pred = surrogate_predict(models, theta)
+
+def compute_grouped_deltas(sim: dict, hist: dict, sds: dict) -> dict:
+    """Grouped, STANDARDISED-MOMENT distances. Each moment's |sim - hist| is
+    divided by that moment's empirical block-bootstrap sampling SD s_i, making
+    it a dimensionless count of sampling SDs (a z-statistic); the component
+    distance Δ_c is the mean over component c's moments, and D = Σ_c Δ_c (L1).
+
+    NB on the weighting (for the write-up): this is INVERSE-SD standardisation —
+    the diagonal-SD / L1 member of the Franke & Westerhoff (2012) inverse-
+    sampling-variability family. It is NOT the full quadratic inverse-covariance
+    form W=Σ⁻¹ (ill-conditioned on one 24-moment sample), NOT HFABM's inverse-
+    VARIANCE 1/s_i² (scale-pathological here — ret_std's ~1e-8 sampling variance
+    inflates ΔV ~1e8× and collapsed the tail fit; observed, D18g), and NOT the
+    XGB-Chiarella equal weights (raw moments span ~4 orders of magnitude, so
+    equal weights bury ΔV). Inverse-SD is the principled middle that makes
+    heterogeneous moments commensurate and keeps D comparable across model
+    versions (s_i and the targets are fixed empirical quantities)."""
+    out = {}
+    for comp, moments in COMPONENT_MOMENTS.items():
+        diffs = []
+        for m in moments:
+            s = sim.get(m, float("nan"))
+            h = hist.get(m, float("nan"))
+            sd = sds.get(m, float("nan"))
+            if np.isfinite(s) and np.isfinite(h) and np.isfinite(sd) and sd > 0:
+                diffs.append(abs(s - h) / sd)
+        out[comp] = float(np.mean(diffs)) if diffs else float("nan")
+    return out
+
+
+def empirical_moment_sd(regime: str,
+                        n_days: int = N_DAYS, n_runs: int = N_RUNS,
+                        n_bootstrap: int = N_BOOTSTRAP,
+                        block_size: int = BOOTSTRAP_BLOCK,
+                        seed: int = 0) -> dict:
+    """Per-moment empirical sampling SD s_i (Franke & Westerhoff 2012
+    weighting) via Künsch (1989) moving-block bootstrap on the historical
+    1-min MID log-returns. For each of `n_bootstrap` block resamples the
+    moment vector is recomputed; s_i is the SD of moment i across the
+    resamples — how much moment i wanders by historical sampling alone.
+
+    These s_i are the fixed weights of the calibration loss: each moment
+    distance is divided by s_i (compute_grouped_deltas). The block size
+    (390 = one RTH day) exceeds the longest ACF lag (91) so block
+    re-ordering preserves the autocorrelation structure (Künsch 1989).
+    Computed ONCE per regime and held fixed across all LHS / AL / stage-2 /
+    optimisation steps so the loss is stationary AND comparable across runs.
+
+    Returns dict keyed by MOMENT_NAMES; values are s_i. Moments with
+    degenerate (zero/NaN) bootstrap SD are returned NaN and skipped by the
+    loss."""
+    rng = np.random.default_rng(seed)
+    path = REGIME_DATA[regime]
+    df = pd.read_csv(path, index_col=0, parse_dates=True)
+    mid = df["mid"].to_numpy(dtype=float)
+    logret = np.diff(np.log(mid))
+    dates = pd.DatetimeIndex(df.index).date
+    keep = dates[1:] == dates[:-1]                 # drop open-bar returns
+    logret = logret[keep]
+    n = len(logret)
+    if n < 2 * block_size:
+        return {m: float("nan") for m in MOMENT_NAMES}
+
+    n_blocks = max(1, n // block_size)
+    # KS is a TWO-sample distance whose null sampling SD scales with the SIM
+    # sample size (KS ~ 1/sqrt(n_eff)), NOT the full history — so estimate s_KS
+    # from a SIM-SIZED block subsample vs the full history. Full-length resamples
+    # (as used for the single-sample moments) understated s_KS and let ΔKS
+    # dominate the loss (~28-33 SDs). n_sim = pooled simulated return count.
+    n_sim = _sim_steps(regime, n_days) * n_runs
+    n_blocks_ks = max(1, min(n_blocks, n_sim // block_size))
+    samples = {m: [] for m in MOMENT_NAMES}
+    for _ in range(n_bootstrap):
+        starts = rng.integers(0, n - block_size + 1, size=n_blocks)
+        resampled = np.concatenate([logret[s:s + block_size] for s in starts])
+        b = compute_moments(resampled)
+        starts_ks = rng.integers(0, n - block_size + 1, size=n_blocks_ks)
+        resampled_ks = np.concatenate([logret[s:s + block_size] for s in starts_ks])
+        b["ks_stat"] = _ks_2samp(resampled_ks, logret)   # sim-sized vs full hist
+        for m in MOMENT_NAMES:
+            samples[m].append(float(b[m]))
+    sds = {}
+    for m in MOMENT_NAMES:
+        vals = np.asarray(samples[m])
+        vals = vals[np.isfinite(vals)]
+        if len(vals) < 5:
+            sds[m] = float("nan")
+            continue
+        sd = float(vals.std(ddof=1))
+        sds[m] = sd if sd > 1e-300 else float("nan")
+    return sds
+
+
+def optimise_surrogate(model, seed: int = 7, n_pool: int = N_CANDIDATE_POOL) -> tuple:
+    """Stage-1 optimum by POOL ARGMIN (XGB-Chiarella §3.3 Steps 3-4): evaluate
+    the single D-surrogate over a large Sobol candidate pool and take the
+    minimum. A gradient-boosted tree is piecewise-constant, so gradient
+    optimisers (L-BFGS-B) are ill-suited — zero/garbage gradients between
+    splits; dense pool evaluation is faithful and well-matched to a tree
+    surrogate. Returns (theta_star, predicted_D_star)."""
+    if model is None:
+        raise RuntimeError(
+            "surrogate untrained (too few finite-loss LHS samples) — "
+            "increase N_LHS / N_PER_REFINE.")
+    rng = np.random.default_rng(seed)
+    u = _sobol(n_pool, len(PARAM_KEYS), rng)
+    pool = PARAM_BOUNDS_ARR[:, 0] + u * (PARAM_BOUNDS_ARR[:, 1] - PARAM_BOUNDS_ARR[:, 0])
+    preds = np.asarray(model.predict(pool), dtype=float)
+    j = int(np.argmin(preds))
+    return pool[j], float(preds[j])
+
+
+def _true_loss(moments: dict, target: dict, sds: dict) -> float:
+    """Franke-standardised grouped-L1 loss D(θ) on actual simulated moments.
+    This is the scalar the single surrogate regresses (via _loss_column) and the
+    score used at stage-2 and validation (no surrogate prediction here)."""
+    sim = {m: float(moments[m]) for m in MOMENT_NAMES}
+    hist = {m: float(target[m]) for m in MOMENT_NAMES}
+    deltas = compute_grouped_deltas(sim, hist, sds)
     total = 0.0
-    for w, regime, target in (
-        (regime_weights[0], "calm",   target_calm),
-        (regime_weights[1], "stress", target_stress),
-    ):
-        for j, m in enumerate(MOMENT_NAMES):
-            t = float(getattr(target, m))
-            s = pred[regime].get(m, float("nan"))
-            if not np.isfinite(t) or not np.isfinite(s):
-                continue
-            denom = max(abs(t), eps)
-            d = (s - t) / denom
-            total += w * moment_weights[j] * d * d
+    for c in COMPONENT_NAMES:
+        d = deltas.get(c, float("nan"))
+        if np.isfinite(d):
+            total += d
     return total
 
 
-def optimise_surrogate(models: dict,
-                       target_calm: Moments,
-                       target_stress: Moments,
-                       n_starts: int = 30,
-                       seed: int = 7) -> tuple:
-    """Multi-start L-BFGS-B on surrogate. Returns (theta*, loss*).
+def stage2_grid_search(theta_surrogate: np.ndarray, regime: str,
+                       target: dict, sds: dict, n_grid: int,
+                       n_days: int, n_runs: int, seed: int,
+                       box_frac: float = STAGE2_BOX_FRAC) -> tuple:
+    """HFABM Gao et al. (2022) §4.2 stage-2 refinement. The surrogate-derived θ* is
+    only approximate (surrogate has finite R²); HFABM follows the surrogate
+    optimum with a numerical grid search over a feasible bounded set centered
+    on θ*, scoring on the TRUE simulator. We use an LHS within a tight box
+    `[θ* − box_frac·width, θ* + box_frac·width]` (clipped to the global
+    parameter bounds), plus θ* itself as a candidate.
 
-    Falls back to random search if scipy is unavailable.
-    """
+    Returns (theta_best, true_loss_best, dataframe_of_all_candidates) where
+    `dataframe_of_all_candidates` has one row per evaluated θ with its
+    moments and the `true_loss` it achieved."""
     rng = np.random.default_rng(seed)
+    lo, hi = PARAM_BOUNDS_ARR[:, 0], PARAM_BOUNDS_ARR[:, 1]
+    width = hi - lo
+    box_lo = np.maximum(lo, theta_surrogate - box_frac * width)
+    box_hi = np.minimum(hi, theta_surrogate + box_frac * width)
+    u = _sobol(n_grid, len(PARAM_KEYS), rng)
+    thetas = box_lo + u * (box_hi - box_lo)
+    # Include the surrogate optimum itself as a candidate (rank-0 entry).
+    thetas = np.vstack([theta_surrogate[None, :], thetas])
 
-    def loss(t):
-        return surrogate_loss(t, models, target_calm, target_stress)
-
-    try:
-        from scipy.optimize import minimize
-        bounds = [tuple(b) for b in SEARCH_BOUNDS]
-        best_x, best_f = None, float("inf")
-        for _ in range(n_starts):
-            x0 = SEARCH_BOUNDS[:, 0] + rng.random(5) * (SEARCH_BOUNDS[:, 1] - SEARCH_BOUNDS[:, 0])
-            res = minimize(loss, x0, method="L-BFGS-B", bounds=bounds)
-            if res.fun < best_f:
-                best_x, best_f = res.x, float(res.fun)
-        return best_x, best_f
-    except ImportError:
-        # Fallback: dense random search if scipy unavailable
-        n_random = max(2000, 100 * n_starts)
-        u = rng.random((n_random, 5))
-        thetas = SEARCH_BOUNDS[:, 0] + u * (SEARCH_BOUNDS[:, 1] - SEARCH_BOUNDS[:, 0])
-        losses = np.array([loss(t) for t in thetas])
-        best = int(np.argmin(losses))
-        return thetas[best], float(losses[best])
-
-
-def feature_importance(models: dict) -> pd.DataFrame:
-    """Per-(regime, moment) feature-importance ranking."""
     rows = []
-    for (regime, m), mdl in models.items():
-        for feat, imp in zip(PARAM_NAMES, mdl.feature_importances_):
-            rows.append({"regime": regime, "moment": m, "param": feat,
-                         "importance": float(imp)})
+    best_loss, best_theta = float("inf"), None
+    for i, theta in enumerate(thetas):
+        m = simulate_moments(theta, regime, n_days, n_runs,
+                             seed=seed + i)
+        loss = _true_loss(m, target, sds)
+        row = {k: float(v) for k, v in zip(PARAM_KEYS, theta)}
+        for name in MOMENT_NAMES:
+            row[name] = float(m[name])
+        row["true_loss"] = float(loss)
+        rows.append(row)
+        if np.isfinite(loss) and loss < best_loss:
+            best_loss, best_theta = float(loss), theta.copy()
+        if (i + 1) % 10 == 0:
+            print(f"    stage-2 sim {i + 1}/{len(thetas)}  "
+                  f"(best so far {best_loss:.4f})", flush=True)
+    return best_theta, best_loss, pd.DataFrame(rows)
+
+
+# ── active learning ─────────────────────────────────────────────────────────
+
+def _refine_round(regime: str, model, target: dict, sds: dict,
+                  n_per: int, n_days: int, n_runs: int, seed: int,
+                  candidate_pool: int = N_CANDIDATE_POOL) -> pd.DataFrame:
+    """One active-learning round (XGB-Chiarella §3.3 Step 4 exploration-
+    exploitation): score a Sobol candidate pool with the D-surrogate, then run
+    the simulator on a ~2:1 mix of EXPLOIT (lowest predicted D) and EXPLORE
+    (random) points — the paper's 200/100 split, scaled to n_per. Returns rows
+    to append to the regime's training set. (target/sds are kept in the
+    signature for interface symmetry; the model already encodes the loss.)"""
+    rng = np.random.default_rng(seed)
+    lo, hi = PARAM_BOUNDS_ARR[:, 0], PARAM_BOUNDS_ARR[:, 1]
+    cand = lo + _sobol(candidate_pool, len(PARAM_KEYS), rng) * (hi - lo)
+    n_exploit = max(1, int(round(2.0 / 3.0 * n_per)))
+    n_explore = max(0, n_per - n_exploit)
+    if model is not None:
+        exploit_idx = np.argsort(np.asarray(model.predict(cand), dtype=float))[:n_exploit]
+    else:
+        exploit_idx = rng.choice(len(cand), n_exploit, replace=False)
+    remaining = np.setdiff1d(np.arange(len(cand)), exploit_idx)
+    explore_idx = (rng.choice(remaining, min(n_explore, len(remaining)), replace=False)
+                   if len(remaining) else np.array([], dtype=int))
+    pick = np.concatenate([np.asarray(exploit_idx), np.asarray(explore_idx)]).astype(int)
+    rows = []
+    for i, j in enumerate(pick):
+        theta = cand[j]
+        row = {k: float(v) for k, v in zip(PARAM_KEYS, theta)}
+        m = simulate_moments(theta, regime, n_days, n_runs, seed=seed + i)
+        for name in MOMENT_NAMES:
+            row[name] = float(m[name])
+        rows.append(row)
+        if (i + 1) % 5 == 0:
+            print(f"    refine sim {i + 1}/{len(pick)} "
+                  f"(exploit {n_exploit} / explore {n_explore})", flush=True)
     return pd.DataFrame(rows)
 
 
-# ─── 6. End-to-end pipeline ───────────────────────────────────────────
+def _report_r2(test_r2: dict):
+    r2 = [v for v in test_r2.values() if np.isfinite(v)]
+    if not r2:
+        print("      no held-out R² (training set too small)")
+        return
+    print(f"      held-out R² (n={len(r2)}): median {np.median(r2):+.2f}, "
+          f"range [{min(r2):+.2f}, {max(r2):+.2f}]")
+    weak = [m for m, v in test_r2.items()
+            if not np.isfinite(v) or v < 0.3]
+    if weak:
+        print(f"      weak fits (R² < 0.3): {', '.join(weak)}")
 
-def run_calibration(n_lhs: int = 200, n_days: int = 90, n_runs: int = 3,
-                    out_dir: str = "output", seed: int = 42) -> dict:
-    """Full calibration: LHS -> XGBoost -> optimise -> validate -> save."""
-    os.makedirs(out_dir, exist_ok=True)
 
-    calm_csv = "data/thesis_data_calm.csv"
-    stress_csv = "data/thesis_data_stressed.csv"
-    calm_d = extract_direct_params(calm_csv)
-    stress_d = extract_direct_params(stress_csv)
-    target_calm = empirical_moments_daily(calm_csv)
-    target_stress = empirical_moments_daily(stress_csv)
+def _report_surrogate_d(info):
+    """Held-out accuracy of the single D(θ) surrogate (XGB-Chiarella §3.3 — the
+    surrogate must be an accurate proxy of the true loss for the stage-1
+    pool-argmin optimum to be trustworthy). This subsumes the old per-moment R²
+    and the item-4 aggregate-D check: the regressor IS the aggregate D now."""
+    if not info or info.get("n", 0) < 20:
+        print("      D(θ) surrogate: n/a (too few finite-loss samples)")
+        return
+    print(f"      D(θ) surrogate (single regressor, n={info['n']}, "
+          f"label-clip cap={info['cap']:.2f}): held-out R²={info['r2']:+.2f}, "
+          f"Pearson r={info['corr']:+.2f}")
 
-    # Step 1: LHS training data
-    print(f"\n[1/4] Generating LHS training data: {n_lhs} pts × {n_days} days × {n_runs} seeds")
+
+def _report_moment_sds(sds: dict):
+    """Print the per-moment empirical sampling SDs s_i (the fixed Franke
+    weights) grouped by loss component, and flag any degenerate ones the
+    loss will skip."""
+    print(f"      per-moment empirical sampling SD s_i (Franke weights, "
+          f"{BOOTSTRAP_BLOCK}-bar block bootstrap):")
+    for c in COMPONENT_NAMES:
+        for m in COMPONENT_MOMENTS[c]:
+            s = sds.get(m, float("nan"))
+            tag = f"{s:.3e}" if np.isfinite(s) else "NaN  (skipped by loss)"
+            print(f"        {c:<5s} {m:<18s} s_i={tag}")
+    dropped = [m for m in MOMENT_NAMES if not np.isfinite(sds.get(m, float("nan")))]
+    if dropped:
+        print(f"      moments skipped by loss (degenerate bootstrap SD): "
+              f"{', '.join(dropped)}")
+
+
+def _report_reachability(lhs_df: pd.DataFrame, target: dict):
+    """Diagnostic only: flag targets outside the LHS-observed achievable range.
+    Doesn't drop moments from the loss; surfaces structural model-vs-data gaps."""
+    unreachable = []
+    for m in MOMENT_NAMES:
+        vals = lhs_df[m].to_numpy()
+        vals = vals[np.isfinite(vals)]
+        if len(vals) < 5:
+            continue
+        t = float(target[m])
+        lo, hi = float(vals.min()), float(vals.max())
+        if not (lo <= t <= hi):
+            gap = t - hi if t > hi else lo - t
+            unreachable.append((m, t, lo, hi, gap))
+    if unreachable:
+        print(f"      UNREACHABLE targets (model-side gap — flag for design review):")
+        for name, t, lo, hi, gap in unreachable:
+            print(f"        {name:<22s} target {t:+.4f}  "
+                  f"LHS [{lo:+.4f}, {hi:+.4f}]  miss {gap:+.4f}")
+
+
+# ── end-to-end ───────────────────────────────────────────────────────────────
+
+def run_regime_calibration(regime: str, target: dict,
+                           n_lhs: int = N_LHS, n_days: int = N_DAYS,
+                           n_runs: int = N_RUNS, n_refine: int = N_REFINE,
+                           n_per_refine: int = N_PER_REFINE,
+                           n_stage2: int = N_STAGE2,
+                           seed: int = SEED) -> dict:
+    """Run the surrogate-assisted SMM pipeline for ONE regime independently
+    (HFABM Gao et al. (2022) §4.2 two-stage: surrogate → tight grid search around
+    optimum on the true simulator; weights from historical block bootstrap)."""
+    OUT_DIR.mkdir(exist_ok=True)
+    lhs_path = OUT_DIR / f"calibration_lhs_{regime}.csv"
+    n_steps = 4 + n_refine + 1   # bootstrap + LHS + surrogate + AL × n_refine + L-BFGS-B + stage-2 + validate
+
+    print(f"\n{'='*70}")
+    print(f"  CALIBRATING REGIME: {regime}  (HFABM 2-stage, bootstrap weights)")
+    print(f"{'='*70}")
+
+    # Step 1 — per-moment empirical sampling SDs (Franke & Westerhoff 2012
+    # weights). Computed ONCE per regime; fixed across all LHS / AL /
+    # stage-2 / optimisation steps so the loss is stationary and the D(θ)
+    # values stay comparable across model versions.
+    step = 1
+    print(f"[{regime}][{step}/{n_steps}] Franke weights from historical 1-min mid returns "
+          f"({N_BOOTSTRAP} block resamples × {BOOTSTRAP_BLOCK}-bar blocks)")
+    moment_sds = empirical_moment_sd(regime, n_days=n_days, n_runs=n_runs, seed=seed)
+    _report_moment_sds(moment_sds)
+
+    # Step 1 — initial LHS
+    step += 1
+    _cols = set(pd.read_csv(lhs_path, nrows=0).columns) if lhs_path.exists() else set()
+    # Regenerate if columns don't EXACTLY match the current param + moment set —
+    # catches a structural change (e.g. dropped depth/MM params, new moments)
+    # whose stale moment VALUES would silently corrupt the surrogate.
+    cache_ok = (lhs_path.exists()
+                and set(MOMENT_NAMES).issubset(_cols)
+                and set(PARAM_KEYS).issubset(_cols)
+                and not (_cols - set(PARAM_KEYS) - set(MOMENT_NAMES)))
+    if cache_ok:
+        lhs_df = pd.read_csv(lhs_path)
+        print(f"[{regime}][{step}/{n_steps}] Reusing cached: {lhs_path} ({len(lhs_df)} samples)")
+    else:
+        if lhs_path.exists():
+            print(f"[{regime}][{step}/{n_steps}] Cached LHS lacks current moment columns "
+                  f"(loss set changed) — regenerating")
+        else:
+            print(f"[{regime}][{step}/{n_steps}] Initial LHS: {n_lhs} samples × {n_days} days × {n_runs} seeds")
+        t0 = time.perf_counter()
+        lhs_df = run_lhs(regime, n_lhs, n_days, n_runs, seed=seed)
+        lhs_df.to_csv(lhs_path, index=False)
+        print(f"      {time.perf_counter() - t0:.0f}s → {lhs_path}")
+
+    # Step 2 — initial surrogate
+    step += 1
+    print(f"[{regime}][{step}/{n_steps}] Initial XGBoost surrogate training")
+    model, sinfo = train_surrogate(lhs_df, target, moment_sds)
+    _report_surrogate_d(sinfo)
+    _report_reachability(lhs_df, target)
+
+    # Active-learning rounds
+    for r in range(n_refine):
+        step += 1
+        print(f"[{regime}][{step}/{n_steps}] Active-learning round {r+1}/{n_refine}: "
+              f"{n_per_refine} new sims")
+        t0 = time.perf_counter()
+        new_rows = _refine_round(regime, model, target, moment_sds, n_per_refine,
+                                 n_days, n_runs, seed=seed + 1000 * (r + 1))
+        lhs_df = pd.concat([lhs_df, new_rows], ignore_index=True)
+        lhs_df.to_csv(lhs_path, index=False)
+        model, sinfo = train_surrogate(lhs_df, target, moment_sds, seed=r + 1)
+        print(f"      total samples now {len(lhs_df)}, "
+              f"{time.perf_counter() - t0:.0f}s")
+        _report_surrogate_d(sinfo)
+        _report_reachability(lhs_df, target)
+
+    # Stage-1 optimisation on the surrogate
+    step += 1
+    print(f"[{regime}][{step}/{n_steps}] Stage 1: surrogate optimum (pool argmin over Sobol candidates)")
+    theta_surrogate, loss_surrogate = optimise_surrogate(model)
+    print(f"      surrogate-predicted D at stage-1 optimum: {loss_surrogate:.4f}")
+
+    # Stage-2 grid search around surrogate optimum on the TRUE simulator
+    # (HFABM Gao et al. (2022) §4.2). Corrects for surrogate fitting noise.
+    step += 1
+    print(f"[{regime}][{step}/{n_steps}] Stage 2: grid search around θ* on true simulator "
+          f"({n_stage2} sims in ±{STAGE2_BOX_FRAC*100:.0f}% box)")
     t0 = time.perf_counter()
-    lhs_df = run_lhs(n_lhs, n_steps=78 * n_days, n_runs=n_runs, seed=seed)
-    lhs_csv = os.path.join(out_dir, "calibration_lhs.csv")
-    lhs_df.to_csv(lhs_csv, index=False)
-    print(f"      wall: {time.perf_counter()-t0:.1f}s; saved -> {lhs_csv}")
+    theta_star, true_loss_star, stage2_df = stage2_grid_search(
+        theta_surrogate, regime, target, moment_sds,
+        n_grid=n_stage2, n_days=n_days, n_runs=n_runs,
+        seed=seed + 50_000,
+    )
+    stage2_path = OUT_DIR / f"calibration_stage2_{regime}.csv"
+    stage2_df.to_csv(stage2_path, index=False)
+    print(f"      stage-2 best TRUE loss: {true_loss_star:.4f}  "
+          f"(surrogate-predicted {loss_surrogate:.4f})  "
+          f"[{time.perf_counter() - t0:.0f}s → {stage2_path}]")
 
-    # Step 2: train XGBoost
-    print(f"\n[2/4] Training XGBoost surrogate")
-    t0 = time.perf_counter()
-    models = train_xgb_surrogate(lhs_df)
-    print(f"      wall: {time.perf_counter()-t0:.1f}s; trained {len(models)} regressors")
+    # Validation at stage-2 best
+    step += 1
+    print(f"[{regime}][{step}/{n_steps}] Validating at stage-2 optimum")
+    validated = simulate_moments(theta_star, regime, n_days, n_runs,
+                                 seed=seed + 9991)
+    validated_loss = _true_loss(validated, target, moment_sds)
 
-    # Step 3: optimise
-    print(f"\n[3/4] Optimising surrogate (multi-start L-BFGS-B)")
-    t0 = time.perf_counter()
-    theta_star, loss_star = optimise_surrogate(models, target_calm, target_stress)
-    print(f"      wall: {time.perf_counter()-t0:.1f}s; surrogate loss at theta*: {loss_star:.4f}")
-    print("      theta*:")
-    for p, v in zip(PARAM_NAMES, theta_star):
-        print(f"        {p:14}  {v:+.6e}")
+    print(f"\n{'':4}{'moment':<20}{'target':>12}{'simulator':>14}{'|s-t|':>12}{'|s-t|/s_i':>12}")
+    # All moments (ret_kurtosis is now in MOMENT_NAMES but in no component, so
+    # it prints as a diagnostic — HFABM convention; Hill/KS are the loss tails).
+    all_moment_names = list(MOMENT_NAMES)
+    for m in all_moment_names:
+        t = float(target[m])
+        v = float(validated[m])
+        sd = moment_sds.get(m, float("nan"))
+        if m == "ret_kurtosis":
+            std_col = "  (diag)"
+        elif np.isfinite(sd) and sd > 0:
+            std_col = f"{abs(v - t) / sd:>12.2f}"
+        else:
+            std_col = f"{'—':>12}"
+        print(f"    {m:<20}{t:>12.4f}{v:>14.4f}{abs(v - t):>12.4f}{std_col}")
 
-    # Step 4: validate by running actual simulator
-    print(f"\n[4/4] Validating: running simulator at theta*")
-    t0 = time.perf_counter()
-    actual = evaluate_theta(theta_star, calm_d, stress_d,
-                            n_steps=78 * n_days, n_runs=n_runs, seed=seed + 9999)
-    print(f"      wall: {time.perf_counter()-t0:.1f}s")
-    pred = surrogate_predict(models, theta_star)
+    sim_dict = {m: float(validated[m]) for m in MOMENT_NAMES}
+    hist_dict = {m: float(target[m]) for m in MOMENT_NAMES}
+    deltas_validated = compute_grouped_deltas(sim_dict, hist_dict, moment_sds)
+    print(f"\n    grouped Δ contributions (Franke-standardised, {len(COMPONENT_NAMES)} in loss):")
+    for c in COMPONENT_NAMES:
+        d = deltas_validated.get(c, float("nan"))
+        print(f"      Δ{c:<6s} = {d:.4f}   (mean sampling-SDs off)")
+    print(f"\n    validated true loss D(θ) at stage-2 θ: {validated_loss:.4f}")
 
-    print("\n              moment           target      surrogate     simulator")
-    for regime, target in (("calm", target_calm), ("stress", target_stress)):
-        for m in MOMENT_NAMES:
-            t = float(getattr(target, m))
-            s = pred[regime].get(m, float("nan"))
-            a = float(getattr(actual[regime], m))
-            print(f"      {regime:6}  {m:18}  {t:+9.4f}    {s:+9.4f}    {a:+9.4f}")
-
-    # Save
-    final = {
-        "ft_sigma_rel": float(theta_star[0]),
-        "mt_sigma_rel": float(theta_star[1]),
-        "mt_lambda_ewma": float(theta_star[2]),
-        "kappa_v": float(theta_star[3]),
-        "xi_v": float(10 ** theta_star[4]),
-        "calm_v0": float(calm_d.v0),
-        "calm_sigma_v_per_5min": float(calm_d.sigma_v_per_5min),
-        "calm_mu_v_per_5min": float(calm_d.mu_v_per_5min),
-        "stress_v0": float(stress_d.v0),
-        "stress_sigma_v_per_5min": float(stress_d.sigma_v_per_5min),
-        "stress_mu_v_per_5min": float(stress_d.mu_v_per_5min),
-        "n_lhs": n_lhs, "n_days": n_days, "n_runs": n_runs, "seed": seed,
-        "surrogate_loss": float(loss_star),
-        "validated_calm_moments": asdict(actual["calm"]),
-        "validated_stress_moments": asdict(actual["stress"]),
-        "target_calm_moments": asdict(target_calm),
-        "target_stress_moments": asdict(target_stress),
+    return {
+        "theta_stage1": {k: float(v) for k, v in zip(PARAM_KEYS, theta_surrogate)},
+        "theta_stage2": {k: float(v) for k, v in zip(PARAM_KEYS, theta_star)},
+        "surrogate_loss_stage1": float(loss_surrogate),
+        "true_loss_stage2": float(true_loss_star),
+        "true_loss_validated": float(validated_loss),
+        "component_deltas": {c: (float(deltas_validated[c])
+                                 if np.isfinite(deltas_validated.get(c, float("nan")))
+                                 else None)
+                             for c in COMPONENT_NAMES},
+        "surrogate_d_accuracy": {"r2": sinfo["r2"], "corr": sinfo["corr"],
+                                 "n": sinfo["n"], "clip_cap": sinfo["cap"]},
+        "moment_sds": {m: (float(v) if np.isfinite(v) else None)
+                       for m, v in moment_sds.items()},
+        "n_total_samples": len(lhs_df),
+        "n_stage2": n_stage2,
+        "target": dict(target),
+        "validated": dict(validated),
     }
-    out_path = os.path.join(out_dir, "calibrated_params.json")
-    with open(out_path, "w") as f:
-        json.dump(final, f, indent=2)
-    print(f"\nSaved calibrated params -> {out_path}")
-
-    # Feature importance
-    fi = feature_importance(models)
-    fi_path = os.path.join(out_dir, "calibration_feature_importance.csv")
-    fi.to_csv(fi_path, index=False)
-    print(f"Saved feature importance -> {fi_path}")
-    return final
 
 
-# ─── CLI ──────────────────────────────────────────────────────────────
+def run_calibration(regimes: tuple = REGIMES,
+                    n_lhs: int = N_LHS, n_days: int = N_DAYS,
+                    n_runs: int = N_RUNS, n_refine: int = N_REFINE,
+                    n_per_refine: int = N_PER_REFINE,
+                    n_stage2: int = N_STAGE2,
+                    seed: int = SEED) -> dict:
+    """Calibrate each regime independently (D18b). Writes one combined
+    output/calibrated_params.json with results nested by regime."""
+    OUT_DIR.mkdir(exist_ok=True)
+    targets = empirical_targets()
+    results = {}
+    for regime in regimes:
+        results[regime] = run_regime_calibration(
+            regime, targets[regime],
+            n_lhs=n_lhs, n_days=n_days, n_runs=n_runs,
+            n_refine=n_refine, n_per_refine=n_per_refine,
+            n_stage2=n_stage2, seed=seed,
+        )
+    payload = {
+        "regimes": list(regimes),
+        "config": {
+            "n_lhs": n_lhs, "n_refine": n_refine, "n_per_refine": n_per_refine,
+            "n_days": n_days, "n_runs": n_runs, "n_stage2": n_stage2, "seed": seed,
+        },
+        "results": results,
+    }
+    with open(OUT_DIR / "calibrated_params.json", "w") as f:
+        json.dump(payload, f, indent=2)
+    print(f"\nSaved output/calibrated_params.json (regimes: {', '.join(regimes)})")
+    return payload
 
-def _print_verify(out: dict):
-    print("WRDS IVol_t_m unit-hypothesis comparison")
-    print("=" * 60)
-    print(f"empirical daily std (open->close): {out['empirical_daily_std_oc']:.4e}")
-    for h in ("H1_per_second_RV", "H2_daily_IV", "H3_per_bar_var"):
-        d = out[h]
-        print(f"\n{h}:")
-        print(f"  implied 5-min std       : {d['implied_5min_std']:.4e}")
-        print(f"  implied daily std       : {d['implied_daily_std']:.4e}")
-        print(f"  ratio vs empirical OC   : {d['ratio_to_empirical']:.3f}")
-    print(f"\nBest fit (log-ratio): {out['best_hypothesis']}")
 
-
-def _print_direct(direct: DirectParams, label: str):
-    print(f"Direct calibration ({label}):")
-    for k, v in asdict(direct).items():
-        print(f"  {k:25}  {v:.6e}")
+def _print_targets():
+    for regime, m in empirical_targets().items():
+        print(f"[{regime}]")
+        for name in MOMENT_NAMES:
+            print(f"  {name:<16}{m[name]:+.5f}")
 
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
-    if cmd == "verify":
-        _print_verify(verify_ivol_units())
-    elif cmd == "direct":
-        _print_direct(extract_direct_params("data/thesis_data_calm.csv"),  "calm")
-        print()
-        _print_direct(extract_direct_params("data/thesis_data_stressed.csv"), "stressed")
+    if cmd == "targets":
+        _print_targets()
     elif cmd == "run":
-        n_lhs  = int(sys.argv[2]) if len(sys.argv) > 2 else 200
-        n_days = int(sys.argv[3]) if len(sys.argv) > 3 else 90
-        n_runs = int(sys.argv[4]) if len(sys.argv) > 4 else 3
-        run_calibration(n_lhs=n_lhs, n_days=n_days, n_runs=n_runs)
+        # Optional regime arg: `run calm [...]` or `run stressed [...]`
+        if len(sys.argv) > 2 and sys.argv[2] in REGIMES:
+            regimes = (sys.argv[2],)
+            arg_offset = 3
+        else:
+            regimes = REGIMES
+            arg_offset = 2
+        n_lhs        = int(sys.argv[arg_offset])     if len(sys.argv) > arg_offset     else N_LHS
+        n_days       = int(sys.argv[arg_offset + 1]) if len(sys.argv) > arg_offset + 1 else N_DAYS
+        n_runs       = int(sys.argv[arg_offset + 2]) if len(sys.argv) > arg_offset + 2 else N_RUNS
+        n_refine     = int(sys.argv[arg_offset + 3]) if len(sys.argv) > arg_offset + 3 else N_REFINE
+        n_per_refine = int(sys.argv[arg_offset + 4]) if len(sys.argv) > arg_offset + 4 else N_PER_REFINE
+        n_stage2     = int(sys.argv[arg_offset + 5]) if len(sys.argv) > arg_offset + 5 else N_STAGE2
+        run_calibration(regimes=regimes, n_lhs=n_lhs, n_days=n_days,
+                        n_runs=n_runs, n_refine=n_refine,
+                        n_per_refine=n_per_refine, n_stage2=n_stage2)
     else:
-        print(f"unknown cmd {cmd!r}; try: verify | direct | run [N D R]")
+        print("usage: python calibrate.py [targets | run [calm|stressed] [N_LHS N_DAYS N_RUNS N_REFINE N_PER_REFINE N_STAGE2]]")

@@ -1,0 +1,176 @@
+{
+  "stressed": {
+    "source": [
+      "glbx-mdp3-20200316.mbp-10.csv.zst",
+      "glbx-mdp3-20200317.mbp-10.csv.zst",
+      "glbx-mdp3-20200318.mbp-10.csv.zst",
+      "glbx-mdp3-20200319.mbp-10.csv.zst"
+    ],
+    "front_month": {
+      "glbx-mdp3-20200316.mbp-10.csv.zst": "ESH0",
+      "glbx-mdp3-20200317.mbp-10.csv.zst": "ESH0",
+      "glbx-mdp3-20200318.mbp-10.csv.zst": "ESM0",
+      "glbx-mdp3-20200319.mbp-10.csv.zst": "ESM0"
+    },
+    "n_rows": 100333425,
+    "n_add": 31273978,
+    "n_passive": 30717059,
+    "n_cancel_top10": 27557830,
+    "frac_aggressive": 5.208829291200416e-07,
+    "placement": {
+      "geometric": {
+        "p_zi": 0.3430661583055641,
+        "mean_depth_ticks": 2.914889667168262,
+        "loglik": -27483691.234513674,
+        "n": 14662544
+      },
+      "lognormal": {
+        "mu": 0.8008491054809017,
+        "sigma": 0.7227349414987277,
+        "loglik": -28220523.28964453,
+        "n": 14662544
+      },
+      "better_fit": "geometric",
+      "loglik_gain_lognormal": -736832.0551308542,
+      "mode_ticks": 1,
+      "hist_frac_k1_15": {
+        "1": 0.36294704384177806,
+        "2": 0.19615081802994078,
+        "3": 0.14473757077898625,
+        "4": 0.11515757429270118,
+        "5": 0.05201771261521875,
+        "6": 0.031254126159826014,
+        "7": 0.02984134267559572,
+        "8": 0.028800936590539814,
+        "9": 0.017779179383877724,
+        "10": 0.01813314251605997,
+        "11": 0.002698644928192543,
+        "12": 0.00018823472925298638,
+        "13": 0.00010543872877721628,
+        "14": 5.86528504194088e-05,
+        "15": 3.38958914633095e-05
+      },
+      "tail": {
+        "P(k>10)": 0.003180553115475732,
+        "P(k>20)": 2.6871189610752403e-05
+      }
+    },
+    "cancellation": {
+      "zi_delta": 0.9999999999999997,
+      "rate_per_min": 35.592393729816635,
+      "mean_cancels_per_min": 8065.410804020101,
+      "mean_resting_orders_top10": 226.60489949748742,
+      "mean_resting_volume_top10": 464.7782663316583,
+      "mean_cancel_size": 1.9554109014750158,
+      "mean_passive_add_size": 2.11864059879377,
+      "rate_per_min_volume_based": 33.932723092953765,
+      "n_minutes": 1592,
+      "n_cancels_total": 12840134,
+      "n_passive_adds_total": 14662544
+    },
+    "book_state_1min": {
+      "n_samples": 1592,
+      "spread_ticks": {
+        "mean": 1.6677135678391959,
+        "median": 2.0,
+        "p10": 1.0,
+        "p90": 3.0
+      },
+      "inside_depth": {
+        "mean": 25.347361809045225,
+        "median": 9.0
+      },
+      "total_depth_10lvl": {
+        "mean": 464.7782663316583,
+        "median": 436.0
+      }
+    }
+  },
+  "calm": {
+    "source": [
+      "glbx-mdp3-20190603.mbp-10.csv.zst",
+      "glbx-mdp3-20190604.mbp-10.csv.zst",
+      "glbx-mdp3-20190605.mbp-10.csv.zst",
+      "glbx-mdp3-20190606.mbp-10.csv.zst"
+    ],
+    "front_month": {
+      "glbx-mdp3-20190603.mbp-10.csv.zst": "ESM9",
+      "glbx-mdp3-20190604.mbp-10.csv.zst": "ESM9",
+      "glbx-mdp3-20190605.mbp-10.csv.zst": "ESM9",
+      "glbx-mdp3-20190606.mbp-10.csv.zst": "ESM9"
+    },
+    "n_rows": 32920099,
+    "n_add": 10677648,
+    "n_passive": 10651297,
+    "n_cancel_top10": 8797261,
+    "frac_aggressive": 0.00047314560844958104,
+    "placement": {
+      "geometric": {
+        "p_zi": 0.5429675871497112,
+        "mean_depth_ticks": 1.8417305630515886,
+        "loglik": -11554539.258702507,
+        "n": 9099628
+      },
+      "lognormal": {
+        "mu": 0.32303514135730627,
+        "sigma": 0.6365533329575919,
+        "loglik": -12394128.708878525,
+        "n": 9099628
+      },
+      "better_fit": "geometric",
+      "loglik_gain_lognormal": -839589.4501760174,
+      "mode_ticks": 1,
+      "hist_frac_k1_15": {
+        "1": 0.7559236487469597,
+        "2": 0.08850999183702894,
+        "3": 0.035836519910484255,
+        "4": 0.022875110938601007,
+        "5": 0.016242532112301734,
+        "6": 0.016336162313448418,
+        "7": 0.016919043283967213,
+        "8": 0.024198791423121913,
+        "9": 0.013059325062519039,
+        "10": 0.010097995214749439,
+        "11": 7.692622159938846e-07,
+        "12": 1.0989460228484065e-07,
+        "13": 0.0,
+        "14": 0.0,
+        "15": 0.0
+      },
+      "tail": {
+        "P(k>10)": 8.791568182787252e-07,
+        "P(k>20)": 0.0
+      }
+    },
+    "cancellation": {
+      "zi_delta": 0.9168183210902626,
+      "rate_per_min": 2.4867281608155563,
+      "mean_cancels_per_min": 4488.002469135802,
+      "mean_resting_orders_top10": 1804.782098765432,
+      "mean_resting_volume_top10": 5593.259259259259,
+      "mean_cancel_size": 2.50790433864553,
+      "mean_passive_add_size": 2.5802306423954913,
+      "rate_per_min_volume_based": 2.0123295457053683,
+      "n_minutes": 1620,
+      "n_cancels_total": 7270564,
+      "n_passive_adds_total": 9099628
+    },
+    "book_state_1min": {
+      "n_samples": 1620,
+      "spread_ticks": {
+        "mean": 1.0074074074074073,
+        "median": 1.0,
+        "p10": 1.0,
+        "p90": 1.0
+      },
+      "inside_depth": {
+        "mean": 216.5820987654321,
+        "median": 191.0
+      },
+      "total_depth_10lvl": {
+        "mean": 5593.259259259259,
+        "median": 5581.0
+      }
+    }
+  }
+}
