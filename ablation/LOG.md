@@ -74,3 +74,16 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   But in calm the VT over-injects volatility (V delta 6.5→10.7) and fattens calm tails, hurting fit.
   VT is a regime-asymmetric lever: a clear stressed-regime win, a calm-regime liability. Worth a
   regime-specific n_vt rather than a global on/off (note for Sid).
+
+## C4 — Fix ft_sigma_c = √390 (≈19.748, Chiarella one-daily-V_t-std; globals.FT_SIGMA_C_DEFAULT). 3-d ZI loop.
+- Edit: removed "ft_sigma_c" from PARAM_BOUNDS; passed ft_sigma_c=float(np.sqrt(390.0)) in _theta_to_params
+  ModelParams(...). PARAM_KEYS now [zi_alpha,zi_mu,zi_delta] (verified). Caches deleted; run exit 0.
+- D vs baseline: calm 102.69 (vs 48.36, MUCH WORSE +54.3, ~2.1x); stressed 71.90 (vs 29.11, +42.8, ~2.5x).
+- Components — both regimes: KS explodes (calm 47.0 vs 23.4; stressed 51.3 vs 18.4), Hill explodes
+  (calm 18.9 vs 0.83; stressed 10.2 vs 3.93), ACF2 worse. V stays fine (vol level still matched).
+- Diagnostics: calm hill 1.50 / kurt 5256 (!!); stressed hill 1.27 / kurt 1409. (baseline kurt 9 / 58.)
+- Interpretation: textbook confirmation of the D7b→calibrated-ft_sigma_c decision. At √390 the FTs
+  sweep to their OUTERMOST reservation (V_t + max z·σ_fund), drowning the book in i.i.d. fundamental
+  bursts → kurtosis in the thousands, Hill≈1.3-1.5 (far below the empirical ~2.4-3.0), KS wrecked.
+  ft_sigma_c is THE tail lever and MUST be calibrated low (~0.6, per C0); the literature daily-news
+  scale is the wrong scale for the 1-min microstructure. Strongest single-param sensitivity so far.
