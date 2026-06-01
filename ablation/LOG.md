@@ -59,3 +59,18 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   volatility (stressed kurt 58→25, V delta worsens) WITHOUT improving clustering (ACF2 still ~14.7 calm),
   and it worsens the calm tail (Hill 0.83→6.2). Net fit is WORSE in both regimes. The tail-vs-clustering
   trade-off goes the wrong way: MM helps KS a bit in calm but the damped vol hurts everything else.
+
+## C3 — Volatility Trader ON (POP n_vt=10, Gao §3.1.3 vol-scaled demand D38; vt_qty_base=2.0). Kalman, KS+Hill.
+- Edit: calibrate.py POP n_vt 0→10. Caches deleted; run exit 0.
+- D vs baseline: calm 52.80 (vs 48.36, WORSE +4.4); stressed 21.27 (vs 29.11, BETTER -7.8).
+- Components — stressed (the win): KS halved (9.66 vs 18.4), Hill near-perfect (0.04 vs 3.93),
+  ACF2 better (2.76 vs 4.04), BUT ACF1 worse (5.21 vs 2.63) and V worse (3.6 vs 0.06).
+  calm (the loss): V much worse (10.73 vs 6.5), ACF1 worse (5.19 vs 4.4), Hill worse (5.65 vs 0.83);
+  KS slightly better (18.1 vs 23.4); ACF2 ~flat (13.1 vs 13.3).
+- Diagnostics: stressed hill 3.17 / kurt 19.9 (was 2.44 / 58.4 — VT thinned the extreme tail toward target),
+  long-lag clustering UP (acf_absr_10 0.111 vs baseline 0.08-ish, acf_absr_20 0.092). calm hill 2.52 / kurt 13.9.
+- Interpretation: STRONGLY supports the C3 hypothesis FOR STRESSED — the vol-scaled VT supplies the
+  long-lag |r| clustering and tames the runaway stressed tail (kurt 58→20, Hill exact), cutting D by ~27%.
+  But in calm the VT over-injects volatility (V delta 6.5→10.7) and fattens calm tails, hurting fit.
+  VT is a regime-asymmetric lever: a clear stressed-regime win, a calm-regime liability. Worth a
+  regime-specific n_vt rather than a global on/off (note for Sid).
