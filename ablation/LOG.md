@@ -29,3 +29,19 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   stressed: Hill 2.44, kurtosis 58.4, ret_std 1.8e-3, surrogate R² 0.95.
 - Interpretation: KS (whole-distribution fit) is the largest loss term in both regimes; the stressed
   fat tail (kurt 58, Hill 2.4) is what KS+Hill is chasing. Calm's residual is clustering (ACF2). Clean run, exit 0.
+
+## C1 — SV-MJD fundamental (Stein-Stein vol + Merton jumps) instead of Kalman.
+- Edit: `python3 data/v_gbm.py generate-all 42 30` regenerated data/fv_{calm,stressed}.csv as
+  smooth synthetic SV-MJD series. No calibrate.py code change. Caches deleted; run exit 0.
+- **fv length used**: SV-MJD = 11700 bars/regime (30 days × 390). NOT like-for-like vs Kalman BASE
+  (calm 102758, stressed 11445 real bars) — the stressed window in particular is synthetic-30d vs
+  real-29d. Per PLAN this is a mechanism-level comparison, not a fit comparison. Both regimes' V_t
+  had 94 Merton jumps; calm σ_t mean 1.98e-4, stressed σ_t mean 1.22e-3.
+- D vs baseline: calm 47.17 (vs 48.36, ≈flat -1.2); stressed 36.92 (vs 29.11, WORSE +7.8).
+- Components moved — calm: KS up (24.4 vs 23.4), ACF2 up (14.9 vs 13.3), Hill worse (4.48 vs 0.83),
+  V improved (0.91 vs 6.5). stressed: KS up (23.0 vs 18.4), Hill worse (5.73 vs 3.93).
+- Diagnostics: calm hill 2.61 / kurt 16.9 (was 3.02 / 9.0 — fatter tails); stressed hill 2.11 / kurt 47.9.
+- Interpretation: the smooth SV-MJD fundamental does NOT improve fit — it WORSENS the tail match
+  (Hill) in both regimes and the whole-distribution KS, especially in stressed. The Kalman real
+  efficient price (BASE) transmits microstructure the synthetic jump-diffusion smooths over;
+  the model leans on faithful V_t for its tail. Confirms fundamental choice matters and Kalman is better.
