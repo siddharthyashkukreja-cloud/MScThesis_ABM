@@ -45,3 +45,17 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   (Hill) in both regimes and the whole-distribution KS, especially in stressed. The Kalman real
   efficient price (BASE) transmits microstructure the synthetic jump-diffusion smooths over;
   the model leans on faithful V_t for its tail. Confirms fundamental choice matters and Kalman is better.
+
+## C2 — Market Maker ON (POP n_mm=4, HFABM mid-anchored D48; mm_p_edge=4.0). Kalman, KS+Hill.
+- Edit: calibrate.py POP n_mm 0→4. Caches deleted; run exit 0.
+- D vs baseline: calm 51.46 (vs 48.36, WORSE +3.1); stressed 33.42 (vs 29.11, WORSE +4.3).
+- Components — calm: KS improved (18.5 vs 23.4) but ACF2 stuck high (14.7 vs 13.3), Hill worse
+  (6.2 vs 0.83), ACF1 worse (6.4 vs 4.4), V worse (5.7). stressed: KS up (21.7 vs 18.4),
+  V worse (3.3 vs 0.06), Hill ~flat (3.24 vs 3.93), ACF1/ACF2 ~flat or slightly better.
+- Diagnostics: calm hill 2.48 / kurt 16.6 (was 3.02 / 9.0 — fatter); stressed hill 2.57 / kurt 24.9
+  (was 2.44 / 58.4 — MM TAMED the stressed tail/kurtosis). Calm θ shifted: ft_sigma_c up to 1.0,
+  ZI rates pulled down (alpha 0.16, delta 0.036) — the MM now supplies near-mid liquidity so ZI backs off.
+- Interpretation: confirms the D37/D48 rationale for removing the MM — the always-quoting MM clamps
+  volatility (stressed kurt 58→25, V delta worsens) WITHOUT improving clustering (ACF2 still ~14.7 calm),
+  and it worsens the calm tail (Hill 0.83→6.2). Net fit is WORSE in both regimes. The tail-vs-clustering
+  trade-off goes the wrong way: MM helps KS a bit in calm but the damped vol hurts everything else.
