@@ -158,3 +158,17 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   optimum sits near its L2 value (0.47 vs 0.54), so freeing it buys little and slightly perturbs the tail.
   Suggests p_zi is worth calibrating for stressed but the L2/MBP-10 data-fix is adequate for calm. Note
   the 5-d surrogate R² is a touch lower (0.86 calm) — more dims, same budget. Net: a stressed-side win.
+
+## C10 — Loss ablation: KS-only tail. COMPONENT_NAMES = ("KS","V","ACF1","ACF2") — Hill DROPPED.
+- Edit: COMPONENT_NAMES drops "Hill" (one-line). Caches deleted; run exit 0. NB Hill is still computed as
+  a DIAGNOSTIC (in MOMENT_NAMES), just not in the loss — so dHill is blank in results.csv but `hill` is logged.
+- CAVEAT: D here is a 4-component sum, NOT comparable to C0's 5-component D. Judge by the FITTED-model
+  tail diagnostics, not D. (calm D 51.59, stressed D 25.18 — lower just because one term is removed.)
+- KEY RESULT — calm: with Hill out of the loss the tail EXPLODES. kurtosis 9.0 → 108.8, Hill 3.02 → 1.67,
+  and ft_sigma_c runs UP to 2.42 (from 0.61). KS alone does NOT pin the tail index — it tolerates a fat tail
+  as long as the whole-distribution CDF roughly matches, so the optimiser fattens the FT overshoot.
+- stressed: optimum essentially UNCHANGED from C0 (θ ≈ {0.561,0.282,0.096,0.134}, hill 2.44, kurt 58.4) —
+  Hill was a minor stressed term (3.9 of 29), so dropping it doesn't move the stressed optimum.
+- Interpretation: JUSTIFIES keeping Hill in the loss. KS is necessary but not sufficient for the tail —
+  in calm it lets kurtosis blow past 100 and Hill fall to 1.67 (vs empirical ~3). Hill is the direct,
+  reachable tail-index lever that prevents this. Pair KS (whole distribution) + Hill (tail index): C0 is right.
