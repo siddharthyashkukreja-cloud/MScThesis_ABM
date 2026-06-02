@@ -143,3 +143,18 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   LESS than the naive sum of the single fixes (C5+C6+C7 ≈ +20.3) because ft_sigma_c re-optimises to
   partly compensate — but the loss is real. Calibrating ZI rates (esp. zi_alpha, zi_delta in calm) is
   justified; zi_mu alone (C6) was the only freely-droppable one.
+
+## C9 — p_zi ADDED to the loop (5-d). PARAM_BOUNDS += "p_zi":(0.2,0.8). Free depth vs L2-fixed.
+- Edit: added "p_zi":(0.2,0.8) to PARAM_BOUNDS; p_zi=float(d["p_zi"]) in _theta_to_params (overrides the
+  P_ZI data-fix; verified __post_init__ does NOT clobber an explicit value). PARAM_KEYS 5-d (verified).
+  Caches deleted; run exit 0.
+- D vs baseline: calm 49.70 (vs 48.36, ~flat +1.3); stressed 23.00 (vs 29.11, BETTER -6.1, ~21%).
+- Calibrated p_zi: calm 0.468 (vs L2 0.543 — slightly sparser), stressed 0.218 (vs L2 0.343 — much sparser).
+- Components — stressed (the win): KS down hard (13.4 vs 18.4), V near-perfect (1.04), Hill better (2.57 vs 3.93).
+  calm: KS better (18.0 vs 23.4) but ACF2 worse (15.4 vs 13.3), Hill worse (3.72 vs 0.83) — a wash net.
+- Diagnostics: stressed hill 2.70 / kurt 45.4 (vs 2.44 / 58.4 — closer to target); calm hill 2.67 / kurt 24.7.
+- Interpretation: freeing depth helps STRESSED clearly — a sparser ZI book (p_zi 0.22) lets price moves
+  punch through thin liquidity, sharpening the whole-distribution fit (KS) and vol level (V). Calm's
+  optimum sits near its L2 value (0.47 vs 0.54), so freeing it buys little and slightly perturbs the tail.
+  Suggests p_zi is worth calibrating for stressed but the L2/MBP-10 data-fix is adequate for calm. Note
+  the 5-d surrogate R² is a touch lower (0.86 calm) — more dims, same budget. Net: a stressed-side win.
