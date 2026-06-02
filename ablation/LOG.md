@@ -100,3 +100,17 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   down starves near-mid limit liquidity, so the book thins and ft_sigma_c/zi_delta over-compensate,
   fattening the calm tail (Hill 0.83→12.5). Calibrating zi_alpha clearly MATTERS for calm. Stressed's
   optimum (0.28) is closer to 0.15, so the constraint barely bites — even helps KS marginally.
+
+## C6 — Fix zi_mu = 0.025 (CST 2008 market-arrival baseline). Free: ft_sigma_c, zi_alpha, zi_delta.
+- Edit: removed "zi_mu" from PARAM_BOUNDS; zi_mu=0.025 in _theta_to_params. PARAM_KEYS
+  [ft_sigma_c,zi_alpha,zi_delta] (verified). Caches deleted; run exit 0.
+- D vs baseline: calm 48.28 (vs 48.36, FLAT -0.08); stressed 29.96 (vs 29.11, ~flat +0.85).
+- Components essentially unchanged — calm: Hill stays great (0.53 vs 0.83), KS ~flat (22.3 vs 23.4),
+  ACF2 ~flat (14.0). stressed: KS ~flat (19.2 vs 18.4), Hill ~flat (3.02 vs 3.93). Other θ barely move
+  (calm ft_sigma_c 0.586≈0.606, zi_alpha 0.395≈0.340; stressed ~baseline).
+- Diagnostics: calm hill 3.00 / kurt 5.86 (≈ baseline 3.02 / 9.0); stressed hill 2.61 / kurt 40.9.
+- Interpretation: zi_mu is a LOW-sensitivity lever. Baseline calm/stressed optima (0.087 / 0.096) sit
+  modestly above the CST 0.025, but pinning it there costs ~nothing — the market-order rate is a minor
+  contributor and the literature value is adequate. Calibrating zi_mu is NOT worth a loop dimension;
+  this justifies treating it as fixable (cheapest free param to drop). Contrast with ft_sigma_c (C4) and
+  zi_alpha-calm (C5), which matter a lot.
