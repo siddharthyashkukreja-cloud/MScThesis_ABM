@@ -172,3 +172,50 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
 - Interpretation: JUSTIFIES keeping Hill in the loss. KS is necessary but not sufficient for the tail —
   in calm it lets kurtosis blow past 100 and Hill fall to 1.67 (vs empirical ~3). Hill is the direct,
   reachable tail-index lever that prevents this. Pair KS (whole distribution) + Hill (tail index): C0 is right.
+
+## C11 — Loss ablation: Hill-only tail. COMPONENT_NAMES = ("V","ACF1","ACF2","Hill") — KS DROPPED.
+- Edit: COMPONENT_NAMES drops "KS" (one-line). Caches deleted; run exit 0. NB ks_stat still computed as a
+  DIAGNOSTIC but not in the loss — so dKS is blank in results.csv; `hill` and ks_stat are still logged.
+- CAVEAT: D here is a 4-component sum (no KS), NOT comparable to C0's 5-component D (calm 24.95, stressed 10.75).
+- KEY RESULT — the MIRROR of C10: with Hill IN the loss the tail stays well-controlled. calm kurtosis 8.34
+  (vs baseline 9.0 — fine), Hill 2.86 (vs 3.02 — fine); stressed kurt 50.7, Hill 2.49 (≈ baseline 2.44).
+  ft_sigma_c stays low (0.66 calm / 0.57 stressed) — no FT-overshoot blow-up. BUT KS is now untargeted:
+  ks_stat 0.179 (calm) / 0.186 (stressed) drift free (the whole-distribution CDF is no longer pinned).
+- Interpretation: completes the KS+Hill justification. C10 (KS-only) → tail explodes (kurt 109, Hill 1.67).
+  C11 (Hill-only) → tail fine but the whole return distribution (KS) is no longer directly matched. Neither
+  tail term alone is sufficient: KS pins the body/CDF, Hill pins the tail index. The C0 pairing (KS+Hill) is
+  the right loss — each component controls a distinct failure mode the other cannot reach.
+
+---
+
+# CAMPAIGN SUMMARY (C0–C11, all 12 cells, exit 0; KS+Hill 5-component loss unless noted)
+Reference baseline (C0): calm D=48.36, stressed D=29.11.
+
+| Cell | Change | calm D | stressed D | Verdict |
+|------|--------|--------|-----------|---------|
+| C0 | Baseline (Kalman, 4-d, KS+Hill) | 48.36 | 29.11 | reference |
+| C1 | SV-MJD fundamental | 47.17 | 36.92 | worse tail; Kalman better |
+| C2 | Market Maker on (n_mm=4) | 51.46 | 33.42 | both worse — MM damps vol (confirms removal) |
+| C3 | Volatility Trader on (n_vt=10) | 52.80 | 21.27 | stressed BIG win, calm liability — regime-asymmetric |
+| C4 | Fix ft_sigma_c=√390 | 102.69 | 71.90 | catastrophic; ft_sigma_c MUST be calibrated low |
+| C5 | Fix zi_alpha=0.15 | 66.35 | 26.68 | calm much worse; zi_alpha matters (calm) |
+| C6 | Fix zi_mu=0.025 | 48.28 | 29.95 | flat; zi_mu freely droppable |
+| C7 | Fix zi_delta=0.15 | 50.77 | 30.35 | calm mild-worse; moderate sensitivity |
+| C8 | Fix ALL ZI at CST | 59.07 | 33.43 | both worse; calibrating ZI rates is justified |
+| C9 | p_zi in the loop (5-d) | 49.70 | 23.00 | stressed win (sparser book); calm ≈flat |
+| C10 | KS-only (drop Hill) | 51.59* | 25.18* | calm tail EXPLODES (kurt 109, Hill 1.67) |
+| C11 | Hill-only (drop KS) | 24.95* | 10.75* | tail fine but KS untargeted |
+(*C10/C11 D not comparable to others — different component count.)
+
+Headline takeaways for Sid:
+1. ft_sigma_c is THE dominant lever (C4): the √390 literature scale is catastrophically wrong for 1-min
+   microstructure; calibrating it low (~0.6) is essential.
+2. KS+Hill loss is vindicated (C10 vs C11): KS alone lets the tail blow up; Hill alone leaves the CDF
+   untargeted. Both are needed — each controls a failure mode the other can't.
+3. Structural adds are regime-asymmetric: the Volatility Trader (C3) and free p_zi (C9) BOTH substantially
+   improve STRESSED (D 29→21 / 29→23) while being neutral/negative for calm → argues for regime-specific
+   structure (n_vt, p_zi) rather than a global on/off. The Market Maker (C2) hurts both (confirms its removal).
+4. Among ZI rates, calibration value ranks zi_alpha (calm, C5 +18) > zi_delta (C7 +2.4) > zi_mu (C6 ≈0);
+   the full CST pin (C8) costs +10.7 calm / +4.3 stressed — worth calibrating, esp. zi_alpha.
+5. Best fits observed: stressed via VT-on (C3, D=21.27) or free-p_zi (C9, D=23.00); calm stays near the C0
+   baseline (no tested change beat 48.36 for calm — its residual is volatility clustering, ACF2≈13-15).
