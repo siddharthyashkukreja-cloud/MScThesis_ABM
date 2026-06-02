@@ -87,3 +87,16 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   bursts → kurtosis in the thousands, Hill≈1.3-1.5 (far below the empirical ~2.4-3.0), KS wrecked.
   ft_sigma_c is THE tail lever and MUST be calibrated low (~0.6, per C0); the literature daily-news
   scale is the wrong scale for the 1-min microstructure. Strongest single-param sensitivity so far.
+
+## C5 — Fix zi_alpha = 0.15 (Cont-Stoikov-Talreja 2008 limit-arrival baseline). Free: ft_sigma_c, zi_mu, zi_delta.
+- Edit: removed "zi_alpha" from PARAM_BOUNDS; zi_alpha=0.15 in _theta_to_params. PARAM_KEYS
+  [ft_sigma_c,zi_mu,zi_delta] (verified). Caches deleted; run exit 0.
+- D vs baseline: calm 66.35 (vs 48.36, WORSE +18.0); stressed 26.68 (vs 29.11, slightly BETTER -2.4).
+- Components — calm: Hill blows up (12.45 vs 0.83), V worse (13.55 vs 6.5), ACF2 ~flat (14.1).
+  ft_sigma_c compensates UP to 1.45 (from 0.61) and zi_delta up to 0.355, zi_mu floored at 0.0066.
+  stressed: KS better (13.3 vs 18.4), Hill ~flat (2.30 vs 3.93); ft_sigma_c 0.51 ≈ baseline.
+- Diagnostics: calm hill 2.00 / kurt 33.7 (was 3.02 / 9.0 — much fatter); stressed hill 2.75 / kurt 54.5.
+- Interpretation: calm's calibrated zi_alpha (0.34, C0) is well ABOVE the CST 0.15 baseline; forcing it
+  down starves near-mid limit liquidity, so the book thins and ft_sigma_c/zi_delta over-compensate,
+  fattening the calm tail (Hill 0.83→12.5). Calibrating zi_alpha clearly MATTERS for calm. Stressed's
+  optimum (0.28) is closer to 0.15, so the constraint barely bites — even helps KS marginally.
