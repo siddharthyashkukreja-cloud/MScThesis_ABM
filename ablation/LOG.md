@@ -128,3 +128,18 @@ Autonomous run per `ablation/PLAN.md`. Sid reviews after completion.
   calm tail (Hill 0.83→6.8) — net slightly worse despite a better KS. Stressed optimum (0.134) is already
   near 0.15, so it barely moves. Ranking of ZI-rate calibration value (calm): zi_alpha (C5, +18) >>
   zi_delta (C7, +2.4) > zi_mu (C6, ~0).
+
+## C8 — Fix ALL ZI rates at CST 2008 (zi_alpha 0.15, zi_mu 0.025, zi_delta 0.15). Only ft_sigma_c free (1-d loop).
+- Edit: PARAM_BOUNDS = {ft_sigma_c} only; zi_alpha=0.15, zi_mu=0.025, zi_delta=0.15 in _theta_to_params.
+  PARAM_KEYS [ft_sigma_c], dim (1,2) (verified). Caches deleted; run exit 0.
+- D vs baseline: calm 59.07 (vs 48.36, WORSE +10.7); stressed 33.43 (vs 29.11, WORSE +4.3).
+- Components — calm: V blows up (15.02 vs 6.5 — vol level now badly off), KS ~flat (24.3), ACF2 ~flat
+  (12.2), Hill ok (1.90). stressed: KS ~flat (18.0), ACF1 worse (5.23 vs 2.63), Hill ~flat (3.69).
+  ft_sigma_c lands at 0.81 (calm) / 0.54 (stressed) — it absorbs what it can but cannot fix everything.
+- Diagnostics: calm hill 2.81 / kurt 13.9; stressed hill 2.49 / kurt 54.8.
+- Interpretation: KEY RESULT for "does calibrating the ZI rates matter?" — YES. Pure-literature CST ZI
+  is materially worse in BOTH regimes (+10.7 calm, +4.3 stressed), the calm hit driven mainly by the
+  return-std (V) miss that free zi_alpha/zi_delta otherwise correct. Net degradation (calm +10.7) is
+  LESS than the naive sum of the single fixes (C5+C6+C7 ≈ +20.3) because ft_sigma_c re-optimises to
+  partly compensate — but the loss is real. Calibrating ZI rates (esp. zi_alpha, zi_delta in calm) is
+  justified; zi_mu alone (C6) was the only freely-droppable one.
