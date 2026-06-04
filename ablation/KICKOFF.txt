@@ -1,8 +1,0 @@
-You'll run an autonomous calibration ablation. First, set up safely: create a git
-branch called `ablation`, commit everything as the baseline (note the commit hash —
-that's BASE in the plan), and never push or touch the main branch. Then read
-`ablation/PLAN.md` and follow it exactly — work through cells C0 to C11 in order, and
-before each cell reset the code to BASE, delete the LHS caches, run
-`python calibrate.py run`, then record the results to ablation/results.csv and a short
-note to ablation/LOG.md, and commit those records. Re-read `ablation/PLAN.md` before
-each cell. If a cell errors, log it and move on. Start now.

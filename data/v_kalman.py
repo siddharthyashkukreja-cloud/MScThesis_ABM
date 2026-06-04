@@ -50,58 +50,69 @@ DATA_DIR = Path(__file__).parent
 PROC_DIR = DATA_DIR / "processed"
 OUT_DIR = DATA_DIR.parent / "output"
 REGIMES = ("calm", "stressed")
-REGIME_START = {"calm": "2019-01-02", "stressed": "2020-02-24"}   # cosmetic fv ts
-BARS_PER_DAY = 390
 
 
 # ── data loading: per-day intra-RTH log-price sequences ─────────────────────
 
-def load_per_day_log_prices(regime: str, column: str = "close") -> list:
+def load_per_day_log_prices(regime: str, column: str = "close",
+                            with_ts: bool = False):
     """Return a list of np.ndarray, one per RTH date, of log-prices. Splitting
     by date ensures the overnight gap is never crossed inside the filter (the
     same convention as data/v_gbm.py's open-bar exclusion). `column` is "close"
     for the diagnostic and "mid" for the fundamental generator (the mid is the
-    calibration target and is less bounce-prone)."""
+    calibration target and is less bounce-prone). With `with_ts=True` also returns
+    the matching per-day timestamp slices (D57 — so the generator can write the REAL
+    timestamps and the day boundaries are recoverable downstream)."""
     df = pd.read_csv(PROC_DIR / f"ES_front_{regime}_1m.csv",
                      index_col=0, parse_dates=True)
     px = df[column].to_numpy(dtype=float)
     log_p = np.log(px)
-    dates = pd.DatetimeIndex(df.index).date
-    days, cur_start = [], 0
+    idx = pd.DatetimeIndex(df.index)
+    dates = idx.date
+    days, ts_days, cur_start = [], [], 0
     for i in range(1, len(dates)):
         if dates[i] != dates[i - 1]:
             seq = log_p[cur_start:i]
             if len(seq) >= 10:
-                days.append(seq)
+                days.append(seq); ts_days.append(idx[cur_start:i])
             cur_start = i
     seq = log_p[cur_start:]
     if len(seq) >= 10:
-        days.append(seq)
-    return days
+        days.append(seq); ts_days.append(idx[cur_start:])
+    return (days, ts_days) if with_ts else days
 
 
 # ── Kalman log-likelihood (scalar state) ────────────────────────────────────
 
 def kalman_neg_loglik(theta: np.ndarray, days: list) -> float:
     """Negative Kalman log-likelihood under the local-level state-space
-    (μ, σ_v, σ_ε) parameterised as (μ, log σ_v, log σ_ε)."""
+    (μ, σ_v, σ_ε) parameterised as (μ, log σ_v, log σ_ε). Vectorised across days:
+    every day starts at P=r, so the variance/gain recursion (P, S, K) is
+    data-independent and identical for all days — only the state x and innovation
+    e differ. The filter is therefore run as one length-loop over the day-stacked
+    matrix (NaN-padded for unequal session lengths), numerically identical to the
+    per-day scalar recursion but ~D× faster (D≈264 calm days)."""
     mu, lsv, lse = theta
     q = float(np.exp(2.0 * lsv))   # σ_v²
     r = float(np.exp(2.0 * lse))   # σ_ε²
+    Lmax = max(len(y) for y in days)
+    Y = np.full((len(days), Lmax), np.nan)
+    for i, y in enumerate(days):
+        Y[i, :len(y)] = y
+    valid = ~np.isnan(Y)
+    x = Y[:, 0].copy()
+    P = r
     acc = 0.0
-    for y in days:
-        # initial state: anchor on the first obs, with one-period obs uncertainty
-        x = float(y[0])
-        P = r
-        for t in range(1, len(y)):
-            x_pred = x + mu
-            P_pred = P + q
-            e = float(y[t]) - x_pred
-            S = P_pred + r
-            acc += np.log(S) + e * e / S
-            K = P_pred / S
-            x = x_pred + K * e
-            P = (1.0 - K) * P_pred
+    for t in range(1, Lmax):
+        x_pred = x + mu
+        P_pred = P + q
+        S = P_pred + r
+        K = P_pred / S
+        m = valid[:, t]
+        e = np.where(m, Y[:, t] - x_pred, 0.0)
+        acc += int(m.sum()) * np.log(S) + float(np.dot(e, e)) / S
+        x = np.where(m, x_pred + K * e, x)
+        P = (1.0 - K) * P_pred
     n_obs = sum(len(y) - 1 for y in days)
     return 0.5 * (acc + n_obs * np.log(2.0 * np.pi))
 
@@ -194,35 +205,44 @@ def _local_vol(rets: np.ndarray, halflife: float = 30.0) -> np.ndarray:
 def generate(regime: str, out_path=None) -> np.ndarray:
     """Write data/fv_{regime}.csv with a Kalman-SMOOTHED real fundamental
     (V_smooth) plus the real local volatility (sigma_t). The latent efficient
-    price is RTS-smoothed per RTH day, then days are spliced CONTINUOUSLY
-    (overnight gaps removed) so the simulator sees no spurious day-boundary
-    jumps. This is the XGB-Chiarella §2.5.2 data-derived fundamental — an
+    price is RTS-smoothed per RTH day, and the per-day series are concatenated at
+    their REAL levels so the OVERNIGHT GAPS are preserved (D56 — the simulator
+    opens each new RTH day at the gapped V_t via a session reset, so the cleared
+    book is marked across the gap; gap risk is a primary CCP default driver).
+    This is the XGB-Chiarella §2.5.2 data-derived fundamental — an
     alternative to the synthetic SV-MJD of data/v_gbm.py, and ODD-faithful (the
     ODD §Mech #9 fundamental signal is itself a historical data series). It
     carries the REAL return tails and REAL volatility clustering, which the
     agent layer cannot manufacture (see the calibration residuals)."""
-    days = load_per_day_log_prices(regime, column="mid")
+    days, ts_days = load_per_day_log_prices(regime, column="mid", with_ts=True)
     mu, q, r = _fit_params(days)
     logV_parts, sig_parts = [], []
-    prev_end = None
     for y in days:
         S = _kalman_smooth(y, mu, q, r)
-        logV = S.copy() if prev_end is None else prev_end + (S - S[0])
-        prev_end = float(logV[-1])
-        logV_parts.append(logV)
+        # Keep each day's smoothed series at its REAL level — the per-day RTS
+        # smoother anchors S[0] at the day's open, so concatenating across days
+        # PRESERVES the overnight gaps (D56). The Kalman filter still runs per RTH
+        # day (the overnight gap is not in any single day's state evolution), but
+        # the gap IS retained in the level path so the cleared book is marked
+        # across it. The simulator opens each new RTH day at the gapped V_t via a
+        # session reset (Simulation), so the gap is a clean between-session jump,
+        # not an intraday drift. (Earlier this spliced continuously, removing the
+        # gaps; that understated COVID — the big moves were overnight limit-downs.)
+        logV_parts.append(S)
         sig = _local_vol(np.diff(y))
         sig_parts.append(np.concatenate([[sig[0]], sig]))   # length == len(y)
     V_smooth = np.exp(np.concatenate(logV_parts))
     sigma_t = np.maximum(np.concatenate(sig_parts), 1e-10)
     n = len(V_smooth)
-    n_days = int(np.ceil(n / BARS_PER_DAY))
-    bdays = pd.bdate_range(start=REGIME_START[regime], periods=n_days)
-    ts = [pd.Timestamp(d) + pd.Timedelta(hours=13, minutes=30) + pd.Timedelta(minutes=k)
-          for d in bdays for k in range(BARS_PER_DAY)][:n]
+    # REAL per-bar timestamps (D57), aligned bar-for-bar with V_smooth — so the true
+    # RTH-session boundaries (which are ~405 bars and vary, not 390) are recoverable from
+    # the ts column by every consumer (Simulation reprice, calibration overnight exclusion,
+    # daily returns, notebook day slices). Replaces the old synthetic 390-per-day stamps.
+    ts = pd.DatetimeIndex(np.concatenate([t.to_numpy() for t in ts_days]))
     out_path = Path(out_path) if out_path else (DATA_DIR / f"fv_{regime}.csv")
     pd.DataFrame({"ts": ts, "V_smooth": V_smooth,
                   "sigma_t": sigma_t}).to_csv(out_path, index=False)
-    print(f"[{regime}] Kalman fundamental -> {out_path}  n={n} (~{n_days}d)  "
+    print(f"[{regime}] Kalman fundamental -> {out_path}  n={n} (~{len(days)}d)  "
           f"σ_v={np.sqrt(q):.3e} σ_ε={np.sqrt(r):.3e}  "
           f"V0={V_smooth[0]:.2f} Vend={V_smooth[-1]:.2f}  σ_t mean={sigma_t.mean():.3e}")
     return V_smooth

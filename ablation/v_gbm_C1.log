@@ -1,2 +1,0 @@
-[calm] seed=42 n_days=30 n=11700, mu=1.21e-06, 94 jumps, V0=2463.13, V_end=2608.84, range=[2428.81, 2618.37]; σ_t mean=1.982e-04, std=1.532e-04 (θ_eff=2.091e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_calm.csv
-[stressed] seed=42 n_days=30 n=11700, mu=-6.36e-06, 94 jumps, V0=3253.87, V_end=3844.57, range=[2873.43, 4093.63]; σ_t mean=1.224e-03, std=8.095e-04 (θ_eff=1.305e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_stressed.csv

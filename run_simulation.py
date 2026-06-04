@@ -1,19 +1,23 @@
 """
-Entry point — market layer + scaffolded clearing tier.
+Entry point — market layer + central-clearing tier.
 
-Market layer (54 LOB agents): 10 FT + 10 BCM (FT-cast, own-account) +
-10 MT (single cohort) + 20 ZI + 4 MM (HFABM mid-anchored, D48).
-Clearing tier (D28/D29): 5 NBCM + 1 CCP off-LOB; 5 of 10 BCMs carry
-client books (plain FT + MT round-robin); ZI direct exchange participants.
+Market layer (50 LOB agents): 10 FT + 10 BCM (FT-cast, own-account) +
+10 MT (single cohort) + 20 ZI. No market maker (removed) — geometric
+data-fit ZI placement supplies the near-mid liquidity.
+Clearing tier: 5 NBCM + 1 CCP off-LOB; 5 of 10 BCMs carry client books,
+all 5 NBCMs do; plain FT + MT + ZI clear through them round-robin (ZI
+clearing is a thesis extension to the ODD).
 
-Margin cycle (D29) runs every 60 ticks: VM settles the cleared book's
-M2M into CM cash, IM/MM recomputed, capital ratio recorded. Note: VM
-currently uses raw model qty — D51 (pending) will USD-denominate it
-consistently with the D50 VOLUME_LOT relabeling.
+Margin cycle runs every 60 min: USD variation margin (× VOLUME_LOT ×
+CONTRACT_USD) settles the cleared book's M2M into CM cash, IM/MM and the
+capital ratio recomputed, margin call flagged; a capital-ratio breach
+triggers an Almgren-Chriss deleverage, cash exhaustion a default + the
+5-level waterfall + a CCP fire-sale. The cover-2 default fund is
+recomputed each RTH day.
 
 1-min cadence (ODD-native): 390 steps per 6.5h RTH day. V_t exogenous,
-read from data/fv_{regime}.csv (SV-MJD path; D33). The 6-d behavioural
-θ is taken per regime from globals.CALIBRATED.
+read from data/fv_{regime}.csv (Kalman efficient price; data/v_kalman.py).
+The behavioural θ is taken per regime from globals.CALIBRATED (grid optimum).
 """
 
 import os
@@ -23,6 +27,7 @@ import pandas as pd
 from model.globals import (
     ModelParams, V0, CALIBRATED,
     CCP_CASH, BCM_CASH_RANGE, NBCM_CASH_RANGE, CCP_CALIBRATION,
+    FT_CLIENT_CASH, MT_CLIENT_CASH, ZI_CLIENT_CASH, CLIENT_BOOK_RANGE,
 )
 from model.agents import (
     FundamentalTrader, MomentumTrader, ZeroIntelligenceTrader, MarketMaker,
@@ -50,7 +55,7 @@ def build_traders(params: ModelParams, seed: int) -> list:
 
     for _ in range(params.n_fundamental):
         traders.append(FundamentalTrader(
-            agent_id=next_id(), cash=float(rng.uniform(1e6, 1e7)),
+            agent_id=next_id(), cash=float(rng.uniform(*FT_CLIENT_CASH)),
             z_score=float(rng.standard_normal())))
 
     for _ in range(params.n_bcm):
@@ -60,17 +65,17 @@ def build_traders(params: ModelParams, seed: int) -> list:
 
     for _ in range(params.n_momentum):
         traders.append(MomentumTrader(
-            agent_id=next_id(), cash=float(rng.uniform(1e6, 1e7)),
+            agent_id=next_id(), cash=float(rng.uniform(*MT_CLIENT_CASH)),
             lambda_decay=params.mt_lambda))
 
     for _ in range(params.n_momentum_long):
         traders.append(MomentumTrader(
-            agent_id=next_id(), cash=float(rng.uniform(1e6, 1e7)),
+            agent_id=next_id(), cash=float(rng.uniform(*MT_CLIENT_CASH)),
             lambda_decay=params.mt_lambda_long))
 
     for _ in range(params.n_zi):
         traders.append(ZeroIntelligenceTrader(
-            agent_id=next_id(), cash=float(rng.uniform(1e4, 1e5))))
+            agent_id=next_id(), cash=float(rng.uniform(*ZI_CLIENT_CASH))))
 
     for _ in range(params.n_vt):
         traders.append(VolatilityTrader(
@@ -93,10 +98,11 @@ def build_clearing_tier(traders: list, params: ModelParams, seed: int):
     n_nbcm NonBankingClearingMembers, the bidirectional CM<->CCP links and
     the client-book assignment. All BCMs + NBCMs are CCP members; but only
     `n_bcm_with_clients` BCMs carry a client book — the rest are own-account
-    only (D29 — client-book concentration as a study lever). The plain FT
-    and MT clear through the client-carrying CMs (round-robin); ZI stay
-    direct exchange participants (ODD §Initialization). Returns the
-    CentralCounterparty (which holds every CM via `members`)."""
+    only. The plain FT, MT and ZI clear through the client-carrying CMs with
+    SKEWED, size-ranked book sizes (D53c — heterogeneous counts in
+    CLIENT_BOOK_RANGE, larger CMs by cash holding more clients). NB: ZI clearing
+    is a thesis extension — the ODD has ZI as direct, balance-less participants.
+    Returns the CentralCounterparty (holds every CM via `members`)."""
     rng = np.random.default_rng(seed + 7)
     start_id = len(traders)
 
@@ -104,6 +110,7 @@ def build_clearing_tier(traders: list, params: ModelParams, seed: int):
         ccp_id=start_id + params.n_nbcm, cash=float(CCP_CASH),
         own_df=CCP_CALIBRATION["ex_df_ratio"] * CCP_CASH)
 
+    # NBCM adjusted net capital ~ UNIFORM over the CFTC FCM non-bank range ($50M-$1B).
     nbcms = [NonBankingClearingMember(
                  agent_id=start_id + k,
                  cash=float(rng.uniform(*NBCM_CASH_RANGE)))
@@ -111,18 +118,46 @@ def build_clearing_tier(traders: list, params: ModelParams, seed: int):
 
     bcms = [t for t in traders if isinstance(t, BankingClearingMember)]
     for cm in bcms + nbcms:
+        cm.balance_sheet.volume_lot = params.volume_lot   # per-regime contract lot
         ccp.register_member(cm)
 
     clients = [t for t in traders
-               if isinstance(t, (FundamentalTrader, MomentumTrader))
+               if isinstance(t, (FundamentalTrader, MomentumTrader,
+                                 ZeroIntelligenceTrader))
                and not isinstance(t, BankingClearingMember)]
-    # Only half the BCMs carry clients (D29); the rest are own-account only.
-    client_cms = bcms[:params.n_bcm_with_clients] + nbcms
-    for i, client in enumerate(clients):
-        cm = client_cms[i % len(client_cms)]
-        client.clearing_member_id = cm.agent_id
-        cm.client_ids.append(client.agent_id)
-        cm.balance_sheet.client_positions[client.agent_id] = 0
+    # Skewed, size-ranked client-book concentration (D53c). Only n_bcm_with_clients
+    # BCMs carry clients (the rest own-account only). Book sizes are HETEROGENEOUS in
+    # CLIENT_BOOK_RANGE; the NBCMs hold the LARGER books (no own position → all their
+    # capacity is client-clearing), and WITHIN each type more clients = higher cash.
+    # Clients are shuffled so each CM's FT/MT/ZI mix also varies. Concentrating the big
+    # books on the NBCMs (pure intermediaries) is the client→NBCM contagion lever.
+    client_cms = sorted(bcms[:params.n_bcm_with_clients] + nbcms,
+                        key=lambda cm: (isinstance(cm, NonBankingClearingMember), cm.cash),
+                        reverse=True)   # NBCMs first, then within-type by cash
+    K, N = len(client_cms), len(clients)
+    lo, hi = CLIENT_BOOK_RANGE
+    if K and lo * K <= N <= hi * K:
+        ramp = np.linspace(hi, lo, K) * (N / (0.5 * (hi + lo) * K))  # descending, mean N/K
+        counts = np.clip(np.round(ramp), lo, hi).astype(int)
+        j = 0
+        while int(counts.sum()) != N:                               # fix rounding within [lo,hi]
+            step = 1 if counts.sum() < N else -1
+            nv = counts[j % K] + step
+            if lo <= nv <= hi:
+                counts[j % K] = nv
+            j += 1
+        counts = sorted(counts.tolist(), reverse=True)              # large CM -> more clients
+    else:
+        base = N // K
+        counts = [base + (1 if i < N % K else 0) for i in range(K)]
+    order = list(range(N)); rng.shuffle(order)                      # varied type-mix per CM
+    pos = 0
+    for cm, n in zip(client_cms, counts):
+        for _ in range(int(n)):
+            client = clients[order[pos]]; pos += 1
+            client.clearing_member_id = cm.agent_id
+            cm.client_ids.append(client.agent_id)
+            cm.balance_sheet.client_positions[client.agent_id] = 0
 
     return ccp
 
@@ -131,13 +166,17 @@ def main():
     stressed = False
     regime = "stressed" if stressed else "calm"
 
-    # 50 LOB agents: 10 FT + 10 BCM + 10 MT + 20 ZI (no MM — removed; geometric
-    # data-fit placement supplies near-mid liquidity). 5 NBCM + 1 CCP off-LOB;
-    # 5 of 10 BCMs carry client books (D29). 3-d θ from CALIBRATED (zi_alpha,
-    # zi_mu, zi_delta); p_zi / qty_max / σ_v auto-populate from globals per regime.
+    # 100 LOB agents (D53 — CLIENTS scaled 2×, CM count unchanged at 15): 30 FT +
+    # 10 BCM + 20 MT + 40 ZI (no MM — removed; geometric data-fit placement supplies
+    # near-mid liquidity). 5 NBCM + 1 CCP off-LOB; 5 of 10 BCMs carry client books
+    # (D29). 90 cleared clients across 10 client-carrying CMs = 9 per CM. FT clients
+    # are 30 (not 20) so FT-equivalent = 30 + 10 BCM = 40, preserving the pre-doubling
+    # FT-equiv:MT:ZI = 40:20:40 (40/20/40) price-formation mix at 2× scale — the
+    # calibrated θ carries over. Behavioural θ from CALIBRATED {ft_sigma_c, zi_alpha,
+    # zi_delta (+ p_zi stressed)}; qty_max / σ_v / VOLUME_LOT auto-populate per regime.
     params = ModelParams(
-        n_fundamental=10, n_momentum=10, n_momentum_long=0,
-        n_mm=0, n_zi=20, n_vt=0, n_ct=0,
+        n_fundamental=30, n_momentum=20, n_momentum_long=0,
+        n_mm=0, n_zi=40, n_vt=0, n_ct=0,
         n_bcm=10, n_nbcm=5, n_bcm_with_clients=5,
         v0=V0[regime], tick_size=0.25, dt_minutes=1.0,
         **CALIBRATED[regime],

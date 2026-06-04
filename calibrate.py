@@ -67,7 +67,7 @@ weighting):
 
 Data-side parameters (V_t GBM σ/μ and v0 from data/v_gbm.py) live in
 model/globals.py and auto-populate per regime via ModelParams.__post_init__.
-Pinned-structural: ft_sigma_c at √390; order_ttl=10 (D5d); qty_max=10;
+Pinned-structural: ft_sigma_c at √390; qty_max=10;
 ft_alpha=mt_alpha=1.0 (D36); mt_lambda=0.05 (D44); mt_mu=0 (D40); mm_qty=2
 (D48). The FT has no dead-band (D23); 4 HFABM MMs are live (D48). This script
 calibrates **8 behavioural parameters PER REGIME**: ft_alpha, mt_alpha
@@ -99,6 +99,7 @@ CLI:
 """
 
 from __future__ import annotations
+import itertools
 import json
 import sys
 import time
@@ -111,7 +112,7 @@ import pandas as pd
 import xgboost as xgb
 from scipy.optimize import minimize
 
-from model.globals import ModelParams, V0, FV_CSV
+from model.globals import ModelParams, V0, FV_CSV, day_start_steps
 from model.simulation import Simulation
 from run_simulation import build_traders
 
@@ -124,7 +125,9 @@ REGIME_DATA = {
     "stressed": PROC_DIR / "ES_front_stressed_1m.csv",
 }
 REGIMES = ("calm", "stressed")
-BARS_PER_DAY = 390   # 6.5-hour RTH day at the 1-min cadence
+BARS_PER_DAY = 390   # nominal RTH-day length, used only to size the calm
+                     # subsample (_sim_steps); the real overnight boundaries are
+                     # data-driven via day_start_steps (D57)
 
 
 @lru_cache(maxsize=None)
@@ -147,19 +150,40 @@ def _sim_steps(regime: str, n_days: int) -> int:
 # it clamped spread variability and suppressed volatility clustering (D37 +
 # the in-sandbox smoke: stressed lag-1 |r| ACF 0.11 -> 0.44 without it).
 # Geometric data-fit placement (globals.P_ZI) supplies near-mid liquidity instead.
-POP = dict(n_fundamental=20, n_momentum=10, n_momentum_long=0,
-           n_mm=0, n_zi=20, n_vt=0, n_ct=0)
+POP = dict(n_fundamental=40, n_momentum=20, n_momentum_long=0,
+           n_mm=0, n_zi=40, n_vt=0, n_ct=0)   # D53 — clients scaled 2× (30 FT + 20 MT + 40 ZI);
+                                              # n_fundamental folds 30 FT + 10 BCM = 40, preserving the
+                                              # 40:20:40 FT-equiv:MT:ZI mix (was 20/10/20 = same ratio)
 
 # Per-regime calibration loop (D18b). Every parameter is regime-specific.
 # Pinned-structural (NOT calibrated):
 #   ft_sigma_c              → √390  (Chiarella one-daily-V_t-std)
 #   qty_max                 → QTY_MAX[regime]  (10 calm / 5 stressed)
 #   depth_sigma             → 0.3   (log-normal placement-depth shape; D20)
-PARAM_BOUNDS = {
-    "ft_sigma_c": (0.5, 10.0),    # FT belief-width scale; σ_fund = ft_sigma_c·σ_t·v0
-    "zi_alpha":   (0.02, 0.50),   # ZI limit-order arrival per step (D21/D30)
-    "zi_mu":      (0.005, 0.10),  # ZI market-order arrival per step (D21/D30)
-    "zi_delta":   (0.005, 0.50),  # ZI per-resting cancellation per step (D21)
+ZI_MU_FIXED = 0.025      # CST-2008 market-order baseline; out of the loop (ablation C6)
+PARAM_BOUNDS_BY_REGIME = {
+    "calm": {
+        "ft_sigma_c": (0.5, 2.0),     # FT belief-width scale (the tail lever; ablation C4).
+                                      # Upper bound tightened 10.0 -> 2.0 (D56): the optimum
+                                      # sits near the 0.5 floor (the tail term pins it), but a
+                                      # wide [0.5,10] range puts most Sobol samples in the
+                                      # fat-tail zone, so the surrogate's stage-1 prediction was
+                                      # pulled to an interior 1.12 and stage-2 never reached the
+                                      # floor. Concentrating the range resolves the low region.
+        "zi_alpha":   (0.02, 0.50),   # ZI limit-order arrival per step
+        "zi_delta":   (0.05, 0.50),   # ZI per-resting cancellation — floor raised
+                                      # 0.005->0.05 (D58): the SOLE order-lifetime lever
+                                      # now the LOB TTL is gone; below ~0.05 resting orders
+                                      # would accumulate without the backstop.
+    },
+    "stressed": {
+        "ft_sigma_c": (0.5, 2.0),     # tightened 10.0 -> 2.0 (D56), same reasoning as calm —
+                                      # the optimum is near the floor (full run found 0.55); a
+                                      # concentrated range keeps the short-budget surrogate on it.
+        "zi_alpha":   (0.02, 0.50),
+        "zi_delta":   (0.05, 0.50),   # floor raised 0.005->0.05 (D58 — see calm)
+        "p_zi":       (0.15, 0.80),   # geometric depth — calibrated for stressed only
+    },                                # (ablation C9: sparser book sharpens stressed fit)
 }
 # Loop is 4-d. ft_sigma_c is UNPINNED (was √390≈19.7, D7b "one daily V_t std"):
 # the in-sandbox sweep showed it is THE lever on the mid tails. √390 gives
@@ -172,8 +196,9 @@ PARAM_BOUNDS = {
 # less FT inventory concentration (D6b CCP-layer input) — raise the lower bound
 # if that matters more than the market-layer fit. Placement geometric (data-fit
 # p_zi); MM removed (n_mm=0). FT/MT still trade every step (ft_alpha=mt_alpha=1).
-# Calibrated loop = 6-d (the PARAM_BOUNDS keys above): depth_mean, depth_sigma,
-# zi_alpha, zi_mu, zi_delta, mm_p_edge. Pinned / out of the loop:
+# Calibrated loop is regime-specific (PARAM_BOUNDS_BY_REGIME): calm 3-d
+# {ft_sigma_c, zi_alpha, zi_delta}, stressed 4-d {+ p_zi}. Pinned / out of the loop:
+#   zi_mu = ZI_MU_FIXED (0.025, CST-2008; ablation C6 — calibrating it is free).
 #   ft_alpha = mt_alpha = 1.0 (D36 — FT/MT submit a limit every step, ODD-
 #     faithful §Step Sequence step 3).
 #   mt_mu = 0.0 (D40 — MT limit-only; the D27 market branch was reverted —
@@ -189,41 +214,44 @@ PARAM_BOUNDS = {
 # 0.15). zi_mu ≈ 0.5 means half of all ZI activity is book-walking market
 # orders → kurtosis ~1200 and a bid-ask bounce. The new caps keep market
 # orders a clear minority of ZI flow: zi_mu ≤ 0.10 (4x baseline), zi_alpha
-# ≤ 0.50 (3.3x baseline). zi_delta (cancellation) left at 0.50.
-PARAM_KEYS = list(PARAM_BOUNDS)
-PARAM_BOUNDS_ARR = np.array([PARAM_BOUNDS[k] for k in PARAM_KEYS])
+# ≤ 0.50 (3.3x baseline). zi_delta (cancellation) ∈ [0.05, 0.50] — lower bound
+# raised from 0.005 (D58: sole order-lifetime control now the LOB TTL is removed).
+# Active regime's parameter set. _activate_regime() swaps these at the top of
+# each regime's run — calibration is sequential (one regime at a time), so
+# module-level state is safe. Default to calm for imports / other tools.
+PARAM_KEYS: list = list(PARAM_BOUNDS_BY_REGIME["calm"])
+PARAM_BOUNDS_ARR = np.array([PARAM_BOUNDS_BY_REGIME["calm"][k] for k in PARAM_KEYS])
 
-# Individual moments — surrogate targets and loss inputs. ACF lags are
-# chosen from where the empirical ES 1-min signal actually sits (D18e,
-# revised):
-#   ACF1 (return ACF): centers {1, 5, 10}. The empirical return ACF is
-#     concentrated at the SHORT end — a bid-ask/microstructure term at
-#     lag 1 and a transient-impact mean-reversion peaking near lag ~9 in
-#     the stressed regime. At lags 30/60/90 it is flat (~0) in both
-#     regimes, so the prior {30,60,90} choice carried no information.
-# Loss moments and components — matched to XGB-Chiarella (Gao et al. 2022
-# §3.2, eq 6): D(θ) = ΔKS + ΔV + ΔACF1 + ΔACF2 — the paper's EXACT 4-component
-# loss. Hill is DROPPED from the loss (the model's Hill was unreachable + the
-# 1-min Hill curve is fragile/sloping; KS already targets the whole return
-# distribution incl. tails).
-#   ACF1 = returns ACF at centres {1, 10, 20}, FORWARD 3-lag smoothed
-#          (paper §3.2.2: lag-1 = mean of {1,2,3}, etc.).
-#   ACF2 = ABSOLUTE-returns ACF, forward 3-lag smoothed at short centres
-#          {1,5,10,20} — the volatility-clustering target. |r| (Cont 2001) is
-#          used rather than the paper's r²: r² is outlier-dominated, so its ACF
-#          has a large sampling SD and the clustering miss vanishes under the
-#          standardisation (ΔACF2 was ~1.3 despite reproducing none of it); |r|
-#          is far less noisy, so clustering actually counts. Short lags avoid
-#          diluting the strong lag-1 signal with high-lag noise.
-#   KS   = Kolmogorov-Smirnov 2-sample statistic between simulated and
-#          empirical return CDFs (paper §3.2.4, eq 7) — robust whole-
-#          distribution fat-tail target.
-# hill_tail_index (banded) is BACK in the loss (ΔHill component): KS + Hill together
-# carry the tail — KS the whole-distribution match (XGB-Chiarella §3.2.4), Hill the
-# tail-index (HFABM §4.1.1), and Hill gives the optimiser a direct, reachable lever to
-# thin the tails (the book-density params can then act on it). ret_kurtosis stays a
-# DIAGNOSTIC only — outlier-dominated, so matching it exactly would be noise-chasing.
-ACF1_CENTERS = (1, 10, 20)              # returns ACF, forward 3-lag smoothed
+
+def _activate_regime(regime: str) -> None:
+    """Point PARAM_KEYS / PARAM_BOUNDS_ARR at `regime`'s parameter set (calm 3-d,
+    stressed 4-d with p_zi)."""
+    global PARAM_KEYS, PARAM_BOUNDS_ARR
+    PARAM_KEYS = list(PARAM_BOUNDS_BY_REGIME[regime])
+    PARAM_BOUNDS_ARR = np.array([PARAM_BOUNDS_BY_REGIME[regime][k] for k in PARAM_KEYS])
+
+# Individual moments — surrogate targets and loss inputs (D18e, revised). ACF
+# lags sit where the empirical ES 1-min signal actually lives: the return ACF is
+# concentrated at the SHORT end (a bid-ask/microstructure term at lag 1 and a
+# transient-impact mean-reversion peaking near lag ~5-10), and flat (~0) by lag
+# 30+, so high lags carry no information.
+# Loss D(θ) — FIVE standardised-moment components, matched to XGB-Chiarella
+# (Gao et al. 2022 §3.2) + HFABM (§4.1.1):
+#   KS   = Kolmogorov-Smirnov 2-sample statistic between simulated and empirical
+#          return CDFs (paper §3.2.4, eq 7) — robust whole-distribution fat-tail target.
+#   V    = return-standard-deviation distance (paper eq 8).
+#   ACF1 = returns ACF at centres {1, 5, 10, 20}, FORWARD 3-lag smoothed
+#          (paper §3.2.2: lag-c = mean of {c, c+1, c+2}).
+#   ACF2 = ABSOLUTE-returns ACF, forward 3-lag smoothed at {1, 5, 10, 20} — the
+#          volatility-clustering target. |r| (Cont 2001) is used rather than the
+#          paper's r²: r² is outlier-dominated, so its ACF has a large sampling SD
+#          and the clustering miss vanishes under the standardisation; |r| is far
+#          less noisy, so clustering actually counts.
+#   Hill = banded Hill tail index (HFABM §4.1.1). KS + Hill together carry the tail:
+#          KS the whole-distribution match, Hill a direct, reachable tail-index lever.
+# ret_kurtosis stays a DIAGNOSTIC only — outlier-dominated, so matching it exactly
+# would be noise-chasing.
+ACF1_CENTERS = (1, 5, 10, 20)           # returns ACF, forward 3-lag smoothed (5-min lag added)
 ACF2_CENTERS = (1, 5, 10, 20)           # |returns| ACF centres, forward 3-lag smoothed
 HILL_FRACS = (0.03, 0.04, 0.05, 0.06, 0.07, 0.08)   # banded-Hill k/n grid
 HILL_FRAC = 0.05                        # single-frac default (band primitive)
@@ -403,30 +431,47 @@ def empirical_targets() -> dict:
 # ── simulator wrapper ────────────────────────────────────────────────────────
 
 def _theta_to_params(theta: np.ndarray, regime: str) -> ModelParams:
-    """Build a ModelParams for one regime from the 4-d theta (ft_sigma_c + ZI
-    rates). Pinned-structural (order_ttl, qty_max, p_zi, etc.) and the geometric
-    placement / no-MM population auto-populate from POP + globals."""
+    """Build a ModelParams for one regime from the active theta (calm 3-d:
+    ft_sigma_c + zi_alpha/zi_delta; stressed 4-d: + p_zi). zi_mu is pinned
+    (ZI_MU_FIXED); p_zi passes through only when calibrated (stressed), else it
+    falls back to the L2/MBP-10 P_ZI[regime] data-fix. Other structure auto-
+    populates from POP + globals."""
     d = dict(zip(PARAM_KEYS, theta))
+    kw = dict(
+        ft_sigma_c=float(d["ft_sigma_c"]),
+        zi_alpha=float(d["zi_alpha"]),
+        zi_mu=ZI_MU_FIXED,
+        zi_delta=float(d["zi_delta"]),
+    )
+    if "p_zi" in d:                       # stressed only; calm keeps the L2 P_ZI
+        kw["p_zi"] = float(d["p_zi"])
     return ModelParams(
         **POP,
         v0=V0[regime], tick_size=0.25, dt_minutes=1.0,
-        # FT/MT trade every step (ft_alpha=mt_alpha=1, D36/D40/D44); placement
-        # geometric (p_zi data-fixed); MM removed (n_mm=0). ft_sigma_c is now
-        # calibrated (the FT-overshoot / tail lever); ZI rates free.
-        ft_sigma_c=float(d["ft_sigma_c"]),
-        zi_alpha=float(d["zi_alpha"]),
-        zi_mu=float(d["zi_mu"]),
-        zi_delta=float(d["zi_delta"]),
+        **kw,
         stressed=(regime == "stressed"),
     )
+
+
+def _intraday_logret(mid: np.ndarray, regime: str) -> np.ndarray:
+    """1-min log-returns with the cross-day (overnight) returns dropped. The sim
+    opens each RTH day at the gapped V_t via a session reset (D56), so the
+    day-boundary return is an overnight gap; excluding it matches the empirical
+    convention (_empirical_returns drops cross-day returns), keeping the
+    calibration moments intraday on both sides. Boundaries are the real session
+    opens (D57: `day_start_steps`), since a session is ~405 bars and varies, not
+    a fixed 390 — the return into open row d is r[d-1]."""
+    r = np.diff(np.log(mid))
+    drop = [d - 1 for d in day_start_steps(regime) if 0 < d <= len(r)]
+    return np.delete(r, drop) if drop else r
 
 
 def simulate_moments(theta: np.ndarray, regime: str,
                      n_days: int, n_runs: int, seed: int) -> dict:
     """Run the simulator n_runs times on one regime; return the moment dict of
-    the pooled 1-min mid log-returns. `ks_stat` is the KS distance of the
-    pooled simulated returns from the empirical returns (filled here — it needs
-    both samples)."""
+    the pooled 1-min mid log-returns (cross-day returns dropped — D56). `ks_stat`
+    is the KS distance of the pooled simulated returns from the empirical returns
+    (filled here — it needs both samples)."""
     params = _theta_to_params(theta, regime)
     n_steps = _sim_steps(regime, n_days)
     rets = []
@@ -436,7 +481,7 @@ def simulate_moments(theta: np.ndarray, regime: str,
         mid = pd.Series(hist["mid_price"]).ffill().bfill().to_numpy()
         mid = mid[mid > 0]
         if len(mid) > 1:
-            rets.append(np.diff(np.log(mid)))
+            rets.append(_intraday_logret(mid, regime))
     if not rets:
         return {m: float("nan") for m in MOMENT_NAMES}
     pooled = np.concatenate(rets)
@@ -833,8 +878,9 @@ def run_regime_calibration(regime: str, target: dict,
     (HFABM Gao et al. (2022) §4.2 two-stage: surrogate → tight grid search around
     optimum on the true simulator; weights from historical block bootstrap)."""
     OUT_DIR.mkdir(exist_ok=True)
+    _activate_regime(regime)     # calm 3-d / stressed 4-d (p_zi) parameter set
     lhs_path = OUT_DIR / f"calibration_lhs_{regime}.csv"
-    n_steps = 4 + n_refine + 1   # bootstrap + LHS + surrogate + AL × n_refine + L-BFGS-B + stage-2 + validate
+    n_steps = 6 + n_refine   # bootstrap + LHS + surrogate + AL × n_refine + stage-1 + stage-2 + validate
 
     print(f"\n{'='*70}")
     print(f"  CALIBRATING REGIME: {regime}  (HFABM 2-stage, bootstrap weights)")
@@ -973,6 +1019,101 @@ def run_regime_calibration(regime: str, target: dict,
     }
 
 
+def grid_search(regime: str, target: dict, sds: dict,
+                n_per_dim: int, n_days: int = N_DAYS, n_runs: int = N_RUNS,
+                seed: int = SEED) -> tuple:
+    """Exhaustive grid search over the regime's parameter box, minimising the
+    SAME loss D(theta) the surrogate uses. This is the calibration method of Gao
+    et al. (2023) 'Deeper Hedging' / Chiarella-Heston (§3.3: kappa,beta,omega,
+    theta,phi calibrated by grid search minimising D(theta)) — transparent and
+    exhaustive, which is defensible at this low dimension (calm 3-d / stressed
+    4-d). Evaluates the TRUE simulator at every node (no surrogate). Returns
+    (theta_best, D_best, grid_df); grid_df has one row per node with theta, D,
+    each component delta and the moments — the full loss surface for the report."""
+    _activate_regime(regime)
+    keys = list(PARAM_KEYS)
+    lo, hi = PARAM_BOUNDS_ARR[:, 0], PARAM_BOUNDS_ARR[:, 1]
+    axes = [np.linspace(lo[i], hi[i], n_per_dim) for i in range(len(keys))]
+    nodes = list(itertools.product(*axes))
+    print(f"  grid: {len(keys)}-d x {n_per_dim}/dim = {len(nodes)} nodes "
+          f"({n_days}d x {n_runs} seeds each)")
+    rows, best_theta, best_D = [], None, float("inf")
+    for i, node in enumerate(nodes):
+        theta = np.array(node, dtype=float)
+        m = simulate_moments(theta, regime, n_days, n_runs, seed=seed + i)
+        D = _true_loss(m, target, sds)
+        deltas = compute_grouped_deltas(
+            {k: float(m[k]) for k in MOMENT_NAMES},
+            {k: float(target[k]) for k in MOMENT_NAMES}, sds)
+        row = {k: float(v) for k, v in zip(keys, theta)}
+        row["D"] = float(D) if np.isfinite(D) else float("nan")
+        for c in COMPONENT_NAMES:
+            row[f"d{c}"] = float(deltas.get(c, float("nan")))
+        for name in MOMENT_NAMES:
+            row[name] = float(m[name])
+        rows.append(row)
+        if np.isfinite(D) and D < best_D:
+            best_theta, best_D = theta, float(D)
+        if (i + 1) % max(1, len(nodes) // 10) == 0:
+            print(f"    node {i+1}/{len(nodes)}  best D so far {best_D:.4f}")
+    return best_theta, best_D, pd.DataFrame(rows)
+
+
+def _merge_save(path, config: dict, results: dict) -> dict:
+    """Merge per-regime results into an existing JSON so calm-only and
+    stressed-only runs ACCUMULATE instead of overwriting (resolves the
+    'rewritten per regime' gotcha — both regimes persist in one file)."""
+    prev = {}
+    if path.exists():
+        try:
+            prev = json.load(open(path))
+        except Exception:
+            prev = {}
+    merged = dict(prev.get("results", {}))
+    merged.update(results)
+    payload = {"regimes": sorted(merged), "config": config, "results": merged}
+    with open(path, "w") as f:
+        json.dump(payload, f, indent=2)
+    return payload
+
+
+def run_grid(regimes: tuple = REGIMES, n_per_dim: int = 7,
+             n_days: int = N_DAYS, n_runs: int = N_RUNS, seed: int = SEED) -> dict:
+    """Grid-search calibration per regime, reported ALONGSIDE the surrogate `run`
+    (same loss, same targets — the two should agree on theta*). Writes the full
+    loss surface to output/calibration_grid_{regime}.csv and the optima to
+    output/calibrated_params_grid.json."""
+    OUT_DIR.mkdir(exist_ok=True)
+    targets = empirical_targets()
+    results = {}
+    for regime in regimes:
+        print(f"\n{'='*70}\n  GRID SEARCH: {regime}\n{'='*70}")
+        sds = empirical_moment_sd(regime, n_days=n_days, n_runs=n_runs, seed=seed)
+        t0 = time.perf_counter()
+        theta_best, D_best, grid_df = grid_search(
+            regime, targets[regime], sds, n_per_dim, n_days, n_runs, seed=seed)
+        grid_path = OUT_DIR / f"calibration_grid_{regime}.csv"
+        grid_df.to_csv(grid_path, index=False)
+        keys = list(PARAM_KEYS)
+        best_row = grid_df.loc[grid_df["D"].idxmin()]
+        results[regime] = {
+            "theta_grid": {k: float(theta_best[i]) for i, k in enumerate(keys)},
+            "D_grid": float(D_best),
+            "component_deltas": {c: float(best_row[f"d{c}"]) for c in COMPONENT_NAMES},
+            "target": {name: float(targets[regime][name]) for name in MOMENT_NAMES},
+            "moments": {name: float(best_row[name]) for name in MOMENT_NAMES},
+            "n_per_dim": int(n_per_dim), "n_nodes": int(len(grid_df)),
+        }
+        print(f"  [{regime}] best D {D_best:.4f} at {results[regime]['theta_grid']}  "
+              f"[{time.perf_counter()-t0:.0f}s -> {grid_path}]")
+    _merge_save(OUT_DIR / "calibrated_params_grid.json",
+                {"n_per_dim": n_per_dim, "n_days": n_days, "n_runs": n_runs, "seed": seed},
+                results)
+    print(f"\nSaved output/calibrated_params_grid.json (regimes now: "
+          f"{', '.join(sorted(results))} merged with any prior)")
+    return results
+
+
 def run_calibration(regimes: tuple = REGIMES,
                     n_lhs: int = N_LHS, n_days: int = N_DAYS,
                     n_runs: int = N_RUNS, n_refine: int = N_REFINE,
@@ -991,17 +1132,13 @@ def run_calibration(regimes: tuple = REGIMES,
             n_refine=n_refine, n_per_refine=n_per_refine,
             n_stage2=n_stage2, seed=seed,
         )
-    payload = {
-        "regimes": list(regimes),
-        "config": {
-            "n_lhs": n_lhs, "n_refine": n_refine, "n_per_refine": n_per_refine,
-            "n_days": n_days, "n_runs": n_runs, "n_stage2": n_stage2, "seed": seed,
-        },
-        "results": results,
-    }
-    with open(OUT_DIR / "calibrated_params.json", "w") as f:
-        json.dump(payload, f, indent=2)
-    print(f"\nSaved output/calibrated_params.json (regimes: {', '.join(regimes)})")
+    payload = _merge_save(
+        OUT_DIR / "calibrated_params.json",
+        {"n_lhs": n_lhs, "n_refine": n_refine, "n_per_refine": n_per_refine,
+         "n_days": n_days, "n_runs": n_runs, "n_stage2": n_stage2, "seed": seed},
+        results)
+    print(f"\nSaved output/calibrated_params.json (regimes now: "
+          f"{', '.join(sorted(payload['results']))} merged with any prior)")
     return payload
 
 
@@ -1033,5 +1170,20 @@ if __name__ == "__main__":
         run_calibration(regimes=regimes, n_lhs=n_lhs, n_days=n_days,
                         n_runs=n_runs, n_refine=n_refine,
                         n_per_refine=n_per_refine, n_stage2=n_stage2)
+    elif cmd == "grid":
+        # Grid-search calibration (Gao 2023 Deeper-Hedging method), reported
+        # alongside `run`. Usage: grid [regime] [n_per_dim] [n_days] [n_runs]
+        if len(sys.argv) > 2 and sys.argv[2] in REGIMES:
+            regimes = (sys.argv[2],)
+            arg_offset = 3
+        else:
+            regimes = REGIMES
+            arg_offset = 2
+        n_per_dim = int(sys.argv[arg_offset])     if len(sys.argv) > arg_offset     else 7
+        n_days    = int(sys.argv[arg_offset + 1]) if len(sys.argv) > arg_offset + 1 else N_DAYS
+        n_runs    = int(sys.argv[arg_offset + 2]) if len(sys.argv) > arg_offset + 2 else N_RUNS
+        run_grid(regimes=regimes, n_per_dim=n_per_dim, n_days=n_days, n_runs=n_runs)
     else:
-        print("usage: python calibrate.py [targets | run [calm|stressed] [N_LHS N_DAYS N_RUNS N_REFINE N_PER_REFINE N_STAGE2]]")
+        print("usage: python calibrate.py [ targets | "
+              "run [calm|stressed] [N_LHS N_DAYS N_RUNS N_REFINE N_PER_REFINE N_STAGE2] | "
+              "grid [calm|stressed] [N_PER_DIM N_DAYS N_RUNS] ]")

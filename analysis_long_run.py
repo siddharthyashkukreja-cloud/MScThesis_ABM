@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from model.globals import ModelParams, V0, CALIBRATED
+from model.globals import ModelParams, V0, CALIBRATED, day_start_steps
 from model.simulation import Simulation
 from run_simulation import build_traders, build_clearing_tier, BARS_PER_DAY
 
@@ -41,9 +41,10 @@ def _acf(x: np.ndarray, k: int) -> float:
 
 
 def _acf_smooth(x: np.ndarray, c: int) -> float:
-    """Centred 3-lag avg (Franke-Westerhoff smoothing; same as
-    `calibrate._acf_smoothed`)."""
-    lags = (1, 2) if c <= 1 else (c - 1, c, c + 1)
+    """Forward 3-lag avg — MATCHES calibrate._acf_smoothed_fwd so the long-run
+    validation uses the same estimator as the calibration loss (XGB-Chiarella
+    §3.2.2: lag-c = mean of {c, c+1, c+2})."""
+    lags = (c, c + 1, c + 2)
     vals = [v for v in (_acf(x, l) for l in lags) if np.isfinite(v)]
     return float(np.mean(vals)) if vals else float("nan")
 
@@ -131,7 +132,7 @@ def main():
 
     params = ModelParams(
         n_fundamental=10, n_momentum=10, n_momentum_long=0,
-        n_mm=4, n_zi=20, n_vt=0, n_ct=0,                # D48 — 4 HFABM MMs
+        n_mm=0, n_zi=20, n_vt=0, n_ct=0,                # MM removed (ablation C2)
         n_bcm=10, n_nbcm=5, n_bcm_with_clients=5,
         v0=V0[regime], tick_size=0.25, dt_minutes=1.0,
         stressed=(regime == "stressed"),
@@ -143,9 +144,19 @@ def main():
     mid = pd.Series(hist["mid_price"]).ffill().bfill().to_numpy()
     mid = mid[mid > 0]
 
+    # Real RTH-session opens within the run (D57: data-driven, ~405 bars/session
+    # and variable, not a fixed 390).
+    opens = [d for d in day_start_steps(regime) if 0 < d < len(mid)]
     r_1m_mdl = np.diff(np.log(mid))
-    # daily close = last mid of each simulated 390-bar day
-    daily_mid = mid[BARS_PER_DAY - 1::BARS_PER_DAY]
+    # Drop cross-day (overnight) returns — the sim opens each RTH day at the
+    # gapped V_t (D56), so the day-boundary return is an overnight gap; match the
+    # empirical convention (intraday returns only) for the 1-min comparison.
+    r_1m_mdl = np.delete(r_1m_mdl, [d - 1 for d in opens])
+    # daily close = last mid of each session (the bar before the next open, plus
+    # the final bar); the overnight gap IS in the daily return — that is the
+    # correct cross-day return.
+    closes = sorted(set([d - 1 for d in opens] + [len(mid) - 1]))
+    daily_mid = mid[closes]
     r_d_mdl = np.diff(np.log(daily_mid))
 
     r_1m_emp, r_d_emp = empirical_returns(regime)

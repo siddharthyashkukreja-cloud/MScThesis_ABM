@@ -5,7 +5,10 @@ Design
 ------
 - Single-asset, price-time priority, bids/asks stored as sorted dicts.
 - Call auction: orders accumulate during a step, then clear once.
-- Orders expire after `ttl` steps (ODD-native 1-min cadence; default ttl 10).
+- Resting orders leave the book only by FILL or explicit CANCELLATION — there is
+  no blanket time-to-live (D58: the ODD §Mech #7 TTL was removed). Order lifetime
+  is governed by the agents: ZI cancels each resting order w.p. `zi_delta` per step
+  (Cont-Stoikov-Talreja 2008 / Farmer et al.), FT/MT are replace-on-new.
 - Mid-price = (best_bid + best_ask) / 2 after each auction.
 - Spread and depth are outputs, not inputs -- they emerge from order flow.
 
@@ -16,7 +19,7 @@ Extension hooks
 """
 
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict
 import numpy as np
 
 
@@ -27,7 +30,6 @@ class Order:
     side: int        # +1 buy, -1 sell
     price: float
     qty: int
-    ttl: int         # steps remaining before expiry
 
 
 @dataclass
@@ -39,9 +41,8 @@ class Fill:
 
 
 class LOB:
-    def __init__(self, tick_size: float, order_ttl: int):
+    def __init__(self, tick_size: float):
         self.tick_size = tick_size
-        self.order_ttl = order_ttl
 
         self._bids: Dict[float, List[Order]] = {}
         self._asks: Dict[float, List[Order]] = {}
@@ -58,12 +59,10 @@ class LOB:
 
     # -- Order submission -------------------------------------------------
 
-    def add_limit(self, agent_id: int, side: int, price: float, qty: int,
-                  ttl: Optional[int] = None) -> int:
+    def add_limit(self, agent_id: int, side: int, price: float, qty: int) -> int:
         price = self._round(price)
         oid = self._next_id; self._next_id += 1
-        use_ttl = ttl if ttl is not None else self.order_ttl
-        order = Order(oid, agent_id, side, price, qty, use_ttl)
+        order = Order(oid, agent_id, side, price, qty)
         book = self._bids if side == 1 else self._asks
         book.setdefault(price, []).append(order)
         self._order_index[oid] = (side, price)
@@ -129,6 +128,34 @@ class LOB:
             if not book[price]:
                 del book[price]
 
+    def reprice(self, factor: float):
+        """Scale every resting order's price by `factor` — an overnight session
+        gap (D56). The book reopens at the gapped level with its shape (depth,
+        order ids, sizes) intact, so the new RTH day starts at the gapped V_t with
+        a normal spread: no empty-book warm-up (which would jiggle the mid for
+        several steps and inflate the intraday return kurtosis) and no stale-level
+        crossing. Relative bid/ask ordering is preserved, so no new crosses."""
+        if not (factor == factor) or factor <= 0:
+            return
+        for name in ("_bids", "_asks"):
+            new: Dict[float, List[Order]] = {}
+            for px, queue in getattr(self, name).items():
+                npx = self._round(px * factor)
+                for o in queue:
+                    o.price = npx
+                new.setdefault(npx, []).extend(queue)
+            setattr(self, name, new)
+        self._order_index = {o.order_id: (o.side, o.price)
+                             for bk in (self._bids, self._asks)
+                             for q in bk.values() for o in q}
+        for a in ("best_bid", "best_ask", "mid_price", "last_price"):
+            v = getattr(self, a)
+            if v == v:                      # not NaN
+                setattr(self, a, v * factor)
+        self.spread = (self.best_ask - self.best_bid
+                       if (self.best_bid == self.best_bid and self.best_ask == self.best_ask)
+                       else np.nan)
+
     # -- Call auction -----------------------------------------------------
 
     def match(self) -> List[Fill]:
@@ -166,23 +193,6 @@ class LOB:
         self.step_fills.extend(fills)
         self._update_quotes()
         return fills
-
-    # -- Expiry -----------------------------------------------------------
-
-    def age_orders(self):
-        for book in (self._bids, self._asks):
-            for px in list(book):
-                surviving = []
-                for o in book[px]:
-                    o.ttl -= 1
-                    if o.ttl > 0:
-                        surviving.append(o)
-                    else:
-                        self._order_index.pop(o.order_id, None)
-                if surviving:
-                    book[px] = surviving
-                else:
-                    del book[px]
 
     # -- Observables ------------------------------------------------------
 

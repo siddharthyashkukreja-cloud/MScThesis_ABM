@@ -13,10 +13,18 @@ class BaseTrader:
     cash: float
     inventory: int = 0
     pnl: float = 0.0
-    # Client-clearing link (D28): id of the clearing member this trader
-    # clears through; None for clearing members themselves and for direct
-    # exchange participants (ZI stay direct — ODD §Initialization).
+    # Client-clearing link (D28): id of the clearing member this trader clears
+    # through; None for clearing members themselves. Set for every cleared client
+    # (FT/MT/ZI — ZI clearing is a thesis extension to the ODD).
     clearing_member_id: Optional[int] = None
+    # Client clearing-account state (D52). Cleared clients post variation margin
+    # from their own cash each margin cycle; `_stopped` freezes a client that
+    # breaches the 8% capital floor (stop-trading); `has_defaulted` marks cash
+    # exhaustion, on which its CM absorbs the shortfall. Unused by the CMs
+    # themselves (they track default on the balance sheet).
+    _stopped: bool = field(default=False, init=False, repr=False)
+    has_defaulted: bool = field(default=False, init=False, repr=False)
+    _cm_last_mark: float = field(default=0.0, init=False, repr=False)
 
     def update_pnl(self, price: float):
         self.pnl = self.inventory * price
@@ -68,6 +76,42 @@ def _bernoulli_cancel(open_oids: list, lob: LOB, delta: float,
         else:
             kept.append(oid)
     return kept
+
+
+def _client_cap_qty(trader, side: int, qty: int, params: ModelParams,
+                    mid: float) -> int:
+    """Position cap applied before an OPENING order (D52/D55). Two regimes:
+    • a cleared CLIENT (clearing_member_id set) cannot open beyond what its free cash
+      can margin — |pos| <= cash / (house_im · VOLUME_LOT · CONTRACT_USD · mid), where
+      house_im is the broker house margin (CCP_CALIBRATION im_percent = 20%, i.e. 5×),
+      uniform across clients;
+    • a banking CM's OWN account (balance_sheet.is_banking) is bounded by a VaR house
+      limit — own VaR z·σ_daily·notional <= HOUSE_VAR_BUDGET·cash, i.e.
+      |pos| <= β·cash / (z·σ_daily · VOLUME_LOT · CONTRACT_USD · mid) (regime σ; Basel
+      FRTB / prop-desk practice). This stops the unbounded prop accumulation that
+      otherwise compounds to many ×capital in a trend and inflates the cover-2 DF.
+    Orders that reduce/flatten the position are never capped; other agents are uncapped."""
+    if qty <= 0:
+        return qty
+    inv = trader.inventory
+    if not ((side > 0 and inv >= 0) or (side < 0 and inv <= 0)):
+        return qty                                   # reducing — never capped
+    from .globals import CONTRACT_USD, CCP_CALIBRATION
+    px = mid if (mid == mid and mid > 0) else params.v0
+    base = params.volume_lot * CONTRACT_USD * px
+    if trader.clearing_member_id is not None:        # cleared client — margin-capacity cap
+        denom = CCP_CALIBRATION["im_percent"] * base
+    elif getattr(trader, "balance_sheet", None) is not None and trader.balance_sheet.is_banking:
+        from .globals import IM_CONF_Z, TRADING_MINUTES_PER_DAY, HOUSE_VAR_BUDGET
+        from math import sqrt
+        sigma_daily = params.sigma_v * sqrt(TRADING_MINUTES_PER_DAY)
+        denom = (IM_CONF_Z * sigma_daily / HOUSE_VAR_BUDGET) * base if HOUSE_VAR_BUDGET > 0 else 0.0
+    else:
+        return qty                                   # uncleared / non-CM — uncapped
+    if denom <= 0:
+        return qty
+    room = int(trader.cash / denom) - abs(inv)
+    return max(0, min(int(qty), room))
 
 
 def ac_schedule(Q: float, T: int, sigma: float, eta: float, gamma: float,
@@ -124,15 +168,19 @@ class ZeroIntelligenceTrader(BaseTrader):
                                    (D20), qty ~ U[qty_min, qty_max]
       - submit one market order  w.p. zi_mu    → random side, qty ~ U[…]
 
-    The three Bernoulli rates are fixed at ODD-baseline values; population
-    n_zi is structural. The placement depth `depth_mean` is calibrated but
-    SHARED with MT (D20) — it is a market-microstructure parameter, not a
-    ZI-specific one — so ZI keeps no calibrated parameter of its own.
+    zi_alpha (limit arrival) and zi_delta (per-resting cancellation) are
+    CALIBRATED (PARAM_KEYS); zi_mu (market arrival) is pinned at the
+    Cont-Stoikov-Talreja 2008 baseline (0.025). With the LOB TTL removed (D58),
+    zi_delta is the SOLE control on ZI order lifetime. Population n_zi is
+    structural; the placement depth `depth_mean` is calibrated but SHARED with
+    MT (D20 — a market-microstructure parameter, not ZI-specific).
     """
     _open_oids: List[int] = field(default_factory=list, init=False, repr=False)
 
     def submit_orders(self, lob: LOB, params: ModelParams,
                       ctx: SimContext, rng: np.random.Generator):
+        if self._stopped or self.has_defaulted:      # D52 — frozen / defaulted client
+            return
         self._open_oids = _bernoulli_cancel(self._open_oids, lob,
                                             params.zi_delta, rng)
         anchor = ctx.mid_price if not np.isnan(ctx.mid_price) else ctx.v
@@ -140,13 +188,15 @@ class ZeroIntelligenceTrader(BaseTrader):
             side = 1 if rng.random() < 0.5 else -1
             k = _draw_depth(params, rng)
             price = max(anchor - side * k * params.tick_size, params.tick_size)
-            qty = _draw_qty(params, rng)
-            oid = lob.add_limit(self.agent_id, side, price, qty)
-            self._open_oids.append(oid)
+            qty = _client_cap_qty(self, side, _draw_qty(params, rng), params, anchor)
+            if qty > 0:
+                oid = lob.add_limit(self.agent_id, side, price, qty)
+                self._open_oids.append(oid)
         if rng.random() < params.zi_mu:
             side = 1 if rng.random() < 0.5 else -1
-            qty = _draw_qty(params, rng)
-            lob.add_market(self.agent_id, side, qty)
+            qty = _client_cap_qty(self, side, _draw_qty(params, rng), params, anchor)
+            if qty > 0:
+                lob.add_market(self.agent_id, side, qty)
 
 
 # ── Fundamental Trader (ODD §Agents) ─────────────────────────────────────────
@@ -174,15 +224,19 @@ class FundamentalTrader(BaseTrader):
     per-agent Simudyne band U[0.01·V, 0.10·V] were both trialled and
     dropped — D9b/D22/D23.)
 
-    Order management is replace-on-new: the FT holds at most one resting
-    limit, refreshed on the next activation; otherwise it persists until the
-    hard order_ttl ceiling (10 steps). No per-resting cancellation rate.
+    Order management is replace-on-new: the FT holds at most one resting limit,
+    refreshed on the next activation. It trades every step (ft_alpha=1), so the
+    order is refreshed each step in practice. No per-resting cancellation rate and
+    no TTL (D58 — the LOB hard ceiling was removed); an un-refreshed order persists
+    until filled.
     """
     z_score: float = 0.0
     _open_oid: Optional[int] = field(default=None, init=False, repr=False)
 
     def submit_orders(self, lob: LOB, params: ModelParams,
                       ctx: SimContext, rng: np.random.Generator):
+        if self._stopped or self.has_defaulted:      # D52 — frozen / defaulted client
+            return
         # Drop the standing-order reference if it was filled / TTL-expired.
         if self._open_oid is not None and not lob.is_resting(self._open_oid):
             self._open_oid = None
@@ -214,9 +268,11 @@ class FundamentalTrader(BaseTrader):
         # and limit price vs market price comparison"). Replace-on-new
         # without a Bernoulli gate — `ft_alpha` is pinned at 1.0 and out of
         # the calibration loop.
+        qty = _client_cap_qty(self, side, _draw_qty(params, rng), params, ref)
+        if qty <= 0:
+            return                                   # at margin cap on this side — hold
         if self._open_oid is not None:
             lob.cancel(self._open_oid)
-        qty = _draw_qty(params, rng)
         self._open_oid = lob.add_limit(self.agent_id, side, reservation, qty)
 
 
@@ -267,6 +323,8 @@ class MomentumTrader(BaseTrader):
 
     def submit_orders(self, lob: LOB, params: ModelParams,
                       ctx: SimContext, rng: np.random.Generator):
+        if self._stopped or self.has_defaulted:      # D52 — frozen / defaulted client
+            return
         # Drop the standing-order reference if it was filled / TTL-expired.
         if self._open_oid is not None and not lob.is_resting(self._open_oid):
             self._open_oid = None
@@ -295,7 +353,9 @@ class MomentumTrader(BaseTrader):
         k = _draw_depth(params, rng)          # shared log-normal depth (D20)
         price = anchor - side * k * params.tick_size
         price = max(price, params.tick_size)
-        qty = _draw_qty(params, rng)
+        qty = _client_cap_qty(self, side, _draw_qty(params, rng), params, anchor)
+        if qty <= 0:
+            return                                   # at margin cap on this side — hold
         # Replace-on-new: cancel the standing order, place a fresh one.
         if self._open_oid is not None:
             lob.cancel(self._open_oid)
@@ -489,22 +549,49 @@ class BankingClearingMember(FundamentalTrader):
     balance_sheet: Optional[BalanceSheet] = None
     ccp_id: Optional[int] = None
     client_ids: List[int] = field(default_factory=list)
+    _liq_slices: List[int] = field(default_factory=list, repr=False)  # AC fire-sale queue
+    _liq_side: int = 0
 
     def __post_init__(self):
         if self.balance_sheet is None:
             self.balance_sheet = BalanceSheet(owner_id=self.agent_id,
                                               is_banking=True)
 
-    def capital_ratio(self, mid: float) -> float:
-        """ODD §Mech #2 capital-adequacy ratio: cash / USD notional exposure
-        (D50). Exposure = |own position|·VOLUME_LOT·CONTRACT_USD·mid +
-        client_notional (already USD). The 8% floor drives the deferred
-        fire-sale; with the D50 institutional-lot relabeling, this ratio
-        now sits in a regime where the floor can plausibly bind."""
-        from model.globals import VOLUME_LOT, CONTRACT_USD
-        own_notional = abs(self.inventory) * VOLUME_LOT * CONTRACT_USD * mid
+    def start_firesale(self, qty: int, urgency: float, horizon: int) -> None:
+        """ODD §Mech #2 forced deleveraging via Almgren-Chriss liquidation: on an
+        8%-capital-ratio breach, sell down `qty` of the OWN position over
+        `horizon` steps to restore compliance (sell if long, buy if short).
+        Slices are sent as LOB market orders by submit_orders — the book walk is
+        the temporary impact (permanent impact GAMMA_PERM ≈ 0 empirically)."""
+        from model.clearing import ac_slices
+        qty = min(int(abs(qty)), abs(self.inventory))
+        if qty <= 0:
+            return
+        self._liq_side = -1 if self.inventory > 0 else 1
+        self._liq_slices = ac_slices(qty, horizon, urgency)
+
+    def submit_orders(self, lob, params, ctx, rng):
+        """In a fire-sale, send the next AC liquidation slice as a market order
+        and skip normal trading; otherwise trade own-account as an FT."""
+        if self._liq_slices:
+            qty = int(self._liq_slices.pop(0))
+            if qty > 0:
+                lob.add_market(self.agent_id, self._liq_side, qty)
+            return
+        super().submit_orders(lob, params, ctx, rng)
+
+    def capital_ratio(self, mid: float, sigma_t: float = 0.0) -> float:
+        """CFTC Reg 1.17 capital adequacy (D55): adjusted net capital / initial
+        margin. IM = im_fraction(sigma_t) · USD notional exposure (own +
+        client). The 8% floor (cap_ratio_floor) is the FCM net-capital minimum
+        on RISK MARGIN, not gross notional — so the stop-out / deleverage binds
+        near distress rather than routinely (FCMs clear many multiples of their
+        capital in notional). sigma_t=0 → im_fraction falls back to the APC floor."""
+        from model.globals import CONTRACT_USD, im_fraction
+        own_notional = abs(self.inventory) * self.balance_sheet.volume_lot * CONTRACT_USD * mid
         exposure = own_notional + self.balance_sheet.client_notional(mid)
-        return float("inf") if exposure <= 0.0 else self.cash / exposure
+        im = im_fraction(sigma_t) * exposure
+        return float("inf") if im <= 0.0 else self.cash / im
 
 
 @dataclass
@@ -521,15 +608,42 @@ class NonBankingClearingMember(BaseTrader):
     balance_sheet: Optional[BalanceSheet] = None
     ccp_id: Optional[int] = None
     client_ids: List[int] = field(default_factory=list)
+    # _stopped (ODD §Mech #2 stop-out, capital_ratio <= floor) is inherited from BaseTrader.
+    # Fire-sale queue for a DEFAULTED client's position the NBCM has assumed (D55).
+    # The NBCM has no LOB access, so Simulation routes these slices through the CCP,
+    # attributed to the NBCM, so the fills mark down its assumed `inventory` — the loss
+    # is realised by marking the assumed book to market (deficit-consistent), not a flat
+    # (1-recovery) haircut. Empty in normal operation (NBCM carries no position).
+    _liq_slices: List[int] = field(default_factory=list, repr=False)
+    _liq_side: int = 0
 
     def __post_init__(self):
         if self.balance_sheet is None:
             self.balance_sheet = BalanceSheet(owner_id=self.agent_id,
                                               is_banking=False)
 
-    def capital_ratio(self, mid: float) -> float:
-        """ODD §Mech #2 for a non-banking CM: cash / USD client-book
-        notional (no own position; `client_notional` is already USD via
-        D50 — VOLUME_LOT · CONTRACT_USD · mid · qty)."""
-        exposure = self.balance_sheet.client_notional(mid)
-        return float("inf") if exposure <= 0.0 else self.cash / exposure
+    def start_firesale(self, qty: int, urgency: float, horizon: int) -> None:
+        """Almgren-Chriss liquidation of an ASSUMED defaulted-client position (D55).
+        The NBCM holds no own trading book, so `inventory` is only ever a position it
+        has assumed on a client default; this schedules its disposal over `horizon`
+        steps (sell if long, buy if short). Slices are sent to the LOB by Simulation
+        (via the CCP, attributed to this NBCM) so the book-walk impact is endogenous."""
+        from model.clearing import ac_slices
+        qty = min(int(abs(qty)), abs(self.inventory))
+        if qty <= 0:
+            return
+        self._liq_side = -1 if self.inventory > 0 else 1
+        self._liq_slices = ac_slices(qty, horizon, urgency)
+
+    def capital_ratio(self, mid: float, sigma_t: float = 0.0) -> float:
+        """CFTC Reg 1.17 (D55) for a non-banking CM: adjusted net capital /
+        initial margin. IM = im_fraction(sigma_t) · (client-book notional + any
+        ASSUMED defaulted-client position still being liquidated). The 8% floor is
+        on risk margin, not gross notional — an FCM clears 8-30× its capital in
+        client notional, so cash/notional would breach routinely whereas cash/IM
+        binds only in distress (the fix that lets the operational stop-out fire)."""
+        from model.globals import im_fraction, CONTRACT_USD
+        assumed = abs(self.inventory) * self.balance_sheet.volume_lot * CONTRACT_USD * mid
+        exposure = self.balance_sheet.client_notional(mid) + assumed
+        im = im_fraction(sigma_t) * exposure
+        return float("inf") if im <= 0.0 else self.cash / im
