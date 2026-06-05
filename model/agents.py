@@ -241,6 +241,15 @@ class FundamentalTrader(BaseTrader):
         if self._open_oid is not None and not lob.is_resting(self._open_oid):
             self._open_oid = None
 
+        # Stochastic cancellation of the standing order (campaign E5; CST-2008 /
+        # Farmer ZI cancel rate). Off by default (ft_delta=0.0, replace-on-new).
+        if self._open_oid is not None and params.ft_delta > 0.0 and rng.random() < params.ft_delta:
+            lob.cancel(self._open_oid); self._open_oid = None
+        # Bernoulli activation gate (campaign E5 — re-testing the D36-rejected gate):
+        # skip this step w.p. 1-ft_alpha. Off by default (ft_alpha=1.0).
+        if params.ft_alpha < 1.0 and rng.random() >= params.ft_alpha:
+            return
+
         ref = ctx.mid_price if not np.isnan(ctx.mid_price) else ctx.v
         # D34 — FT belief width tracks the stochastic V_t volatility σ_t
         # (Deloitte convention: `theta_v = sigma_fundamental`). When σ_t
@@ -337,6 +346,14 @@ class MomentumTrader(BaseTrader):
             self._M = (1.0 - self.lambda_decay) * self._M + self.lambda_decay * r
         if not np.isnan(cur_mid):
             self._prev_mid = cur_mid
+
+        # Stochastic cancellation + Bernoulli gate (campaign E5) — placed AFTER the
+        # EWMA update so the trend signal keeps updating on skipped steps. Off by
+        # default (mt_delta=0.0 replace-on-new, mt_alpha=1.0 trades every step).
+        if self._open_oid is not None and params.mt_delta > 0.0 and rng.random() < params.mt_delta:
+            lob.cancel(self._open_oid); self._open_oid = None
+        if params.mt_alpha < 1.0 and rng.random() >= params.mt_alpha:
+            return
 
         am = abs(self._M)
         if am < params.mt_eps:

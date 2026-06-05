@@ -1,0 +1,38 @@
+Campaign complete. Here's the summary.
+
+## What happened
+
+I took over a **stalled** campaign: the prior session built all the infrastructure but its driver died, leaving E0-calm running orphaned with no supervisor and zero results logged. I killed the orphan, added a resume-skip guard to the driver (idempotent restarts), verified all the code wiring (E1–E6 flags, E5 agent gates off-by-default, E6 scenario CLI, xgboost/scipy present), and relaunched under a background watcher.
+
+**It ran clean in 2.56 h — all 8 experiments × 2 regimes + E6, zero errors.** Outputs: `SUMMARY.md` (16 rows), `FINDINGS.md`, `E6_gaps_vs_shock.csv`, and per-experiment `<EID>_<regime>.json`. Acceptance held throughout (R² ≥ 0.58, depth bounded ~197–373).
+
+## Key findings (vs E0: calm 44.02 / stressed 13.84)
+
+- **E2 (`mt_lambda` in the loop) — the recommended win.** Improves *both* regimes (calm −2.32, stressed −1.91) with clean component deltas and one extra parameter. Data prefers a slightly slower trend than the pinned 0.05 (λ\*≈0.018 calm / 0.041 stressed).
+- **E5 (FT/MT gate + cancellation) — best calm (38.41, −5.61).** Largest clustering improvement (ACF2 14.4→9.2) and a clean tail. The D36 rejection no longer applies post-TTL-removal. Costs: worse V, higher depth, +4 params → a *candidate* to validate at higher resolution, not an automatic adopt.
+- **E3 rejected** — calm total drops but only by blowing up Hill (1.1→8.1); a slow single trend wrecks the tail.
+- **E4a/E4b rejected** — more/two-cohort MT does **not** revive multi-scale clustering. The documented single-timescale limit stands.
+- **E1 — methodology caveat.** Calm ≈ E0 (clearing inert), but stressed jumps 13.8→**28.0** (kurt→94): the stressed bare-market calibration is **not clearing-invariant** — freezes during the crash feed back into the matched moments.
+- **E6 — clean contagion result.** At equal total drawdown, a single concentrated shock reaches L4 mutualisation at −19%, while the equal-magnitude gapped path needs −46%. Cascade severity tracks **move concentration, not total magnitude** — the overnight-gap structure is a mitigant (VM collects between jumps).
+
+Full analysis and the one-paragraph recommendation are in `output/campaign/FINDINGS.md`. As instructed, `globals.CALIBRATED` is untouched and nothing was pushed.
+22:42:28] E4b calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'N_MOMENTUM': '15', 'N_MOMENTUM_LONG': '15', 'MT_LAMBDA_LONG': '0.00385'}
+[22:52:01] E4b calm: D=44.46 R2=0.62 depth~262 (570s)
+[22:52:01] E4b stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'N_MOMENTUM': '15', 'N_MOMENTUM_LONG': '15', 'MT_LAMBDA_LONG': '0.00385'}
+[23:05:26] E4b stressed: D=16.80 R2=0.84 depth~280 (802s)
+[23:05:26] E4b complete. elapsed 1.73h
+[23:05:26] E6: gaps vs single shock scenario sweep
+[23:05:56] E6: done. gapped: cl_def~9.1 cm_def~1.2 maxWF~1.4; shock: cl_def~29.1 cm_def~4.1 maxWF~4.0
+[23:05:56] --- E5 (FT/MT Bernoulli gate + cancellation (high-dim)) — fresh caches ---
+[23:05:56] E5 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 96 20 2 1 16 12  flags={'FTMT_GATES': '1'}
+[23:18:43] E5 calm: D=38.41 R2=0.76 depth~373 (764s)
+[23:18:43] E5 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 96 20 2 1 16 12  flags={'FTMT_GATES': '1'}
+[23:36:09] E5 stressed: D=14.70 R2=0.83 depth~197 (1043s)
+[23:36:09] E5 complete. elapsed 2.24h
+[23:36:09] --- E1 (clearing/CCP tier active in the loop) — fresh caches ---
+[23:36:09] E1 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'CLEARING_IN_LOOP': '1'}
+[23:44:23] E1 calm: D=44.45 R2=0.58 depth~285 (491s)
+[23:44:23] E1 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'CLEARING_IN_LOOP': '1'}
+[23:55:01] E1 stressed: D=27.98 R2=0.84 depth~224 (637s)
+[23:55:01] E1 complete. elapsed 2.56h
+[23:55:01] === campaign done in 2.56h ===

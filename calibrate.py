@@ -101,6 +101,7 @@ CLI:
 from __future__ import annotations
 import itertools
 import json
+import os
 import sys
 import time
 from dataclasses import dataclass, asdict
@@ -114,7 +115,7 @@ from scipy.optimize import minimize
 
 from model.globals import ModelParams, V0, FV_CSV, day_start_steps
 from model.simulation import Simulation
-from run_simulation import build_traders
+from run_simulation import build_traders, build_clearing_tier
 
 # ── config ───────────────────────────────────────────────────────────────────
 REPO_DIR = Path(__file__).parent
@@ -216,6 +217,22 @@ PARAM_BOUNDS_BY_REGIME = {
 # orders a clear minority of ZI flow: zi_mu ≤ 0.10 (4x baseline), zi_alpha
 # ≤ 0.50 (3.3x baseline). zi_delta (cancellation) ∈ [0.05, 0.50] — lower bound
 # raised from 0.005 (D58: sole order-lifetime control now the LOB TTL is removed).
+# ── Campaign experiment flags (overnight calibration campaign) ────────────────
+# Each is OFF by default, so absent any env var PARAM_BOUNDS_BY_REGIME is the
+# baseline (E0) loop. Gated at import time — every experiment is a fresh process
+# with its own environment, so import-time injection is clean and isolated.
+#   E2  MT_LAMBDA_IN_LOOP  — add mt_lambda (0.004, 0.20) to both regimes' loops.
+#   E5  FTMT_GATES         — add ft_alpha/mt_alpha/ft_delta/mt_delta (high-dim).
+if os.environ.get("MT_LAMBDA_IN_LOOP"):
+    for _rb in PARAM_BOUNDS_BY_REGIME.values():
+        _rb["mt_lambda"] = (0.004, 0.20)   # ~3.5-min (0.20) to ~3-hour (0.004) half-life
+if os.environ.get("FTMT_GATES"):
+    for _rb in PARAM_BOUNDS_BY_REGIME.values():
+        _rb["ft_alpha"] = (0.2, 1.0)
+        _rb["mt_alpha"] = (0.2, 1.0)
+        _rb["ft_delta"] = (0.0, 0.5)
+        _rb["mt_delta"] = (0.0, 0.5)
+
 # Active regime's parameter set. _activate_regime() swaps these at the top of
 # each regime's run — calibration is sequential (one regime at a time), so
 # module-level state is safe. Default to calm for imports / other tools.
@@ -445,8 +462,32 @@ def _theta_to_params(theta: np.ndarray, regime: str) -> ModelParams:
     )
     if "p_zi" in d:                       # stressed only; calm keeps the L2 P_ZI
         kw["p_zi"] = float(d["p_zi"])
+    # E2 — mt_lambda calibrated in the loop (MT_LAMBDA_IN_LOOP).
+    if "mt_lambda" in d:
+        kw["mt_lambda"] = float(d["mt_lambda"])
+    # E3/E4 — mt_lambda pinned externally (MT_LAMBDA_FIXED, e.g. 0.00385 = 3h half-life).
+    if os.environ.get("MT_LAMBDA_FIXED"):
+        kw["mt_lambda"] = float(os.environ["MT_LAMBDA_FIXED"])
+    # E4b — long-cohort EWMA decay (MT_LAMBDA_LONG); build_traders wires n_momentum_long.
+    if os.environ.get("MT_LAMBDA_LONG"):
+        kw["mt_lambda_long"] = float(os.environ["MT_LAMBDA_LONG"])
+    # E5 — FT/MT Bernoulli gate + stochastic cancellation, all calibrated (FTMT_GATES).
+    for g in ("ft_alpha", "mt_alpha", "ft_delta", "mt_delta"):
+        if g in d:
+            kw[g] = float(d[g])
+    # Population: POP (bare market) by default. E1 swaps to the run_simulation
+    # population WITH clearing members (CLEARING_IN_LOOP); E4 overrides MT counts.
+    pop = dict(POP)
+    if os.environ.get("CLEARING_IN_LOOP"):
+        pop = dict(n_fundamental=30, n_momentum=20, n_momentum_long=0,
+                   n_mm=0, n_zi=40, n_vt=0, n_ct=0,
+                   n_bcm=10, n_nbcm=5, n_bcm_with_clients=5)
+    if os.environ.get("N_MOMENTUM"):
+        pop["n_momentum"] = int(os.environ["N_MOMENTUM"])
+    if os.environ.get("N_MOMENTUM_LONG"):
+        pop["n_momentum_long"] = int(os.environ["N_MOMENTUM_LONG"])
     return ModelParams(
-        **POP,
+        **pop,
         v0=V0[regime], tick_size=0.25, dt_minutes=1.0,
         **kw,
         stressed=(regime == "stressed"),
@@ -475,9 +516,11 @@ def simulate_moments(theta: np.ndarray, regime: str,
     params = _theta_to_params(theta, regime)
     n_steps = _sim_steps(regime, n_days)
     rets = []
+    clearing = bool(os.environ.get("CLEARING_IN_LOOP"))   # E1 — calibrate with the CCP tier active
     for s in range(seed, seed + n_runs):
         traders = build_traders(params, seed=s)
-        hist = Simulation(params, traders, seed=s).run(n_steps)
+        ccp = build_clearing_tier(traders, params, seed=s) if clearing else None
+        hist = Simulation(params, traders, seed=s, ccp=ccp).run(n_steps)
         mid = pd.Series(hist["mid_price"]).ffill().bfill().to_numpy()
         mid = mid[mid > 0]
         if len(mid) > 1:

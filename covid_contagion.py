@@ -64,6 +64,77 @@ def run(c: float, seed: int = 42):
         total_df=ccp.total_df, ccp_cash=ccp.cash, cl=cl)
 
 
+from model.globals import CCP_CASH
+
+
+def _gapped_v(c: float) -> np.ndarray:
+    """Scenario A — the real gapped COVID window, amplified by c (overnight limit-down
+    gaps RETAINED, D56). Same construction as run()."""
+    w = _V[WINDOW_START:WINDOW_START + WINDOW_STEPS]
+    return w[0] * np.exp(c * (np.log(w) - np.log(w[0])))
+
+
+def _shock_v(c: float) -> np.ndarray:
+    """Scenario B — flat at V0, ONE large intraday jump to the same trough level as the
+    gapped path (matched total drawdown), then flat. No overnight gaps. Isolates the
+    price-delivery STRUCTURE (many discrete gaps vs one shock) at matched total move."""
+    g = _gapped_v(c)
+    out = np.full(len(g), g[0], dtype=float)
+    out[len(g) // 2:] = g.min()             # single −X% jump at the window midpoint
+    return out
+
+
+def scenario_run(kind: str, c: float, seed: int = 42) -> dict:
+    """Run the cleared population + CCP tier through one fundamental path and return the
+    cascade summary. kind='gapped' (Scenario A — real overnight gaps) or 'shock'
+    (Scenario B — one equal-magnitude jump). sigma_t (the procyclical-IM driver) is held
+    at the real window's local vol for BOTH so only the price-delivery structure differs.
+    Euronext A9 §5 reverse-stress / scenario design."""
+    p = ModelParams(
+        n_fundamental=30, n_momentum=20, n_mm=0, n_zi=40, n_vt=0, n_ct=0,
+        n_bcm=10, n_nbcm=5, n_bcm_with_clients=5, v0=float(_V[WINDOW_START]),
+        tick_size=0.25, dt_minutes=1.0, **CALIBRATED["stressed"], stressed=True)
+    traders = build_traders(p, seed=seed)
+    ccp = build_clearing_tier(traders, p, seed=seed)
+    sim = Simulation(p, traders, seed=seed, ccp=ccp, v_start=WINDOW_START)
+    sim.v_array = _gapped_v(c) if kind == "gapped" else _shock_v(c)
+    sim.sigma_t_array = _SIG[WINDOW_START:WINDOW_START + WINDOW_STEPS]
+    sim.run(WINDOW_STEPS)
+    ch = pd.DataFrame(sim.clearing_history)
+    cl = pd.DataFrame(sim.client_history)
+    mid = np.array([m for m in sim.history["mid_price"] if m == m])
+    deepest = int(ch["waterfall_level"].max()) if len(ch) else 0
+    return dict(
+        kind=kind, c=float(c), seed=int(seed),
+        drawdown=100.0 * (mid.min() / mid[0] - 1.0) if len(mid) else float("nan"),
+        client_defaults=len(cl),
+        cm_defaults=int(ch[ch["has_defaulted"]]["agent_id"].nunique()) if len(ch) else 0,
+        nbcm_defaults=int(ch[ch["has_defaulted"] & (ch["kind"] == "NBCM")]["agent_id"].nunique()) if len(ch) else 0,
+        waterfall_level_reached=deepest,
+        mutualised=bool(deepest >= 4),                   # L4 = surviving-member cash pro-rata
+        total_df=float(ccp.total_df),                    # sized cover-2 DF
+        ccp_cash_used=float(CCP_CASH - ccp.cash),        # SITG (L2) + exchange (L5) drawn
+    )
+
+
+def scenario_sweep(out_csv: str = "output/campaign/E6_gaps_vs_shock.csv",
+                   cs=(1.0, 1.5, 2.0, 2.5, 3.0), seeds=(42, 43)):
+    """E6 — gaps vs single shock. Sweep the amplifier c for both scenarios over a few
+    seeds; write one row per (kind, c, seed) and print a per-c mean comparison."""
+    import os as _os
+    rows = [scenario_run(kind, c, s)
+            for kind in ("gapped", "shock") for c in cs for s in seeds]
+    df = pd.DataFrame(rows)
+    _os.makedirs(_os.path.dirname(out_csv), exist_ok=True)
+    df.to_csv(out_csv, index=False)
+    print(f"E6 gaps-vs-shock — {len(df)} runs -> {out_csv}")
+    agg = (df.groupby(["kind", "c"])[["drawdown", "client_defaults", "cm_defaults",
+                                      "nbcm_defaults", "waterfall_level_reached",
+                                      "ccp_cash_used"]].mean().reset_index())
+    print(agg.to_string(index=False))
+    return df
+
+
 def trace(seed: int = 42):
     r = run(1.0, seed)
     print(f"COVID window cascade trace (seed {seed}): drawdown {r['drawdown']:+.1f}%")
@@ -92,4 +163,9 @@ def reverse(seed: int = 42):
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "trace"
-    (reverse if mode == "reverse" else trace)()
+    if mode == "scenario":
+        scenario_sweep()
+    elif mode == "reverse":
+        reverse()
+    else:
+        trace()

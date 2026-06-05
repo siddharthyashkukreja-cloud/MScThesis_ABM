@@ -1,0 +1,49 @@
+[21:18:48] === campaign start (budget ~8h) python=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3 ===
+[21:18:48] --- E0 (baseline control (no changes)) — fresh caches ---
+[21:18:48] E0 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={}
+[21:21:39] === campaign start (budget ~8h) python=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3 ===
+[21:21:39] --- E0 (baseline control (no changes)) — fresh caches ---
+[21:21:39] E0 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={}
+[21:29:44] E0 calm: D=44.02 R2=0.81 depth~244 (482s)
+[21:29:44] E0 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={}
+[21:40:49] E0 stressed: D=13.84 R2=0.77 depth~274 (663s)
+[21:40:49] E0 complete. elapsed 0.32h
+[21:40:49] --- E2 (mt_lambda in the loop (0.004-0.20)) — fresh caches ---
+[21:40:49] E2 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'MT_LAMBDA_IN_LOOP': '1'}
+[21:49:03] E2 calm: D=41.70 R2=0.78 depth~256 (491s)
+[21:49:03] E2 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'MT_LAMBDA_IN_LOOP': '1'}
+[22:00:11] E2 stressed: D=11.93 R2=0.74 depth~255 (666s)
+[22:00:11] E2 complete. elapsed 0.64h
+[22:00:11] --- E3 (mt_lambda pinned ~3h half-life) — fresh caches ---
+[22:00:11] E3 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'MT_LAMBDA_FIXED': '0.00385'}
+[22:08:31] E3 calm: D=41.23 R2=0.69 depth~329 (498s)
+[22:08:31] E3 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'MT_LAMBDA_FIXED': '0.00385'}
+[22:19:49] E3 stressed: D=14.38 R2=0.74 depth~253 (675s)
+[22:19:49] E3 complete. elapsed 0.97h
+[22:19:49] --- E4a (30 short-lambda MT, long lambda) — fresh caches ---
+[22:19:49] E4a calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'N_MOMENTUM': '30', 'MT_LAMBDA_FIXED': '0.00385'}
+[22:29:26] E4a calm: D=43.11 R2=0.58 depth~260 (575s)
+[22:29:26] E4a stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'N_MOMENTUM': '30', 'MT_LAMBDA_FIXED': '0.00385'}
+[22:42:28] E4a stressed: D=16.68 R2=0.83 depth~272 (779s)
+[22:42:28] E4a complete. elapsed 1.35h
+[22:42:28] --- E4b (two-cohort MT 15 long + 15 short) — fresh caches ---
+[22:42:28] E4b calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'N_MOMENTUM': '15', 'N_MOMENTUM_LONG': '15', 'MT_LAMBDA_LONG': '0.00385'}
+[22:52:01] E4b calm: D=44.46 R2=0.62 depth~262 (570s)
+[22:52:01] E4b stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'N_MOMENTUM': '15', 'N_MOMENTUM_LONG': '15', 'MT_LAMBDA_LONG': '0.00385'}
+[23:05:26] E4b stressed: D=16.80 R2=0.84 depth~280 (802s)
+[23:05:26] E4b complete. elapsed 1.73h
+[23:05:26] E6: gaps vs single shock scenario sweep
+[23:05:56] E6: done. gapped: cl_def~9.1 cm_def~1.2 maxWF~1.4; shock: cl_def~29.1 cm_def~4.1 maxWF~4.0
+[23:05:56] --- E5 (FT/MT Bernoulli gate + cancellation (high-dim)) — fresh caches ---
+[23:05:56] E5 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 96 20 2 1 16 12  flags={'FTMT_GATES': '1'}
+[23:18:43] E5 calm: D=38.41 R2=0.76 depth~373 (764s)
+[23:18:43] E5 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 96 20 2 1 16 12  flags={'FTMT_GATES': '1'}
+[23:36:09] E5 stressed: D=14.70 R2=0.83 depth~197 (1043s)
+[23:36:09] E5 complete. elapsed 2.24h
+[23:36:09] --- E1 (clearing/CCP tier active in the loop) — fresh caches ---
+[23:36:09] E1 calm: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run calm 48 20 2 1 12 8  flags={'CLEARING_IN_LOOP': '1'}
+[23:44:23] E1 calm: D=44.45 R2=0.58 depth~285 (491s)
+[23:44:23] E1 stressed: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 calibrate.py run stressed 48 20 2 1 12 8  flags={'CLEARING_IN_LOOP': '1'}
+[23:55:01] E1 stressed: D=27.98 R2=0.84 depth~224 (637s)
+[23:55:01] E1 complete. elapsed 2.56h
+[23:55:01] === campaign done in 2.56h ===

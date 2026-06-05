@@ -279,6 +279,9 @@ class ModelParams:
     # the LOB via the FT belief width (D34: σ_fund_t = √390·σ_t·v0).
     ft_alpha: float = 1.0
     ft_sigma_c: float = FT_SIGMA_C_DEFAULT
+    ft_delta: float = 0.0      # per-resting stochastic cancellation rate (campaign E5;
+                               # CST-2008 / Farmer ZI cancel rate). 0.0 = replace-on-new
+                               # only (D58 baseline); >0 re-tests the D36-rejected design.
 
     # ── ZI (Cont-Stoikov 2008) — three Bernoulli rates per step, all CALIBRATED.
     zi_alpha: float = 0.15     # limit-order arrival
@@ -291,6 +294,8 @@ class ModelParams:
     # Limit-only (D40). Replace-on-new (D5d). EWMA decay per-agent at init
     # (params.mt_lambda); placement k ~ shared LogNormal `_draw_depth`.
     mt_alpha: float = 1.0         # trades every step (D36)
+    mt_delta: float = 0.0         # per-resting stochastic cancellation rate (campaign E5;
+                                  # CST-2008 / Farmer). 0.0 = replace-on-new only (baseline).
     mt_mu: float = 0.0            # market branch off (D40)
     mt_lambda: float = 0.05       # EWMA decay — pinned (D44)
     mt_lambda_long: float = 0.02  # long-cohort decay (D35); n_momentum_long=0 by default
