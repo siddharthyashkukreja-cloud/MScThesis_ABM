@@ -6,6 +6,36 @@ work here* and the **full history of changes and the effect each had** —
 including the ablation study. Read the "Project at a glance" snapshot first,
 then the relevant code, before suggesting anything.
 
+## Status & handoff (read first)
+
+**Phase:** the model is COMPLETE and the calibration is LOCKED (D60) — the project is now in the
+**thesis-writing** stage. A fresh chat/agent needs only three files: **`README.md`** (model / code
+reference), **`writing.md`** (thesis findings, numbers, references, chapter structure — the
+writing-agent context pack), and **this `AGENT.md`** (dev history + how-to-work-here). README +
+writing.md are the self-contained context pair; AGENT.md is the dev log.
+
+**Locked baseline θ** (`globals.CALIBRATED`; grid headline, surrogate cross-validated — D60):
+calm `ft_sigma_c=0.80, zi_alpha=0.34, zi_delta=0.05`; stressed `ft_sigma_c=0.50, zi_alpha=0.26,
+zi_delta=0.05, p_zi=0.15`; `zi_mu` pinned 0.025. D_grid 43.8 / 7.9 — **D is comparable only at a
+fixed seed count** (the KS component's `s_KS` is sim-sized; see writing.md §4.1).
+
+**Open decisions (writer):** (1) pick the RQ — RQ-A/B/C in writing.md §2 (the model most directly
+answers B, then A); (2) optionally adopt E2's calibrated `mt_lambda` for a small stressed gain, or
+keep the parsimonious locked baseline. The calibration-extension campaign (E1–E6) is DONE — verdict
+(parsimony; E5/combo/E4 rejected on confirmation) in writing.md §4.3 and the D59 entry below.
+
+**Where things live.** Code → `model/`, `data/`, `calibrate.py`, `run_simulation.py`,
+`covid_contagion.py`. Notebooks → `model_design.ipynb` (built by **`build_nb.py`**),
+`empirical_analysis.ipynb`. Calibration results → `output/campaign/` (E0–E6 screen),
+`output/campaign_v2/` + `output/e5_confirm/` (E2/E5 lock-in), **`output/baseline_grid/`** (the locked
+grid θ + `output/calibration_grid_*.csv` loss surfaces), `output/baseline_hires/` (surrogate
+cross-check). Run scripts: `run_calibration_all.sh` / `run_overnight.sh` (full pipeline),
+`run_baseline_grid.sh` (the lock; has a single-instance lock + `< /dev/null`), the campaign
+`run_*.sh` (provenance, done). `calibration_campaign.md` = the Claude-Code campaign brief.
+
+**Git:** everything is on branch **`calibration-campaign`** with uncommitted changes — commit (and
+merge to `main` if desired) at migration. Nothing has been pushed.
+
 ## Project at a glance
 
 MSc thesis ABM of a CCP-cleared single-asset (ES front-month futures) market,
@@ -19,9 +49,8 @@ Calibration population: 40 FT + 20 MT + 40 ZI (folds 30 FT + 10 BCM into
 (FT-cast, own-account) + 20 MT + 40 ZI on the LOB (100 agents); 5 NBCM + 1 CCP off
 the book; 5 of the 10 BCMs carry client books. 90 clients clear through the 10
 client-carrying CMs, 9 per CM. FT clients are 30 (not 20) so FT-equiv = 40,
-preserving the pre-doubling FT-equiv:MT:ZI = 40:20:40 mix at 2× scale — so the
-calibrated θ carries over (loss validated similar: calm 47.8→50.5, stressed
-10.9→8.8 at the old params; residual is a finite-size tail effect). Full re-run planned.
+preserving the pre-doubling FT-equiv:MT:ZI = 40:20:40 mix at 2× scale. The behavioural θ has
+since been **re-calibrated and locked at thesis-final resolution (D60 — see Status & handoff)**.
 
 **Fundamental V_t.** Primary: Kalman-filtered real efficient price of the ES
 mid (`data/v_kalman.py`) + real local volatility `σ_t` (EWMA of r², 30-min
@@ -40,7 +69,7 @@ weights. Kurtosis is diagnostic only. Run both at thesis resolution via
 regimes, records every moment, merges both regimes into one JSON).
 
 **Clearing.** Built end to end. USD variation-margin cycle every 60 min (`× VOLUME_LOT
-× CONTRACT_USD`; per-regime `VOLUME_LOT = 32 / 72`, `CONTRACT_USD = 50`); live client
+× CONTRACT_USD`; per-regime `VOLUME_LOT = 30 / 60`, `CONTRACT_USD = 50`); live client
 novation; capital-ratio (8% floor) Almgren–Chriss deleveraging; cover-2 default fund;
 five-level waterfall; CCP Almgren–Chriss fire-sale of the defaulted book. All ODD /
 regulatory constants live in `globals.CCP_CALIBRATION`. Calm yields rare pooled-DF-level
@@ -155,6 +184,47 @@ The decision log, most-recent first. Each entry is *what changed* and *the effec
 it had*. Older micro-iterations are condensed; full per-step history is in git.
 
 ### Recent architecture (current model)
+
+- **D60 — thesis-final baseline θ LOCKED (grid headline, surrogate cross-validated).** Grid search
+  (Gao 2023; calm 7³=343 nodes, stressed 5⁴=625, n_days=20, n_runs=3 — `output/baseline_grid/`,
+  full surface in `output/calibration_grid_{regime}.csv`) and the high-res surrogate (160 LHS /
+  6 seeds, 2 refine — `output/baseline_hires/`) land on the SAME optimum: calm ft_sigma_c 0.80/0.83,
+  zi_alpha 0.34/0.343, zi_delta 0.05/0.063; stressed 0.50/0.53, 0.26/0.271, 0.05/0.123, p_zi
+  0.15/0.177 (grid/surrogate). Grid wired into `globals.CALIBRATED` per the stated convention:
+  calm `{0.80, 0.34, 0.05}` D_grid 43.77; stressed `{0.50, 0.26, 0.05, p_zi 0.15}` D_grid 7.92.
+  **Methodology findings recorded:** (i) the KS loss component rescales with seed count (s_KS is
+  sim-sized: calm KS 16.8 at 2 seeds ≙ 28.6 at 6 — observed ×1.70 vs predicted ×1.73), so **D is
+  comparable only at fixed n_runs**; (ii) calm `ft_sigma_c` bound tightened 2.0→1.1 (weakly
+  identified tail lever drifted to a worse interior basin ~1.35, Hill Δ7.4/D 57, under the wide
+  bound — the good basin is 0.5–0.9); (iii) boundary-sitting at the lock: stressed ft_sigma_c at
+  its 0.5 floor, zi_delta at the 0.05 D58 book-stability floor (a near-flat loss direction — calm
+  D 43.8 at 0.05 vs 44.0 at 0.48), stressed p_zi at 0.15 — all justified bounds, disclosed.
+  Operational fixes en route: `< /dev/null` stdin redirect in the run scripts (an unattended
+  second python died with "init_sys_streams: Bad file descriptor" after the launching terminal
+  closed) and a single-instance lock in `run_baseline_grid.sh` (double-launches had clobbered
+  shared caches twice).
+
+- **D59 — calibration robustness campaign + `writing.md` context pair.** Ran a campaign (surrogate
+  SMM only, both regimes, env-flag-gated configs in `calibrate.py`; results under `output/campaign/`,
+  `output/campaign_v2/`, `output/e5_confirm/`, `output/baseline_hires/`): E0 baseline; E1 clearing
+  tier active in the loop; E2 `mt_lambda` in the loop; E3 `mt_lambda` pinned ~3h half-life; E4a/E4b
+  more / two-cohort momentum; E5 FT/MT activation prob + per-order cancellation (revives the
+  D36-rejected gate, post-TTL-removal); COMBO E2+E5; E6 gaps-vs-shock contagion. **Verdict
+  (parsimony):** the baseline is hard to beat. E5's apparent −34% stressed win at screening (D 13.8→9.2,
+  192 LHS) **did not replicate** at higher resolution (256 LHS / 5 seeds → D 16.9, worse than
+  baseline) — a poorly-identified 4-param addition with high run-to-run variance; **high surrogate R²
+  (~0.9) did not guarantee a reproducible optimum** (replicate across seeds). E4a/E4b/COMBO: no robust
+  gain; the two-cohort MT did NOT revive long-horizon clustering (the single-timescale limit stands).
+  **Only consistent win: E2** (`mt_lambda` calibrated) — small (~1 D) reliable stressed gain, one
+  well-identified param; optional. **E1:** stressed calibration is NOT clearing-invariant (D 13.8→28
+  with the tier active) — methodology flag. **E6:** at equal drawdown a single concentrated shock is
+  far worse than the gapped path (~3× client defaults; mutualisation at c=1 vs c≈2.5–3) — contagion
+  tracks move concentration/speed, not magnitude; the overnight-gap structure is a mitigant (VM
+  collects between jumps). `globals.CALIBRATED` left at the baseline; **thesis-final baseline θ being
+  locked** via `run_baseline_hires.sh` (160 LHS / 6 seeds). Nothing pushed; all on the
+  `calibration-campaign` branch. Also added **`writing.md`** — the thesis-writing context pack
+  (results/numbers, references-usage, chapter structure, limitations); README + writing.md are now the
+  self-contained context pair, AGENT.md stays the dev-only log.
 
 - **D58 — removed the LOB order-TTL; ZI cancellation governs order lifetime.** The hard 10-step
   order expiry (`LOB.age_orders`, `Order.ttl`, `order_ttl`, ODD §Mech #7) is gone — resting orders
@@ -448,7 +518,7 @@ the C0 baseline (calm D = 48.36, stressed D = 29.11). Full per-cell detail was i
 | Market layer (FT/MT/ZI, calibrated) | done; grid + surrogate cross-validated |
 | Clearing scaffold (CCP/BCM/NBCM + balance sheets) | done |
 | USD variation-margin cycle (60-min) | done |
-| VOLUME_LOT matched to empirical ES volume | done (per-regime 32 / 72) |
+| VOLUME_LOT matched to empirical ES volume | done (per-regime 30 / 60; globals.py is source of truth) |
 | Live client books (trade novation) | done |
 | Cover-2 default fund (EMIR) | done |
 | 5-level waterfall | done |

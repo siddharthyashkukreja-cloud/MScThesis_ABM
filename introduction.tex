@@ -1,0 +1,331 @@
+%==============================================================================
+%  CHAPTER 1 — INTRODUCTION  (annotated skeleton; prose to be written by author)
+%------------------------------------------------------------------------------
+%  HOW TO USE THIS FILE
+%   - Each \section below is a STORY BEAT, not necessarily a printed heading.
+%     In the final draft you may merge beats and drop some \section{} headers so
+%     the Introduction reads as flowing prose. They are split here for scaffolding.
+%   - "% BEAT n ..."      = the narrative job this beat does (why it's here).
+%   - "% STORY:"          = the one-line thread that carries the reader forward.
+%   - [WRITE: ...]        = expand into prose (this is your job; the spine is here).
+%   - [FACTS: ...]        = ammunition already verified (numbers from writing.md /
+%                           sources). Mark screening/interim numbers as such.
+%   - \citep / \citet      = author-year placements (natbib / biblatex authoryear).
+%     Keys resolve against introduction_refs.bib (merge into your references.bib;
+%     remap keys if yours differ).
+%
+%  THE ARC IN ONE LINE
+%   Clearing concentrates risk in CCPs and their members (1.1) -> clearing does not
+%   destroy risk, it TRANSFORMS counterparty risk into liquidity risk through
+%   procyclical margin (1.2) -> the load-bearing, under-studied node is the
+%   CLIENT-CLEARING TIER (1.3) -> in stress, procyclical margin calls cascade down
+%   the tier into CLIENT PAYMENT DELAYS that do not arrive independently but CLUSTER
+%   / self-excite (1.4) -> studying this propagation needs a calibrated market PLUS a
+%   regulation-grounded clearing tier, coupled: an ABM, and THAT MODEL IS THE
+%   CONTRIBUTION (1.5) -> RQ (1.6) -> contributions (1.7) -> roadmap (1.8).
+%
+%  HONESTY FLAGS (writing.md conventions — keep these true in the prose)
+%   * The Hawkes / payment-delay self-excitation layer is the thesis's framing lens
+%     and (per writing.md) is NOT yet in the built model. Present it as the mechanism
+%     the RQ foregrounds and as a stated contribution/extension — do NOT report
+%     results from it unless/until implemented. See the comment in 1.4 and 1.7.
+%   * Final baseline theta is PENDING a high-res run; any preview numbers are interim
+%     / screening-resolution. Label them.
+%   * Hill (not kurtosis) is the tail measure. Cite a reference for every modelling
+%     claim; flag deviations from the Simudyne ODD explicitly.
+%==============================================================================
+
+\chapter{Introduction}
+\label{ch:intro}
+
+%==============================================================================
+% BEAT 1 — HOOK: clearing was moved to the centre of the system; it mutualises
+%               risk but in doing so CONCENTRATES it.
+% STORY: open wide and end on the tension — the cure for bilateral counterparty
+%        risk created a new concentration of it.
+%==============================================================================
+\section{Central clearing and the concentration of systemic risk}
+\label{sec:intro-motivation}
+
+% [WRITE: 1 short para] Post-2008 framing.
+After the 2008 crisis, the G20 mandated central clearing of standardised
+over-the-counter derivatives, placing central counterparties (CCPs) at the
+structural centre of modern financial markets.
+% [WRITE: what a CCP does, in two moves] interposition + mutualisation.
+[WRITE: A CCP interposes itself between the two sides of every cleared trade
+(novation), multilaterally nets exposures, and mutualises default losses through
+posted margin and a shared default fund. It converts a dense web of bilateral
+exposures into a hub-and-spoke structure.] \citep{menkveld_vuillemey_2021,duffie_zhu_2011}
+
+% [WRITE: the turn — the upside is also the systemic cost] This is the tension that
+% powers the whole thesis.
+[WRITE: State the trade-off plainly. The same interposition that removes bilateral
+counterparty risk concentrates it: the CCP becomes a node whose failure is
+systemic, and the network is not unambiguously safer for every participant.]
+\citep{borovkova_2013,duffie_zhu_2011}
+% [FACTS: netting/insurance/fire-sale rationales and the "is a CCP safer?" debate
+%  are surveyed in menkveld_vuillemey_2021; Borovkova shows safety depends on
+%  network position.]
+
+%==============================================================================
+% BEAT 2 — REFRAME: clearing does not eliminate risk; it TRANSFORMS counterparty
+%               risk into LIQUIDITY risk, via (procyclical) margin.
+% STORY: this is the conceptual pivot of the thesis. Cont (2017) is the spine.
+%==============================================================================
+\section{Risk transformation: from counterparty risk to liquidity risk}
+\label{sec:intro-risktransformation}
+
+% [WRITE: the central idea] The Cont (2017) thesis, in your own words.
+[WRITE: Central clearing does not make risk disappear — it transforms it. Margin
+calls turn mark-to-market (accounting) losses into realised cash demands, so
+counterparty risk is re-expressed as a demand on participants' liquidity buffers.]
+\citep{cont_2017}
+
+% [WRITE: why this bites in stress] procyclicality.
+[WRITE: Initial margin is risk-based and therefore procyclical: it rises precisely
+when volatility rises, so a stress event simultaneously raises the cash a
+participant must find and drains the market in which they would raise it — the
+funding/market-liquidity spiral.] \citep{brunnermeier_pedersen_2009,murphy_2014}
+
+% [WRITE: ground it in the most recent live episode] March 2020.
+[WRITE: Make it concrete with the March-2020 dash-for-cash, which is also the
+thesis's stressed regime.] \citep{esrb_2020}
+% [FACTS — Mar-2020 (ESRB 2020), cite exactly:
+%   - IM at the four largest EU/UK CCPs rose ~ one third, mainly from CLIENT (not
+%     house) portfolios.
+%   - daily variation margin on euro-area fund derivative exposures QUINTUPLED;
+%     ~6% of funds lacked the pre-stress liquidity to cover cumulative VM.
+%   - CMs can apply counterparty-specific IM add-ons up to 50% at short notice;
+%     intraday VM is held overnight (a timing asymmetry that delays cash back to
+%     payers).]
+
+%==============================================================================
+% BEAT 3 — THE GAP: the node that bears this liquidity transformation is the
+%               CLIENT-CLEARING TIER (clients -> clearing members -> CCP), and it
+%               is the under-studied one. This is where the thesis lives.
+% STORY: zoom from "the CCP" to "the tier beneath it" — most work is CCP-centric;
+%        the clearing-member / client layer is comparatively dark.
+%==============================================================================
+\section{The client-clearing tier: the load-bearing, under-studied node}
+\label{sec:intro-tier}
+
+% [WRITE: the structural fact] most participants don't face the CCP directly.
+[WRITE: Most market participants are not clearing members; they reach the CCP only
+THROUGH a member (a bank/FCM or broker) that guarantees their trades, posts
+collateral, and absorbs first loss. Clearing is therefore tiered, and the clearing
+member is the conduit through which the CCP's margin demands reach end clients —
+and through which client distress reaches the CCP.]
+\citep{menkveld_vuillemey_2021}
+
+% [WRITE: the gap claim — say it directly] this is what the thesis targets.
+[WRITE: State the gap: quantitative CCP research is overwhelmingly CCP-centric and
+often static; the clearing-MEMBER / client-clearing perspective is comparatively
+under-studied and largely qualitative or regulatory. The economics of the client-
+clearing market is explicitly flagged as an open question.] \citep{menkveld_vuillemey_2021}
+
+% [WRITE: three concrete channels that make the tier systemically fragile] each
+% gets a citation + a number. These are the "why it matters" beats.
+[WRITE: (i) Single-agent dependency — the modal client clears through ONE member
+with no backup, so a distressed member can cut clients off from the CCP and force
+them to de-risk (Credit Suisse / Archegos).] \citep{ofr_2026}
+% [FACTS (OFR 2026): clients = 73% of margin at the largest US/EU CCPs; modal client
+%  = single clearing agent; single-agent clients cut cleared positions in stress.]
+
+[WRITE: (ii) Crowding — clearing members' client books are positively correlated,
+so correlated portfolios default together in ways member-by-member margin
+overlooks; crowding intensifies with volatility.] \citep{huang_menkveld_yu_2021,menkveld_2017}
+% [FACTS (Huang, Menkveld & Yu 2021): crowding ~17% of the worst CCP-exposure
+%  spikes; top-5 members' share of exposure rises 28% -> 42% in the top-1% tail.]
+
+[WRITE: (iii) Tiering itself is a double-edged structure — it reduces the CCP's
+total exposure but raises its expected exposure to the average general clearing
+member, i.e. it trades diffuse risk for a concentrated single-point dependency.]
+\citep{galbiati_soramaki_2013}
+% [Near-miss evidence to deploy here or in 1.2: Nasdaq Clearing 2018 (Aas) tapped
+%  EUR 107M of a EUR 166M default fund; ABN AMRO Clearing ~ USD 200M single-trade
+%  loss in Mar-2020. Sources flagged VERIFY in the .bib.]
+
+%==============================================================================
+% BEAT 4 — THE MECHANISM / THE NOVEL ANGLE: in stress, procyclical margin calls
+%               cascade DOWN the tier into client PAYMENT DELAYS; these do not
+%               arrive independently — they CLUSTER / self-excite -> a Hawkes lens.
+% STORY: this is the thesis's distinctive contribution to the framing. Move from
+%        "margin is procyclical" (known) to "the resulting payment failures are
+%        self-exciting" (the angle), bridged by the empirical clustering result.
+%==============================================================================
+\section{Procyclical margin calls, client payment delays, and self-excitation}
+\label{sec:intro-paymentdelays}
+
+%  >>> HONESTY FLAG: per writing.md the Hawkes / payment-delay self-excitation
+%      mechanism is the thesis's FRAMING LENS and is NOT (yet) in the built model.
+%      Write this beat as the mechanism the RQ foregrounds + a proposed modelling
+%      contribution. Do NOT state results from it here. If you do implement it,
+%      promote it in 1.7; if not, it belongs in RQ + future work. <<<
+
+% [WRITE: the cascade] connect 1.2 + 1.3.
+[WRITE: Combine the previous two beats into the mechanism. When volatility spikes,
+procyclical margin calls propagate down the tier: the CCP calls its members, members
+relay (and add to) the call to clients. A client that cannot meet a call on time
+DELAYS or FAILS payment; its member must fund the shortfall, assume and liquidate
+the position, and may itself be pushed toward distress — the contagion travels back
+UP the tier.] \citep{cont_2017,brunnermeier_pedersen_2009}
+
+% [WRITE: the empirical bridge to self-excitation] breaches are NOT independent.
+[WRITE: The key empirical observation that motivates the modelling choice: margin
+breaches / clearing-member losses are not independent draws — the most severe losses
+cluster and co-move, i.e. one breach raises the probability of the next.]
+\citep{jones_perignon_2013,huang_menkveld_yu_2021}
+
+% [WRITE: name the tool] the self-exciting / Hawkes representation.
+[WRITE: A natural representation of events whose occurrence raises the short-run
+intensity of further events is a self-exciting (Hawkes) point process; such
+processes are the standard apparatus for clustered, mutually-exciting financial
+events — jump/return contagion and clustered defaults.]
+\citep{hawkes_1971,aitsahalia_2015,errais_2010}
+% [Optional supporting cite for Hawkes-in-finance breadth: bacry_2015.]
+% [POSITIONING: this lets the thesis treat client payment delays as a self-exciting
+%  process on the clearing tier — the distinctive lens. State precisely what you
+%  will/​won't do with it so the claim matches the implementation.]
+
+%==============================================================================
+% BEAT 5 — THE APPROACH + THE PRIMARY CONTRIBUTION: to study propagation through a
+%               tier you need a realistic market AND a regulation-grounded clearing
+%               layer, coupled. That coupled, calibrated ABM IS THE CONTRIBUTION.
+% STORY: justify the method by elimination (static/CCP-centric models can't see the
+%        propagation), then plant the flag: the model is the deliverable.
+%==============================================================================
+\section{An agent-based approach, and why the model is the contribution}
+\label{sec:intro-approach}
+
+% [WRITE: why ABM, by elimination] what closed-form / CCP-centric models miss.
+[WRITE: Argue the method. The propagation in question is endogenous and path-
+dependent: margin calls trigger liquidations, liquidations move prices, price moves
+trigger the next margin call. Reduced-form and CCP-centric models that ASSUME the
+price process cannot represent this feedback; an agent-based model with an explicit
+order book can.] \citep{bookstaber_2014,vytelingum_2025}
+
+% [WRITE: what most CCP ABMs concede, and what this one fixes] the calibration gap.
+[WRITE: State the differentiator: most CCP agent-based models assume the price
+process; here the market-microstructure layer is CALIBRATED to the empirical
+stylised facts of the asset, so the environment the clearing layer acts in is
+earned, not assumed.] \citep{gao_2022_xgb,majewski_2018,cont_2001}
+
+% [WRITE: plant the flag — the model itself is the primary contribution] one
+% paragraph describing the two-tier architecture at a high level.
+[WRITE: Describe the artefact at a glance: a two-tier ABM coupling (i) a calibrated
+1-minute call-auction limit-order-book market on E-mini S\&P 500 futures — fundamental,
+momentum and zero-intelligence traders around a data-derived (Kalman-filtered)
+fundamental — with (ii) a regulation-grounded central-clearing tier: a CCP, banking
+and non-banking clearing members, roughly 90 cleared clients, procyclical VaR/SPAN initial
+margin, a cover-2 default fund, a five-level loss waterfall, and Almgren--Chriss
+fire-sales. The model itself is the central contribution.]
+\citep{cont_stoikov_talreja_2008,farmer_2005,almgren_chriss_2000,simudyne_odd,deloitte_ccp}
+% [Calibration method, name only here; details in Ch.4: surrogate-assisted simulated
+%  method of moments with an XGBoost surrogate, cross-checked by grid search.]
+% \citep{gao_2022_hfabm,gao_2023,lamperti_2018,franke_westerhoff_2012}
+
+%==============================================================================
+% BEAT 6 — THE RESEARCH QUESTION: state it crisply now that the reader has the
+%               tension, the gap, the mechanism, and the tool.
+% STORY: everything above converges to one question (+ sub-questions).
+%==============================================================================
+\section{Research question}
+\label{sec:intro-rq}
+
+% [WRITE: the headline RQ — your framing: role of client clearing + tiered
+%  procyclical-margin system in propagating/absorbing stress.]
+[WRITE: Lead with the main question, e.g.: \emph{What is the role of the tiered
+client-clearing structure and its procyclical margin system in propagating or
+absorbing market stress through to the CCP?} Phrase as buffer-vs-amplifier: does the
+clearing-member layer act as a loss-absorbing buffer between a client and the CCP,
+or as a single point of failure that concentrates and transmits stress?]
+
+% [WRITE: sub-questions — keep only what the model actually answers; mark the
+%  payment-delay one as the proposed/exploratory strand.]
+[WRITE — sub-questions, e.g.:
+  (a) Under realistically calibrated stress, is the cover-2 default-fund framework
+      sufficient to contain client -> member -> CCP contagion, and what DRIVES a
+      breach — the magnitude of the move, or its concentration/speed?
+  (b) Does client TYPE (volatility/HFT-like vs directional) or client-book
+      concentration change the answer?
+  (c) [Exploratory/proposed] If client payment delays are modelled as a self-
+      exciting process on the tier, does self-excitation materially change the
+      breach point versus i.i.d. payment behaviour?]
+% [HONESTY: (a)-(b) are supported by the built model; (c) is the Hawkes extension —
+%  keep it as a question/contribution, not a reported result, unless implemented.]
+
+%==============================================================================
+% BEAT 7 — CONTRIBUTIONS: enumerate, with the MODEL first.
+% STORY: convert the above into a clean, examiner-friendly numbered list.
+%==============================================================================
+\section{Contributions}
+\label{sec:intro-contributions}
+
+% [WRITE: a short lead-in sentence, then the list. Model first, per your framing.]
+\begin{enumerate}
+  \item % PRIMARY — the artefact.
+  [WRITE: A calibrated two-tier ABM that couples an ES-calibrated market-microstructure
+  layer to a regulation-grounded clearing tier — addressing the noted gap that little
+  quantitative work takes the clearing-member perspective and that most CCP ABMs assume
+  rather than calibrate the price process.] \citep{menkveld_vuillemey_2021,gao_2022_xgb}
+
+  \item % methodology realism.
+  [WRITE: A regulation-faithful margin/default stack — procyclical VaR/SPAN initial
+  margin, a cash/IM capital ratio (CFTC Reg 1.17), a cover-2 Stress-Loss-Over-IM
+  default fund (Euronext A9), a deficit-based five-level waterfall, and Almgren--Chriss
+  fire-sales — rather than placeholder haircuts.]
+  \citep{cftc_reg117,euronext_a9,emir_rts,basel_frtb,almgren_chriss_2000}
+
+  \item % findings on drivers of contagion.
+  [WRITE: Findings on the DRIVERS of contagion: cover-2 containment at true COVID
+  severity with mutualisation onset only at roughly 2.5$\times$; and the clean structural result that
+  contagion tracks the concentration/speed of a move, not its total magnitude.]
+  % [FACTS (writing.md; single-seed traces, interim): at actual COVID severity the
+  %  cover-2 framework CONTAINS the book (defaulter's own margin/DF absorb it; no
+  %  cross-member mutualisation; CCP solvent). Mutualisation (waterfall L3-L4) onsets
+  %  at ~2.5x COVID (~ -41%). Gaps-vs-shock: at EQUAL drawdown a single concentrated
+  %  intraday shock causes ~3x the client defaults (~29 vs ~9) and reaches CM default +
+  %  L4 at c=1 (-19%) vs c~2.5-3 for the overnight-gapped path -> the overnight-gap
+  %  structure is a MITIGANT (VM collects between jumps). Label as single-seed/interim;
+  %  Monte-Carlo ensemble = future work.]
+
+  \item % methodological contribution.
+  [WRITE: A methodological result — a parsimony / robustness finding that richer agent
+  dynamics do not robustly improve the fit (over-parameterisation adds estimation
+  variance, not fit), and the cautionary lesson that a high surrogate $R^2$ does not
+  guarantee a reproducible optimum (the E5 non-replication).]
+  % [FACTS: E5's apparent -34% stressed win at screening (D 13.8 -> 9.2) did NOT
+  %  replicate at higher resolution (D -> 16.9). Present as a strength: rigorous
+  %  robustness study.]
+
+  \item % the angle / proposed extension — keep honest.
+  [WRITE — KEEP ONLY IF IMPLEMENTED, else move to future work: A self-exciting
+  (Hawkes) representation of client payment delays on the clearing tier, linking the
+  empirical clustering of margin breaches to a tractable point-process mechanism.]
+  \citep{hawkes_1971,aitsahalia_2015,errais_2010,jones_perignon_2013}
+\end{enumerate}
+
+% [Optional methodological caveat to surface honestly somewhere: the stressed
+%  market-layer calibration is NOT clearing-invariant (calibrating with the clearing
+%  tier active alters the stressed fit, D 13.8 -> 28) — a finding in its own right.]
+
+%==============================================================================
+% BEAT 8 — ROADMAP: one short paragraph mapping the chapters.
+% STORY: tell the reader the route. Keep to prose, not a list, if your style guide
+%        prefers (writing.md leans prose).
+%==============================================================================
+\section{Thesis structure}
+\label{sec:intro-roadmap}
+
+% [WRITE: a single guiding paragraph. Suggested mapping (adjust to your chapters):]
+[WRITE: Chapter~\ref{ch:litreview} reviews the three literatures the thesis sits at
+the junction of — agent-based market microstructure, CCP / clearing risk and
+contagion, and ABM calibration. Chapter~\ref{ch:model} specifies the two-tier model
+(the ODD protocol, agents, the call-auction LOB, the fundamental, and the clearing
+tier). Chapter~\ref{ch:data} covers the ES data, the calm/stressed regimes, and the
+calibration method. Chapter~\ref{ch:market-results} validates the market layer against
+the empirical stylised facts and reports the robustness campaign. Chapter~\ref{ch:clearing-results}
+runs the clearing-layer and contagion experiments. Chapter~\ref{ch:discussion}
+discusses drivers, methodological findings, and limitations, and Chapter~\ref{ch:conclusion}
+answers the research question and sets out future work.]
+% [Update the \ref labels to match your chapter files. Placeholders only.]

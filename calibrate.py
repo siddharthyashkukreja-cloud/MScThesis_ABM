@@ -164,13 +164,12 @@ POP = dict(n_fundamental=40, n_momentum=20, n_momentum_long=0,
 ZI_MU_FIXED = 0.025      # CST-2008 market-order baseline; out of the loop (ablation C6)
 PARAM_BOUNDS_BY_REGIME = {
     "calm": {
-        "ft_sigma_c": (0.5, 2.0),     # FT belief-width scale (the tail lever; ablation C4).
-                                      # Upper bound tightened 10.0 -> 2.0 (D56): the optimum
-                                      # sits near the 0.5 floor (the tail term pins it), but a
-                                      # wide [0.5,10] range puts most Sobol samples in the
-                                      # fat-tail zone, so the surrogate's stage-1 prediction was
-                                      # pulled to an interior 1.12 and stage-2 never reached the
-                                      # floor. Concentrating the range resolves the low region.
+        "ft_sigma_c": (0.5, 1.1),     # FT belief-width scale (the tail lever; ablation C4).
+                                      # Upper bound 10.0 -> 2.0 (D56) -> 1.1 (baseline lock): ft_sigma_c
+                                      # is weakly identified in calm (KS+ACF2 dominate the loss), so a
+                                      # wide range lets the surrogate drift to an interior fat-tail
+                                      # basin (~1.35: Hill delta ~7.4, D~57) while the good optimum
+                                      # sits at 0.5-0.9 (D~44). Capping at 1.1 keeps it in that region.
         "zi_alpha":   (0.02, 0.50),   # ZI limit-order arrival per step
         "zi_delta":   (0.05, 0.50),   # ZI per-resting cancellation — floor raised
                                       # 0.005->0.05 (D58): the SOLE order-lifetime lever

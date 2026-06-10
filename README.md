@@ -12,6 +12,12 @@ equations, the fundamental process, parameters, how everything is calibrated, an
 why each choice was made. The detailed change history and the AI-collaboration
 rules live in `AGENT.md`.
 
+> **Writing the thesis?** See **`writing.md`** for the results with exact numbers, the
+> narrative, the chapter structure, the honest limitations, and how each reference is used.
+> **`README.md` + `writing.md` are the complete context pair** — this file is the *model /
+> code reference*, `writing.md` is the *findings / writing reference*. Nothing else is needed
+> for writing (`AGENT.md` is dev-only).
+
 ## The model in brief
 
 The model has **two tiers**. The first is a **market**: a limit order book where three kinds of
@@ -510,8 +516,8 @@ moments span the same period and the fundamental is never run past the data.
 
 ### Stylised facts reproduced
 
-The calibration targets, and the model's match (post-ablation interim, Kalman
-fundamental), are: a fat-tailed return distribution (calm Hill ≈ 3.0 vs empirical ≈ 2.96 —
+The calibration targets, and the model's match (Kalman fundamental, baseline locked at D60),
+are: a fat-tailed return distribution (calm Hill ≈ 3.0 vs empirical ≈ 2.96 —
 the Hill term is what the loss targets, and it matches; excess kurtosis is tracked only as a
 diagnostic and runs above empirical, being dominated by a few extremes, so it is not a fit
 criterion), near-zero linear return autocorrelation, and short-horizon volatility clustering
@@ -521,13 +527,34 @@ single-timescale momentum cohort cannot produce multi-scale memory (Cont 2005). 
 are visualised against the empirical ES tape in `empirical_analysis.ipynb` and the
 model-design notebook.
 
+### Calibration robustness & current status
+
+A robustness campaign (eight configurations × both regimes; results in `output/campaign*/` and
+`output/e5_confirm/`) tested whether richer agent dynamics improve the fit. The verdict is a
+**parsimony result — the baseline is hard to beat.** Adding FT/MT activation probability +
+per-order cancellation (E5), a second momentum cohort or more momentum traders (E4), or combining
+the changes gave **no reproducible gain**: E5's apparent −34% stressed improvement at screening
+resolution did **not** replicate at higher resolution (a poorly-identified four-parameter
+addition — high surrogate R² did not guarantee a reproducible optimum). The only consistent,
+well-identified improvement was calibrating the momentum half-life `mt_lambda` (a small stressed
+gain; optional). The **thesis-final baseline θ is locked (D60)**: the **grid optimum** is the
+wired headline (calm 7³ / stressed 5⁴ nodes, 3 seeds — `output/baseline_grid/`), cross-validated
+by the high-res surrogate (`output/baseline_hires/`) landing on the same optimum — calm
+`ft_sigma_c=0.80, zi_alpha=0.34, zi_delta=0.05` (D_grid 43.8), stressed `ft_sigma_c=0.50,
+zi_alpha=0.26, zi_delta=0.05, p_zi=0.15` (D_grid 7.9), now in `globals.CALIBRATED`. Note D is
+comparable only at a fixed seed count (the KS component's `s_KS` is sim-sized). Full campaign
+numbers, the gaps-vs-shock contagion result, and the clearing-in-loop sensitivity are written up
+in **`writing.md`**.
+
 ## Repository structure
 
 ```
 .
 ├── README.md                  this file — current thesis state
-├── AGENT.md                   AI-collaboration rules + full change history + ablation
+├── AGENT.md                   AI-collaboration rules + full change history + ablation (start at "Status & handoff")
+├── writing.md                 thesis-writing context pack (findings, numbers, refs, structure) — pairs with README
 ├── model_design.ipynb         presentation notebook — market + clearing design, figures, stylised facts
+├── build_nb.py                generator for model_design.ipynb (edit here, re-run to rebuild the notebook)
 ├── data/
 │   ├── data.py                DataBento ingest (OHLCV-1m, BBO-1m, MBP-10)
 │   ├── roll.py                ES front-month roll + 1-min resample
@@ -572,8 +599,9 @@ python3 covid_contagion.py reverse           # reverse-stress sweep → cover-2 
 python3 calibrate.py run                      # surrogate-assisted SMM
 python3 calibrate.py grid calm 7              # grid search, calm (3-d, 7 points/dim)
 python3 calibrate.py grid stressed 6          # grid search, stressed (4-d)
-#    both write to output/ (calibrated_params.json / _grid.json); the grid optimum is
-#    the wired headline in globals.CALIBRATED, the surrogate is reported as a cross-check
+#    both write to output/ (calibrated_params.json / _grid.json); the chosen optimum is wired
+#    into globals.CALIBRATED — currently the D60 grid headline (output/baseline_grid/),
+#    cross-validated by the high-res surrogate. See writing.md for the calibration campaign.
 
 # 4. Inspect
 #    open model_design.ipynb (design + clearing + stylised facts) / empirical_analysis.ipynb

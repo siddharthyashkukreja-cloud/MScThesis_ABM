@@ -1,0 +1,15 @@
+[08:34:05] === campaign v2 start (E2, E5, COMBO at lock-in resolution) ===
+[08:34:05] E2 calm  flags=[MT_LAMBDA_IN_LOOP=1]  args=[128 20 3 2 32 24]
+[09:12:21] E2 calm  DONE in 38 min  -> output/campaign_v2/E2_calm.json
+[09:12:21] E2 stressed  flags=[MT_LAMBDA_IN_LOOP=1]  args=[128 20 3 2 32 24]
+[10:12:25] E2 stressed  DONE in 60 min  -> output/campaign_v2/E2_stressed.json
+[10:12:25] E5 calm  flags=[FTMT_GATES=1]  args=[192 20 3 2 40 32]
+[11:02:23] E5 calm  DONE in 49 min  -> output/campaign_v2/E5_calm.json
+[11:02:23] E5 stressed  flags=[FTMT_GATES=1]  args=[192 20 3 2 40 32]
+[12:15:29] E5 stressed  DONE in 73 min  -> output/campaign_v2/E5_stressed.json
+[12:15:29] COMBO calm  flags=[MT_LAMBDA_IN_LOOP=1 FTMT_GATES=1]  args=[224 20 3 2 40 32]
+[13:13:08] COMBO calm  DONE in 57 min  -> output/campaign_v2/COMBO_calm.json
+[13:13:08] COMBO stressed  flags=[MT_LAMBDA_IN_LOOP=1 FTMT_GATES=1]  args=[224 20 3 2 40 32]
+[14:29:45] COMBO stressed  DONE in 76 min  -> output/campaign_v2/COMBO_stressed.json
+[14:29:45] === campaign v2 done in 355 min ===
+[14:29:45] Results: output/campaign_v2/<EID>_<regime>.json ; logs in output/campaign_v2/logs/

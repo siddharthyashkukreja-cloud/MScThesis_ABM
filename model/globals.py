@@ -124,20 +124,25 @@ FT_SIGMA_C_DEFAULT = sqrt(390.0)
 # the CST-2008 0.025 baseline (ablation C6); calm p_zi stays at the L2 P_ZI value
 # (omitted here -> ModelParams default), stressed p_zi is calibrated.
 #
-# SURROGATE-assisted SMM optima (theta_stage2) on the D57 data-driven-session fundamentals
-# (calibrate.py run; XGB-Chiarella surrogate, HFABM 2-stage; overnight returns excluded at the
-# real ≈405-bar boundaries). Validated D: calm 42.9 (kurt 5.5, Hill 2.98 vs empirical 2.96;
-# residual is mostly KS+ACF2), stressed 12.9 (kurt 119, Hill 2.96 vs empirical 3.18). Surrogate
-# held-out R²≈0.79-0.80 both regimes. INTERIM (short pre-meeting budget: n_lhs=36, n_runs=2,
-# 1 refine round of 12, 8 stage-2; output/calibrated_params.json): the full grid (the
-# easy-to-defend headline) and a thesis-resolution surrogate are still to be re-run — re-copy the
-# chosen optimum here once done.
+# THESIS-FINAL BASELINE (D60) — GRID-search optima (the easy-to-defend headline; Gao 2023),
+# cross-validated by the high-res surrogate run which lands on the same optimum
+# (calm 0.83/0.343/0.063, stressed 0.53/0.271/0.123/0.177 — output/baseline_hires/).
+# Grid: calm 7^3=343 nodes, stressed 5^4=625 nodes, n_days=20, n_runs=3
+# (output/baseline_grid/grid_{regime}.json; full loss surface in
+# output/calibration_grid_{regime}.csv). D_grid: calm 43.77, stressed 7.92 (3-seed scale —
+# the KS component rescales with seed count because s_KS is sim-sized, so D is comparable
+# only at a fixed n_runs). Boundary notes (honest): stressed ft_sigma_c sits at its 0.5
+# floor, zi_delta at the 0.05 floor (D58 book-stability guard) in both regimes, stressed
+# p_zi at its 0.15 lower bound; zi_delta is a near-flat direction of the loss
+# (D 43.8 at 0.05 vs 44.0 at 0.48 in calm), so the floor-sitting is benign.
+# Calm ft_sigma_c bound was tightened 2.0 -> 1.1 for the lock (see calibrate.py:
+# weakly-identified tail lever drifts to a worse interior basin ~1.35 under a wide bound).
 CALIBRATED = {
     "calm": dict(
-        ft_sigma_c=0.86608, zi_alpha=0.39996, zi_mu=0.025, zi_delta=0.48260,
+        ft_sigma_c=0.80, zi_alpha=0.34, zi_mu=0.025, zi_delta=0.05,
     ),
     "stressed": dict(
-        ft_sigma_c=0.51910, zi_alpha=0.33092, zi_mu=0.025, zi_delta=0.32996, p_zi=0.18036,
+        ft_sigma_c=0.50, zi_alpha=0.26, zi_mu=0.025, zi_delta=0.05, p_zi=0.15,
     ),
 }
 
