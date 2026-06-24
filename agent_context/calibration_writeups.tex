@@ -1,0 +1,281 @@
+% =====================================================================
+% Calibration methodology write-up — aligned with the committed model
+% (calibrate.py: two-stage surrogate-assisted SMM; five-component
+%  stylised-fact loss D = ΔKS + ΔV + ΔACF1 + ΔACF2 + ΔHill; Franke–Westerhoff
+%  inverse-SD weighting via a Künsch moving-block bootstrap).
+%
+% SCOPE OF THIS DRAFT (per request): the story + the setup + the loss and its
+% weighting only. The two optimisers (exhaustive grid; XGBoost surrogate) and
+% the validation protocol (fresh-seed re-rank, moment coverage / J-test,
+% ablation, robustness) come AFTER this and are NOT written here.
+%
+% Destination: Chapter 4 (Data, calibration and validation), opening sections.
+% Preamble-less snippet; natbib author–year (\citep/\citet/\citealp), matching
+% clearing_writeups.tex. Section labels reuse the existing calibration.tex names
+% so cross-refs resolve; this draft refines those opening sections.
+%
+% Citation keys used (all resolve in introduction_refs.bib / model_refs.bib):
+%   franke_westerhoff_2012, lamperti_2018, gao_2022_xgb, gao_2022_hfabm,
+%   gao_2023, cont_2001, hill_1975, kunsch_1989, cont_stoikov_talreja_2008,
+%   majewski_2018, simudyne_odd.
+% Optional lineage keys to ADD (BibTeX at end of file): winker_gilli_maringer_2007,
+%   grazzini_richiardi_2015.
+% =====================================================================
+
+
+% ============== §0 — CALIBRATION STRATEGY ============================
+
+\section{Calibration strategy}
+\label{sec:cal-strategy}
+
+An agent-based market admits no tractable likelihood. The map from the
+behavioural parameters to the realised price path runs through millions of
+discrete order-book events, and there is no closed form for the density of the
+data given the parameters, so the maximum-likelihood and Bayesian machinery of
+classical estimation simply does not apply. The established response, and the
+one taken here, is to match \emph{moments} rather than likelihoods: simulate the
+model, summarise the simulated and the real market by the same battery of
+statistics, and choose the parameters that make the two batteries as close as
+possible. For financial-market agent-based models this \emph{simulated method of
+moments} was put on a systematic footing by \citet{franke_westerhoff_2012},
+whose structural stochastic-volatility models are fitted to the stylised facts
+of returns by exactly this device; the loss construction below is taken from
+their work (Section~\ref{sec:cal-loss}).
+
+Where this calibration departs from the classical method is in how the loss is
+\emph{minimised}. A single evaluation of the objective costs weeks of simulated
+trading replicated over several random seeds, so the affordable budget is a few
+hundred evaluations --- far too few to search a parameter space directly. The
+remedy is a machine-learning \emph{surrogate}: a cheap statistical emulator of
+the loss surface, trained on a modest design of true evaluations and then
+optimised in place of the simulator. Surrogate-assisted calibration of
+agent-based models was introduced by \citet{lamperti_2018} and developed, for
+Chiarella-type models fitted to the same stylised-fact battery used here, by
+\citet{gao_2022_xgb,gao_2022_hfabm}; the two-stage workflow --- a surrogate
+search followed by a refinement on the true simulator --- and the exhaustive
+grid that cross-checks it \citep{gao_2023} are described after the loss.
+
+This separation organises the rest of the chapter. The \emph{target} and the
+\emph{loss} --- common to every optimiser --- are fixed first (this section and
+the next two); the two optimisers and the validation that guards them follow.
+Two principles run throughout. The first is parsimony: the calibrated set is
+kept deliberately small, anything that can be measured or pinned from outside
+the model is removed from the search, and a richer specification earns its extra
+parameters only if it improves the fit out of sample. The second is honesty
+about identification: the loss surface is reported in full, and where a parameter
+is weakly identified or rests against a search bound this is disclosed rather
+than smoothed over.
+
+
+% ============== §1 — DATA AND REGIMES ================================
+
+\section{Data and regimes}
+\label{sec:cal-data}
+
+The empirical basis is the E-mini S\&P~500 futures tape: one-minute bars of the
+front-month contract, rolled at volume crossover and restricted to regular
+trading hours, with the quote midpoint $(b_t + a_t)/2$ as the price series. The
+mid is the same observable the simulator produces, so every model--data
+comparison is like-for-like. Returns are intraday log-returns of the mid;
+overnight (session-boundary) returns are excluded on both sides, with the
+session boundaries read from the data rather than imposed on a fixed grid ---
+ES sessions vary in length, and a fixed-grid convention was found to leak
+overnight gaps into the intraday moments.
+
+Two regimes are calibrated as fully independent problems. The \emph{calm} regime
+is drawn from a quiet stretch of 2019; the \emph{stressed} regime is the
+COVID-19 crash window of late February to early April 2020. The two windows are
+matched in length (about seventy-five sessions each) so that the
+distribution-distance moment below, whose sampling scale depends on sample size,
+is comparable across regimes. Calibrating the regimes separately --- with no
+shared behavioural parameters --- is deliberate: the two market states differ in
+volatility, book depth and microstructure, and forcing common parameters would
+trade fit for compromise; the calm/stressed split follows the convention of the
+reference model \citep{simudyne_odd}. A separate market-by-price (MBP-10) sample
+of order-book events supports the direct measurement of order-placement depth.
+
+
+% ============== §2 — WHAT IS CALIBRATED ==============================
+
+\section{What is calibrated}
+\label{sec:cal-split}
+
+Parameters enter the model through three doors, and only one of them involves
+the optimiser.
+
+\emph{Measured offline.} Anything that can be estimated directly from data, is.
+The fundamental-value process and its local volatility are fitted to the tape
+(Chapter~3.\ref{sec:model-fv}); the order-placement depth $p_{\mathrm{zi}}$ is
+estimated by maximum likelihood on the distance-from-mid distribution of new
+limit orders in the MBP-10 data; and the loss-absorbing capital of members and
+clients is taken from public FCM financials and CCP disclosures
+(Chapter~3.\ref{sec:model-margin}). None of these re-enters the calibration
+loop, with one disclosed exception noted below.
+
+\emph{Pinned by design.} Structural choices follow their sources rather than the
+optimiser: the momentum horizon $\lambda$ is fixed externally as in
+\citet{majewski_2018}; the zero-intelligence market-order rate keeps the
+reference model's baseline \citep{simudyne_odd}, itself structured after
+\citet{cont_stoikov_talreja_2008}; and all clearing-tier constants are regulatory
+pins (Chapter~3.\ref{sec:model-margin}). Pinning is justified case by case in the
+ablation study --- a parameter is pinned only where calibrating it was shown to
+change the fit negligibly.
+
+\emph{Calibrated.} What remains is a small, regime-specific behavioural set. In
+the calm regime the calibrated vector is three-dimensional,
+$\theta = (c_f,\ \alpha_{\mathrm{zi}},\ \delta_{\mathrm{zi}})$: the
+fundamental-trader belief-width scale and the zero-intelligence limit-order
+arrival and cancellation rates. Under stress the same set is augmented with the
+placement depth $p_{\mathrm{zi}}$ --- the one measured parameter that re-enters
+the search --- giving four dimensions, because a sparser book materially improves
+the stressed fit while the calm fit prefers the directly measured value. Search
+bounds are literature-anchored: the zero-intelligence rates are confined to
+ranges of the same order as their \citet{cont_stoikov_talreja_2008} baselines
+(an early unconstrained run drove the market-order rate to many times its
+reference value, producing a book-sweeping artefact), and the belief-width box
+was tightened to the economically sensible basin located by diagnostic runs.
+
+
+% ============== §3 — TARGETS: THE STYLISED-FACT BATTERY ==============
+
+\section{Targets: the stylised-fact battery}
+\label{sec:cal-targets}
+
+The calibration targets are the stylised facts of high-frequency returns
+\citep{cont_2001} --- the statistical fingerprints any credible simulated market
+must reproduce. Three carry the weight. Returns are \emph{fat-tailed}: large
+moves occur far more often than a Gaussian allows. Returns are \emph{linearly
+unpredictable}: their autocorrelation is near zero from the first lag, so the
+price is close to a martingale. And volatility \emph{clusters}: the
+autocorrelation of \emph{absolute} returns is positive and decays slowly, so
+turbulent minutes follow turbulent minutes. These facts are encoded in five
+moment groups, computed identically on simulated and empirical intraday mid
+returns.
+
+The first group, \textbf{KS}, is the two-sample Kolmogorov--Smirnov statistic
+$\sup_x |\widehat F_{\mathrm{sim}}(x) - \widehat F_{\mathrm{emp}}(x)|$ between the
+simulated and empirical return distributions --- the largest vertical gap
+between their cumulative curves, and the whole-distribution target of
+\citet{gao_2022_xgb}; its goal is zero, a simulated distribution indistinguishable
+from the real one. The second, \textbf{V}, is the return standard deviation,
+which anchors the overall volatility scale \citep{gao_2022_hfabm}. The third,
+\textbf{ACF1}, is the autocorrelation of returns at lags $\{1,5,10,20\}$ minutes,
+each smoothed as a forward three-lag average (the mean of lags $\{c,c{+}1,c{+}2\}$,
+following \citealp{gao_2022_xgb}); its target is the empirical near-zero profile,
+so the group penalises any mechanical predictability the agents introduce, such
+as bid--ask bounce or trend-chasing. The fourth, \textbf{ACF2}, is the
+autocorrelation of \emph{absolute} returns at the same lags --- the
+volatility-clustering target. Absolute returns are used in preference to squared
+returns deliberately: $r^2$ is dominated by a handful of extreme observations,
+which makes its autocorrelation so noisy that a clustering miss would vanish
+under the standardisation of Section~\ref{sec:cal-loss}, whereas $|r|$ carries
+the same signal with far less sampling noise \citep{cont_2001}. The fifth,
+\textbf{Hill}, is the \citet{hill_1975} tail index of $|r|$, averaged over a band
+of upper-tail fractions for stability; the index $\alpha$ in
+$\Pr(|r|>x)\sim x^{-\alpha}$ summarises how fast the tail decays, with empirical
+equity-index returns near the ``cubic law'' $\alpha\approx 3$ and smaller values
+meaning fatter tails. Following \citet{gao_2022_hfabm}, Hill rather than kurtosis
+is the tail target: excess kurtosis is governed by the few largest observations,
+so matching it amounts to chasing noise, and it is tracked only as a diagnostic.
+
+KS and Hill are paired on purpose, because each controls a failure mode the
+other cannot. With KS alone the optimiser can match the body of the distribution
+while the tail explodes; with Hill alone the tail is pinned but the body drifts.
+Together they constrain the return distribution everywhere --- body and tail at
+once.
+
+
+% ============== §4 — THE LOSS FUNCTION ===============================
+
+\section{The loss function}
+\label{sec:cal-loss}
+
+The five groups mix units --- a standard deviation of order $10^{-4}$, a
+dimensionless KS statistic, a set of autocorrelations, a tail index near three
+--- so they cannot simply be added. Following the inverse-variability weighting
+of \citet{franke_westerhoff_2012}, each moment's distance is expressed in units
+of that moment's own \emph{sampling noise} before the groups are combined:
+\begin{equation}
+\label{eq:cal-loss}
+D(\theta)
+\;=\!\!\sum_{c \in \{\mathrm{KS,\,V,\,ACF1,\,ACF2,\,Hill}\}}\!\! \Delta_c(\theta),
+\qquad
+\Delta_c(\theta)
+\;=\; \frac{1}{|M_c|}\sum_{m \in M_c}
+\frac{\bigl|\,\widehat m_{\mathrm{sim}}(\theta) - \widehat m_{\mathrm{emp}}\,\bigr|}{s_m}\,,
+\end{equation}
+where $M_c$ collects the moments in group $c$ and $s_m$ is the empirical
+sampling standard deviation of moment $m$. Each group distance $\Delta_c$ is the
+mean standardised miss over its moments, and the total loss is their sum, so the
+five facts carry equal weight and $D$ is a single dimensionless number,
+comparable across model versions.
+
+\subsection{Weighting: noise standardisation}
+\label{sec:cal-weight}
+
+The weights $s_m$ make the heterogeneous moments commensurate. Each is the
+standard deviation of moment $m$ under historical sampling alone, estimated once
+per regime by a Künsch moving-block bootstrap \citep{kunsch_1989} of the
+empirical one-minute mid returns: the series is resampled in contiguous blocks,
+the whole moment battery is recomputed on each resample, and $s_m$ is the spread
+of moment $m$ across resamples. The block length is one full session, longer
+than the longest autocorrelation lag in the battery, so reshuffling blocks
+preserves the dependence structure the ACF moments are meant to capture. The
+$s_m$ are fixed for the entire calibration, which keeps the loss stationary and
+$D(\theta)$ comparable across every evaluation. The interpretation is a
+$z$-statistic: $|\widehat m_{\mathrm{sim}} - \widehat m_{\mathrm{emp}}|/s_m$ is
+how many standard errors of pure historical sampling variation the simulated
+moment misses by, and $D$ counts such standardised misses across the battery, so
+a value of one is, loosely, a one-sigma miss per moment.
+
+Equation~\eqref{eq:cal-loss} is the diagonal, absolute-deviation member of the
+\citet{franke_westerhoff_2012} inverse-variability family, and the choice among
+that family's members is deliberate. The full quadratic inverse-covariance form
+$W=\widehat\Sigma^{-1}$ is ill-conditioned with this many moments and a single
+historical sample. Inverse-\emph{variance} weighting, $1/s_m^2$, is
+scale-pathological here: the minute sampling variance of the return standard
+deviation would inflate its component by many orders of magnitude and collapse
+the tail fit. Raw equal weights would let the large-scale moments bury the small
+ones. Inverse-SD is the principled middle that makes the moments commensurate
+while keeping $D$ stable and interpretable.
+
+One property of \eqref{eq:cal-loss} is recorded for honest reporting. The KS
+statistic is a two-sample distance whose sampling scale shrinks with the
+\emph{simulated} sample size (it falls roughly as $1/\sqrt{n}$), so $s_{\mathrm{KS}}$
+is computed at the simulation's own sample size rather than the full history's;
+otherwise the KS component would be over-weighted and dominate the loss.
+A consequence is that $D$ values are comparable only between runs with the same
+number of simulated days and seeds, and all headline comparisons in the results
+chapter therefore hold the seed count fixed.
+
+\bigskip
+\noindent
+With the target and the loss fixed, the two methods that minimise $D(\theta)$ ---
+an exhaustive grid on the true simulator and the surrogate-assisted search that
+agrees with it --- and the validation protocol that guards the located optimum,
+follow next.
+
+
+% =====================================================================
+% NOTES FOR THE AUTHOR
+% ---------------------------------------------------------------------
+% Citation keys used (all already resolve):
+%   franke_westerhoff_2012, lamperti_2018, gao_2022_xgb, gao_2022_hfabm,
+%   gao_2023, cont_2001, hill_1975, kunsch_1989, cont_stoikov_talreja_2008,
+%   majewski_2018, simudyne_odd.
+%
+% OPTIONAL — to enrich the SMM lineage in §0 (only if you want the classical
+% roots cited alongside Franke–Westerhoff). Not currently \cite'd above:
+%
+% @incollection{winker_gilli_maringer_2007,
+%   author    = {Winker, Peter and Gilli, Manfred and Jeleskovic, Vahidin},
+%   title     = {An objective function for simulation based inference on exchange rate data},
+%   booktitle = {Journal of Economic Interaction and Coordination},
+%   volume    = {2}, number = {2}, pages = {125--145}, year = {2007}}
+%
+% @article{grazzini_richiardi_2015,
+%   author  = {Grazzini, Jakob and Richiardi, Matteo},
+%   title   = {Estimation of ergodic agent-based models by simulated minimum distance},
+%   journal = {Journal of Economic Dynamics and Control},
+%   volume  = {51}, pages = {148--165}, year = {2015}}
+% =====================================================================

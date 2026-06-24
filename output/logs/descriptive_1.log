@@ -1,0 +1,8 @@
+  calm seed 42 done
+  stressed seed 42 done
+
+DONE -> /tmp/ov_desc/  (N_SEEDS=1, regimes=['calm', 'stressed'])
+          cm_defaults  client_defaults       im_mean  total_df  n_margin_calls  client_im_share
+regime                                                                                         
+calm              0.0              0.0  2.671122e+09       0.0            14.0            0.674
+stressed          0.0              0.0  4.475767e+09       0.0            21.0            0.681

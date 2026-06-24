@@ -50,9 +50,8 @@ def _front_month(df: pd.DataFrame) -> pd.DataFrame:
 def build_continuous(ohlcv_path: Path, bbo_path: Path, name: str) -> pd.DataFrame:
     """Rolled front-month 1-min series. `close` is the last trade price
     (OHLCV feed); `mid` is the end-of-minute (best_bid+best_ask)/2 from the
-    BBO feed — the mid is the price series the agent calibration matches
-    against (it is the simulator's own observable; the trade price carries
-    a bid-ask-bounce component the mid does not)."""
+    BBO feed. Calibration matches against the mid, which avoids the bid-ask
+    bounce carried by the trade price."""
     ohlcv = _front_month(pd.read_csv(ohlcv_path, index_col=0, parse_dates=True))
     df1 = ohlcv[["open","high","low","close","volume"]].resample("1min").agg({
         "open":   "first",

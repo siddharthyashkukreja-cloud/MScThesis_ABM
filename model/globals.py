@@ -14,66 +14,56 @@ FV_CSV = {
 
 @lru_cache(maxsize=None)
 def day_start_steps(regime: str) -> tuple:
-    """Step indices where each RTH session BEGINS in fv_{regime}.csv — index 0 plus
-    every date change in the `ts` column (D57). Real ES sessions are ~405 1-min bars
-    and vary day to day (down to ~150 on short days), so a fixed 390-bar day is wrong;
-    these data-driven boundaries are the single source of truth for the simulator's
-    overnight reprice, the calibration's overnight-return exclusion, the daily-return
-    slicing, and the notebook's per-day figures. Cached (the fv is static within a run)."""
+    """Step indices where each RTH session begins in fv_{regime}.csv — index 0 plus
+    every date change in the `ts` column. Real ES sessions vary in length (~150–405
+    1-min bars), so these data-driven boundaries, not a fixed 390-bar day, drive the
+    overnight reprice, the overnight-return exclusion, and the daily-return slicing.
+    Cached since the fv is static within a run."""
     import numpy as np
     import pandas as pd
     ts = pd.read_csv(FV_CSV[regime], usecols=["ts"], parse_dates=["ts"])["ts"]
     d = ts.dt.normalize().to_numpy()
     return tuple(int(i) for i in np.flatnonzero(np.r_[True, d[1:] != d[:-1]]))
 
-# Per-regime σ_v: per-step (1-min) log-return std of V_t. Direct fit on the
-# 1-min processed ES front-month MID series (data/v_gbm.py calibrate). MT
-# also uses this as its reference 1-min return std — by construction the
-# empirical 1-min mid log-return std equals σ_v (that is what σ_v is
-# calibrated against), so no separate MT_REF dict is needed.
+# Per-regime σ_v: per-step (1-min) log-return std of V_t, fit on the 1-min
+# processed ES front-month mid series (data/v_gbm.py calibrate). Also serves as
+# the MT reference 1-min return std (by construction equal to σ_v).
+# Per-minute realised vol of V_t, measured on each regime's calibration window.
+# calm  = quiet 2019-09-13..12-27 stretch (~75 sessions); stressed = COVID episode
+# 2020-02-17..05-28 (~75 sessions). Re-measured when the windows were matched in length.
 SIGMA_V = {
-    "calm":     0.00029732584831326943,
-    "stressed": 0.001822674698246824,
+    "calm":     0.00024,     # 1-min intraday return std, fv_calm (Sep 13-Dec 27 2019, 75 sessions)
+    "stressed": 0.00124,     # 1-min intraday return std, fv_stressed (Feb 17-May 28 2020, 73 sessions, rebuilt)
 }
 
 V0 = {
-    "calm":     2463.125,
-    "stressed": 3253.875,
+    "calm":     3016.63,     # start of the 2019-09-13 calm window
+    "stressed": 3387.38,     # start of the 2020-02-17 stressed window
 }
 
-# MBP-10 geometric placement-depth — diagnostic only (D20). Live limit-
-# order placement uses the calibrated log-normal `depth_mean`.
+# MBP-10 geometric placement-depth p_zi, fit by data/p_zi.py. The shared ZI/MT
+# limit placement is k ~ Geometric(p_zi). Calm uses this measured value directly;
+# stressed p_zi is calibrated and lives in CALIBRATED.
 P_ZI = {
     "calm":     0.5430,
     "stressed": 0.3431,
 }
 
-# MM top-of-book quote size (D31). Structural — pinned not calibrated;
-# `mm_p_edge` is the calibrated MM dial (D48).
-MM_QTY = {
-    "calm":     2,
-    "stressed": 2,
-}
-
-# Uniform `U[1, qty_max]` order-size cap (ODD §Stochasticity). D49 reverted
-# (Pareto degraded Hill under our linear-impact LOB matching). Flat 10
-# matches the ODD baseline; volume scaling to empirical ES is handled by
-# the `VOLUME_LOT` relabeling below, not by per-order qty.
+# Uniform `U[1, qty_max]` order-size cap (ODD §Stochasticity). Flat 10 matches the
+# ODD baseline; volume scaling to empirical ES is handled by the `VOLUME_LOT`
+# relabeling below, not by per-order qty.
 QTY_MAX = {
     "calm":     10,
     "stressed": 10,
 }
 
-# Institutional-lot relabeling (D50/D53). Each model `qty` unit is read as a block of
-# `VOLUME_LOT` ES contracts, set PER REGIME so simulated contract volume matches
-# empirical ES per-minute volume (calm ~2,524/min, stressed ~4,979/min). At the D53
-# doubled population the sim trades ~84 (calm) / ~81 (stressed) model-lots/min, hence
-# VOLUME_LOT ~30 / ~62 (was 45 / 82 at the 50-agent population). ES block-lot scale:
-# Eisler-Bouchaud-Kockelkoren (2012). Applied at REPORTING + NOTIONAL + MARGIN only,
-# never in the LOB — log-returns, ACFs and Hill are invariant. INTERIM: recompute if
-# the final calibration OR the client cash bands shift the realised lots/min (the
-# margin cap couples client cash to traded volume).
-VOLUME_LOT = {"calm": 30, "stressed": 60}
+# Institutional-lot relabeling. Each model `qty` unit is read as a block of
+# `VOLUME_LOT` ES contracts, set per regime so simulated contract volume matches the
+# empirical RTH front-month ES per-minute volume (calm ~2,000/min, stressed ~3,500/min;
+# sim ~113 / ~108 model-lots/min -> 18 / 32 contracts per lot). ES block-lot scale:
+# Eisler-Bouchaud-Kockelkoren (2012). Applied at reporting, notional and margin only,
+# never in the LOB — log-returns, ACFs and Hill are invariant.
+VOLUME_LOT = {"calm": 18, "stressed": 32}
 
 # CME E-mini ES futures contract multiplier — $50 per index point. USD notional
 # per (model lot · price point) = volume_lot · CONTRACT_USD (regime-specific).
@@ -81,196 +71,425 @@ CONTRACT_USD = 50.0
 
 # Almgren-Chriss impact coefficients — calibrated from BBO-1m via
 # data/impact.py (Hasbrouck 1991 / AC 2000 linear-impact regression).
-# NOT currently wired into any agent (AC execution tabled under D10f in
-# favour of POV; see ModelParams.mm_pov). Kept here for documentation +
-# future re-enable. γ both regimes empirically negative (post-trade price
-# reversion dominates at K=30 min, Hasbrouck 1991 / BMP 2002 transient-only
-# finding) → floored at 0.
+# γ is empirically negative in both regimes (post-trade reversion dominates at
+# K=30 min, Hasbrouck 1991 / BMP 2002 transient-only finding) → floored at 0.
 ETA_TEMP = {
-    "calm":     1.5094e-4,
-    "stressed": 7.0064e-4,
+    "calm":     1.3225e-4,   # |r|~volume temporary-impact magnitude, Sep13-Dec27 2019 (was 1.5094e-4: pre-AC-fix / old window)
+    "stressed": 3.7769e-4,   # |r|~volume temporary-impact magnitude, Feb17-May28 2020 rebuilt (was 7.0064e-4: tautology-inflated)
 }
 GAMMA_PERM = {
-    "calm":     0.0,   # raw β_perm = -1.17e-5; transient-only regime
-    "stressed": 0.0,   # raw β_perm = -1.38e-4; transient-only regime
+    "calm":     0.0,   # raw β_perm = -5.3e-9 (forward returns revert) -> no permanent impact; transient-only
+    "stressed": 0.0,   # raw β_perm = -2.9e-8 (reverts) -> transient-only
 }
-# Almgren-Chriss liquidation (Stage C — distressed CM fire-sale + CCP default
-# liquidation). Slices a position over AC_HORIZON minutes; the temporary impact
-# is endogenous (the LOB market orders walk the book); the permanent impact is
-# GAMMA_PERM (≈0 empirically). FIRE_SALE_URGENCY = κH front-loads the schedule
-# under distress (κH→0 = TWAP, the risk-neutral AC limit; Almgren-Chriss 2000).
-AC_LAMBDA = 0.001
+# Almgren-Chriss liquidation (distressed CM fire-sale + CCP default liquidation).
+# Slices a position over AC_HORIZON minutes; temporary impact is endogenous (LOB market
+# orders walk the book), permanent impact is GAMMA_PERM (≈0 empirically).
 AC_HORIZON = 30
-FIRE_SALE_URGENCY = 2.0
+# Urgency κH is DERIVED per regime (Almgren-Chriss 2000 Eq. 19), not hardcoded:
+#   κ = sqrt(λ · σ² / η),   urgency = κ·H
+# with σ = SIGMA_V[regime] (calibrated per-minute vol) and η = ETA_TEMP[regime] (calibrated
+# temporary-impact coefficient). LAMBDA_RISK is the AC risk-aversion — the single free
+# liquidation parameter — set to a moderate value so the calm schedule is near-TWAP (κH≈1)
+# and the stressed schedule front-loads (κH≈2.9, ≈2.85× calm). The regime σ/η do the work,
+# so a crash liquidates more aggressively than a calm market by construction. κH→0 = TWAP
+# (risk-neutral limit). Sensitivity-test LAMBDA_RISK.
+LAMBDA_RISK = 2.0
 
-# ZI rates (zi_alpha limit / zi_mu market / zi_delta cancel) are CALIBRATED
-# per regime (D21 — all three entered the loop when the MM was dropped and
-# ZI became a primary price driver). The ODD-baseline values (0.15 / 0.025 /
-# 0.025) are the ModelParams defaults and the calibration-bound anchors.
 
-# Pin point for FT belief dispersion: σ_fundamental = ft_sigma_c · σ_v · v0
-# = one daily V_t std (Chiarella heterogeneous-beliefs at the daily-news
-# scale; ABIDES ValueAgent precedent). Calibrating ft_sigma_c was tried and
-# landed near √(390·5) (one weekly std); the structural pin removes a
-# calibrated parameter at negligible cost (FT belief dispersion is a design
-# choice, not a market observable).
+def ac_urgency(regime: str) -> float:
+    """Almgren-Chriss (2000) Eq. 19 urgency κ·H for a regime, derived from the calibrated
+    per-minute volatility and temporary-impact coefficient (not a hardcoded constant)."""
+    import math
+    return math.sqrt(LAMBDA_RISK * SIGMA_V[regime] ** 2 / ETA_TEMP[regime]) * AC_HORIZON
+
+# Close-out of a defaulted book — split by WHO resolves it:
+#
+#  CLOSEOUT_MODE — a defaulted MEMBER's book (resolved by the CCP). "transfer" (DEFAULT):
+#       the CCP AUCTIONS it to the surviving member with the largest opposing position at
+#       CLOSEOUT_RECOVERY; the (1-recovery) haircut goes to the waterfall, no open-market
+#       impact. "firesale": CCP open-market Almgren-Chriss disposal (deferred hypothesis).
+#       A defaulted DIRECT client (H1 counterfactual, faced by the CCP) is resolved the
+#       same way (CCP auction).
+#
+#  CLIENT_CLOSEOUT — a defaulted tiered CLIENT's book (resolved by its clearing MEMBER).
+#       "firesale" (DEFAULT): the member ASSUMES the position and liquidates it OPEN-MARKET
+#       via Almgren-Chriss (the member's book-walk is the client-level price-impact channel).
+#       "transfer": assign to the member's largest-offsetting client at recovery (no impact).
+#       Rationale: only the CCP runs an auction; members liquidate assumed client positions
+#       into the market — and a single client's position is small enough that the open-market
+#       impact is realistic (unlike a whole member book, which is why members are auctioned).
+#
+# Real CCP auctions recover close to par on a hedged book (LCH used only ~35% of Lehman's
+# IM and no default fund in 2008; BIS Dec-2018; IOSCO PD657), while concentrated/unhedged
+# books recover less (Nasdaq 2018). 0.80 is a conservative stressed recovery — more
+# conservative than the Lehman outcome, less than the ODD's credit-style 0.60. Sensitivity-test.
+CLOSEOUT_MODE = "transfer"
+CLIENT_CLOSEOUT = "firesale"
+CLOSEOUT_RECOVERY = 0.80
+
+# A BCM that breaches the leverage floor takes regulatory corrective action: it DELEVERAGES
+# its OWN book (Almgren-Chriss) toward this buffer above the 8% floor — Basel III leverage
+# ratio / CFTC net-capital require a member below its minimum to reduce exposure, and the
+# book-walk is the forced-deleveraging contagion channel (Thurner 2012; Aymanns-Farmer 2015).
+# Only the own book can be shed intraday, so a member dominated by its client book sheds all
+# own risk and freezes on the residual. An NBCM (no own book) just freezes — the ODD's
+# BCM-deleverage / NBCM-stop asymmetry. ~2pp above the floor so it does not re-breach next tick.
+CAP_DELEVERAGE_TARGET = 0.10
+
+# Client-margin netting basis for the CM's IM / capital ratio:
+#   "gross" (default) — Sum|client_pos|: US/CME gross customer margining (CFTC).
+#   "net"             — |Sum client_pos|: EU net-omnibus — offsetting client positions
+#                       cancel, lowering the CM's IM and mitigating capital-ratio stop-out
+#                       (the Duffie-Zhu 2011 netting benefit / the H1 tiering value).
+# VM and the cover-2 default fund already use the NET book (book_position); this toggle
+# changes only the margin/capital basis. A clean gross-vs-net comparison axis.
+CLIENT_MARGIN_NETTING = "gross"
+
+# ZI rates (zi_alpha limit / zi_mu market / zi_delta cancel) are calibrated per
+# regime. The ODD-baseline values (0.15 / 0.025 / 0.025) are the ModelParams
+# defaults and the calibration-bound anchors.
+
+# Default for the FT belief-width scale (one daily V_t std). ft_sigma_c is
+# calibrated per regime — the dominant tail lever — and every entry point overrides
+# this via CALIBRATED, so the default only matters for ad-hoc ModelParams builds.
 FT_SIGMA_C_DEFAULT = sqrt(390.0)
 
 # Calibrated behavioural parameters per regime — the single source the simulator
-# entry points (run_simulation.py, analysis_long_run.py) read. RE-COPY after each
-# calibration: theta_stage2 from output/calibrated_params.json (surrogate) or the
-# optimum in output/calibrated_params_grid.json (grid). Regime-specific loop: calm
-# 3-d {ft_sigma_c, zi_alpha, zi_delta}; stressed 4-d {+ p_zi}. zi_mu is pinned at
-# the CST-2008 0.025 baseline (ablation C6); calm p_zi stays at the L2 P_ZI value
-# (omitted here -> ModelParams default), stressed p_zi is calibrated.
-#
-# THESIS-FINAL BASELINE (D60) — GRID-search optima (the easy-to-defend headline; Gao 2023),
-# cross-validated by the high-res surrogate run which lands on the same optimum
-# (calm 0.83/0.343/0.063, stressed 0.53/0.271/0.123/0.177 — output/baseline_hires/).
-# Grid: calm 7^3=343 nodes, stressed 5^4=625 nodes, n_days=20, n_runs=3
-# (output/baseline_grid/grid_{regime}.json; full loss surface in
-# output/calibration_grid_{regime}.csv). D_grid: calm 43.77, stressed 7.92 (3-seed scale —
-# the KS component rescales with seed count because s_KS is sim-sized, so D is comparable
-# only at a fixed n_runs). Boundary notes (honest): stressed ft_sigma_c sits at its 0.5
-# floor, zi_delta at the 0.05 floor (D58 book-stability guard) in both regimes, stressed
-# p_zi at its 0.15 lower bound; zi_delta is a near-flat direction of the loss
-# (D 43.8 at 0.05 vs 44.0 at 0.48 in calm), so the floor-sitting is benign.
-# Calm ft_sigma_c bound was tightened 2.0 -> 1.1 for the lock (see calibrate.py:
-# weakly-identified tail lever drifts to a worse interior basin ~1.35 under a wide bound).
+# entry points (run_simulation.py, analysis_long_run.py) read. Grid-search optima
+# (calm 4-d, stressed 5-d; see calibrate.py). Re-copy after each calibration:
+# theta_stage2 from output/calibrated_params.json (surrogate) or the optimum in
+# output/calibrated_params_grid.json (grid). Calm p_zi stays at the L2 P_ZI value
+# (omitted here -> ModelParams default); stressed p_zi is calibrated.
 CALIBRATED = {
+    # Surrogate (XGBoost) optimum on the D68 widened bounds; auto-wired by
+    # scripts/wire_lock.py from output/relock/sur_*.json. Grid cross-check deferred.
     "calm": dict(
-        ft_sigma_c=0.80, zi_alpha=0.34, zi_mu=0.025, zi_delta=0.05,
+        ft_sigma_c=0.64249, zi_alpha=0.54397, zi_mu=0.01556, zi_delta=0.0667, p_zi=0.46025, mt_lambda=0.02251, mt_gamma=0.30981,
     ),
     "stressed": dict(
-        ft_sigma_c=0.50, zi_alpha=0.26, zi_mu=0.025, zi_delta=0.05, p_zi=0.15,
+        ft_sigma_c=0.45299, zi_alpha=0.36443, zi_mu=0.14419, zi_delta=0.23178, p_zi=0.51189, mt_lambda=0.18145, mt_gamma=0.32414,
     ),
 }
 
 
-# ── Clearing-tier constants (D28) ────────────────────────────────────────────
+# ── Clearing-tier constants ──────────────────────────────────────────────────
 # Clearing-member initialisation (ODD §Initialization). Cash is inert (it
 # does not gate FT/BCM order submission), so the regulatory-scale BCM/NBCM
 # cash does not affect price formation or the calibration.
-CCP_CASH = 7_500_000_000            # CCP prefunded resources / SITG capacity — LCH
-                                    # SwapClear default-fund cap ~£6B (~$7.5B); supersedes
-                                    # the ODD FTSE-scale $10M (it could not fund the SITG)
+CCP_CASH = 1_500_000_000            # CCP OWN capital — the SITG source and the Level-5
+                                    # backstop. ~$1-2B is a major CCP's own equity/dedicated
+                                    # resources (vs TOTAL prefunded DF ~$9-10B = SITG + member
+                                    # fund, which is NOT the CCP's own cash). At ~$1.5B the L5
+                                    # backstop can be exhausted under extreme stress, so CCP
+                                    # insolvency is reachable in the deferred reverse-stress /
+                                    # fire-sale hypotheses, while staying inert at actual severity
+                                    # (L5 never reached; the SITG cap below does not bind). NOTE
+                                    # this is NOT the SITG: SITG = ex_df_ratio (3%) of the cover-2
+                                    # fund (~$20-30M), set in CCP_CALIBRATION below.
 # Loss-absorbing capital ~ FCM adjusted net capital (CFTC monthly FCM financial data).
 BCM_CASH_RANGE = (5e9, 1e10)        # bank-FCM scale (JPM/GS-class); matches ODD U[5B,10B]
-NBCM_CASH_RANGE = (5e7, 1e9)        # non-bank FCM adjusted net capital, UNIFORM $50M-$1B —
-                                    # spans the CFTC FCM financial data (Apr 2026) non-bank range:
-                                    # small clearing FCMs (Dorman/GH/Nanhua/Phillip ~$30-140M) up to
-                                    # Marex/Clear Street/ABN AMRO (~$0.8-0.9B). The small end is where
-                                    # a concentrated client-default cluster can topple the CM.
+NBCM_CASH_RANGE = (5e8, 3e9)        # non-bank FCM adjusted net capital, UNIFORM $0.5-3B — the
+                                    # SUBSTANTIAL non-bank clearers that carry real client volume
+                                    # (Marex / ABN AMRO Clearing / Clear Street / StoneX; CFTC FCM data).
+                                    # Raised from $50M-1B: at the tiny scale the NBCMs were the ONLY
+                                    # tier that ever defaulted under stress — a capital-SIZE artifact,
+                                    # not a risk-rule one (verified: the de-confounded floor alone did
+                                    # not change it; floor_balance.py). At $0.5-3B they clear large
+                                    # client books AND default in balance with the BCMs under deep
+                                    # stress, while calm stays clean and COVID benign.
 
-# Client (cleared end-user) loss-absorbing capital, by entity type (D52 — client
-# clearing). FT = asset managers (largest books -> largest capital), MT = CTA /
-# trend institutions, ZI = smaller noise accounts. Client positions are bounded by
-# margin capacity (initial margin <= free cash -> exposure <= 5x cash), so cash sets
-# the position scale; the bands are tuned so the 8% capital floor freezes clients and
-# defaults a subset under STRESS but not in calm (a margin-capped client sits near a
-# 20% ratio and defaults only on a ~20% adverse mark — a stressed-regime move).
-FT_CLIENT_CASH = (1.0e8, 5.0e8)     # asset-manager scale
-MT_CLIENT_CASH = (3.0e7, 1.5e8)     # CTA / trend-institution scale
-ZI_CLIENT_CASH = (6.0e7, 1.5e8)     # noise accounts, $60-150M (D53b). ZI inventory random-walks
+# Client (cleared end-user) loss-absorbing capital, by entity type. FT = asset
+# managers (largest books -> largest capital), MT = CTA / trend institutions, ZI =
+# smaller noise accounts. Client positions are bounded by margin capacity (initial
+# margin <= free cash -> exposure <= 5x cash), so cash sets the position scale; the
+# bands are tuned so the 8% capital floor freezes clients and defaults a subset under
+# stress but not in calm (a margin-capped client sits near a 20% ratio and defaults
+# only on a ~20% adverse mark — a stressed-regime move).
+FT_CLIENT_CASH = (5.0e8, 3.0e9)     # large asset-manager scale $0.5-3bn (the main client-IM source:
+                                    # FT clients accumulate directional books -> they post the margin)
+MT_CLIENT_CASH = (2.0e8, 1.0e9)     # CTA / managed-futures scale $0.2-1bn
+ZI_CLIENT_CASH = (2.0e8, 5.0e8)     # noise accounts, $0.2-0.5bn. ZI inventory random-walks
+# Scale rationale: with the leverage-balanced client->clearer assignment (run_simulation.py),
+# these levels put the client share of posted IM at ~70% (toward the CME ~82% client / 18%
+# house split) while keeping calm CLEAN (every clearer above the 8% leverage floor, no calm
+# deleverage) and letting the stressed crash push the bank-CMs through the floor via their
+# CLIENT books (the leverage-cycle / contagion channel). Larger clients (~10x) hit ~82% share
+# but pin the clearers at the floor in calm too; the ~70% here is the clean-calm maximum under
+# the conservative full-client-notional leverage treatment (no client-clearing IM offset).
                                     # but ~cancels on average (mean ≈ 0, ~50/50 long/short); cash set
-                                    # so only the unlucky drifters default under stress (≈2 ZI defaults
-                                    # vs 8 at $50-100M), keeping client defaults modest but non-zero.
+                                    # so only the unlucky drifters default under stress, keeping
+                                    # client defaults modest but non-zero.
 
-# Client-book concentration (D53c). Each client-carrying CM holds a heterogeneous
-# number of clients in this range, and the LARGER CMs (by cash) carry MORE clients
-# (bigger FCMs clear bigger books). Skewed book sizes are the client-clearing
-# concentration study lever (the cross-member contagion channel — H1/H4).
-CLIENT_BOOK_RANGE = (5, 15)
-
-# CCP / clearing-tier calibration — ODD §Calibration table. These pin the
-# margin, default-fund and waterfall mechanics built in the LATER stages;
-# none is a free (SMM-calibrated) parameter — each is a regulatory / ODD
-# constant. Listed here as the single source; wired in stage by stage.
+# CCP / clearing-tier calibration — ODD §Calibration table. These pin the margin,
+# default-fund and waterfall mechanics; none is a free (SMM-calibrated) parameter —
+# each is a regulatory / ODD constant.
 CCP_CALIBRATION = dict(
-    im_percent=0.20,        # FIXED broker HOUSE margin — the client POSITION cap only
-                            # (D55): clients post 20% of notional, ~5x leverage, the
-                            # conservative house multiple over the exchange minimum (FCMs
-                            # impose house margin above the CME minimum). The CCP/exchange
-                            # initial margin actually CALLED is procyclical VaR/SPAN via
-                            # globals.im_fraction(sigma_t); im_percent is NOT that margin.
+    im_percent=0.15,        # fixed broker house margin — the client position cap only:
+                            # clients post 15% of notional (~6.67x leverage), the post-2020
+                            # security-futures statutory minimum (17 CFR 242.400-406; the
+                            # 20% 2002-2020 floor was lowered to 15% in 2020). The initial
+                            # margin actually called is procyclical VaR/SPAN via
+                            # im_fraction(sigma_t); im_percent is NOT that margin. At 15% the
+                            # client share of posted IM ~75% (toward the CME ~82% reality) and
+                            # the stressed leverage cycle is materially more active than at 20%.
     mm_percent=0.95,        # maintenance-margin threshold — CME methodology
-    df_percent=0.20,        # DEPRECATED (D55) — flat DF haircut superseded by the cover-2
-                            # SLOIM (recompute_default_fund); kept for back-compat only.
     df_buffer=0.10,         # DF buffer on the cover-2 SLOIM — Euronext Clearing module A9
                             # §3 (Total DF = cover-2 SLOIM x (1 + 10%))
-    ex_df_ratio=0.10,       # exchange skin-in-the-game — EMIR Art. 45
+    ex_df_ratio=0.03,       # exchange skin-in-the-game as a SHARE OF THE FUND. Real SITG
+                            # is ~1-4% of the prefunded fund (CME ES $100M/$9.4B ~2.7%,
+                            # ICE Europe ~2%; Clarus CCP-disclosure data). NB EMIR Art. 45
+                            # mandates dedicated own resources = 25% of the CCP's CAPITAL
+                            # (a small absolute number), NOT 10% of the fund — the prior
+                            # 0.10 conflated the two; 0.03 is the empirical %-of-fund.
     cover_number=2,         # cover-2 — EMIR / Dodd-Frank; Euronext A9 §3 (two most
                             # exposed banking groups, extreme-but-plausible)
-    recovery_rate=0.60,     # auctioned-position recovery — CPMI-IOSCO 2017
-    cap_ratio_floor=0.08,   # CM capital floor — CFTC Reg 1.17 (D55): adjusted net capital
+    cap_ratio_floor=0.08,   # CM capital floor — CFTC Reg 1.17: adjusted net capital
                             # >= 8% of risk maintenance margin, i.e. cash/IM >= 0.08
-                            # (was cash/notional on a Basel reading; the FCM net-capital
-                            # rule is on RISK MARGIN, not gross client notional)
+                            # (on risk margin, not gross client notional)
     margin_interval=60,     # variation-margin cadence (hourly) — ODD §Scales
-    df_interval=390,        # default-fund recalculation — one thesis RTH day
-)                           # (ODD uses 510; the thesis RTH day is 390 — D28)
+    df_interval=390,        # default-fund recalculation — one RTH day
+)
 
 
-# ── Margin methodology (D55) — procyclical VaR/SPAN initial margin ────────────
-# For a single linear futures contract SPAN scanning risk == parametric VaR, so
-# the CCP initial margin is a fraction of notional set by a VaR scan: z-quantile
-# of the daily return over the margin period of risk (MPOR), floored by an
-# anti-procyclicality (APC) floor anchored to the real CME ES margin. The σ fed in
-# is the REGIME 1-min return std (params.sigma_v = SIGMA_V[regime]) scaled to a
-# daily std via sqrt(390) — a daily-reset CCP margin, not the per-minute Kalman SV
-# `sigma_t` (which is a microstructure-noise scale for FT beliefs and does not
-# separate the regimes). IM reverts to the APC floor in calm (~6%) and rises in the
-# stressed regime (~12%) — the procyclical channel. Simulation passes params.sigma_v.
-#   IM_CONF_Z     99% one-tailed normal — EMIR Art. 41 (>=99%, 2-day ETD), CME SPAN
-#   IM_MPOR_DAYS  margin period of risk — 2 business days for exchange-traded futures
+# ── Margin methodology — procyclical VaR/SPAN initial margin ──────────────────
+# For a single linear futures contract SPAN scanning risk == parametric VaR, so the
+# CCP initial margin is a fraction of notional set by a VaR scan: z-quantile of the
+# daily return over the margin period of risk (MPOR), floored by an anti-procyclicality
+# (APC) floor anchored to the real CME ES margin. The σ fed in is a 1-min return std
+# scaled to daily via sqrt(390). IM reverts to the APC floor in calm (~4%) and rises in
+# the stressed regime (~11% peak, uncapped at 1-day MPOR) — the procyclical channel.
+#   IM_CONF_Z     99% quantile of the 2-day return. Set to the EMPIRICAL 99% quantile of
+#                 EWMA-standardised ES returns (~3.0) — an FHS-consistent fat-tail multiplier
+#                 (filtered historical simulation is the standard CCP IM method; LCH/ICE/Eurex).
+#                 The Gaussian normal 2.326 understates the fat-tailed ES 99% move by ~1/3
+#                 (measured 3.0 stressed / 3.2 calm). EMIR Art. 41 (>=99%, 2-day ETD); CME SPAN 2.
+#   IM_MPOR_DAYS  margin period of risk — 1 business day (CME/CFTC liquidation horizon for
+#                 liquid exchange-traded futures; EMIR's 2-day is the OTC-derivative minimum)
 #   IM_FLOOR      APC floor ~ CME ES maintenance margin / notional (~6%); EMIR Art. 28
 #                 RTS APC option (long-run floor)
-#   DF_STRESS_Z   ~99.87% — DF scenario beyond the IM confidence (extreme-but-plausible)
+#   DF_STRESS_Z   ~99.87% empirical (FHS) quantile, extreme-but-plausible, beyond the IM
+#                 confidence — kept above IM_CONF_Z so the SLOIM coefficient stays positive
 #   DF_STRESS_FLOOR  historical extreme-but-plausible 2-day ES move (2008 / COVID
 #                    2020-03 scale) — Euronext A9 §2.1 stress scenarios
 TRADING_MINUTES_PER_DAY = 390
-IM_CONF_Z = 2.326
-IM_MPOR_DAYS = 2
-IM_FLOOR = 0.06
-DF_STRESS_Z = 3.0
-DF_STRESS_FLOOR = 0.15
+IM_CONF_Z = 3.0       # empirical FHS 99% quantile of standardised ES returns (was Gaussian 2.326)
+IM_MPOR_DAYS = 1     # CME/CFTC 1-day liquidation horizon for liquid ETD futures (EMIR 2-day = OTC min); D77
+IM_FLOOR = 0.04       # ~ES calm IM/notional (CME ES ~$6.3k on ~$162k ≈ 3.9%, Jan-2020); realistic APC floor
+DF_STRESS_Z = 3.9     # empirical FHS ~99.87% quantile; raised from 3.0 to stay above IM_CONF_Z=3.0
+# DF_STRESS_FLOOR — calm cover-2 stress-move floor, set ~0.04 above IM_FLOOR so the calm SLOIM
+# coefficient (stress_move - im_frac) stays ~0.04 and the calm default-fund/IM ratio aligns with the
+# stressed regime. With IM_FLOOR=0.04 this is 0.08 (was 0.10 when IM_FLOOR was 0.06). Binds only in
+# calm — the stressed raw stress move exceeds it, so cover-2 sizing in stress is unchanged. (Residual
+# calm DF/IM elevation is a small-N artifact: cover-2 of 15 members is a larger IM share than a real
+# 50-100-member CCP.)
+DF_STRESS_FLOOR = 0.08
 
-# House/prop-book risk limit for a banking CM's OWN account (D55). A clearing
-# member is primarily an intermediary; its house desk runs under a VaR limit, not
-# the unbounded fundamental-trader accumulation that compounds to many ×capital in a
-# trend. Cap own notional so its 99%/1-day VaR ≤ HOUSE_VAR_BUDGET · capital (Basel
-# FRTB / prop-desk practice): |own notional| ≤ β·cash/(z·σ_daily). Procyclical via the
-# regime σ — loose in calm (never binds on a flat day), tight in the stressed/crash
-# regime (~0.6×cash), which also makes it a deleveraging-in-stress channel.
-HOUSE_VAR_BUDGET = 0.05
+# IM_CAP — optional hard upper bound on the IM fraction (None = no cap). DROPPED (D77): at the
+# 1-day MPOR the reactive VaR self-bounds at ~11% on the COVID path (well under the old 12% cap,
+# which therefore never bound — 0/73 stressed sessions), and the realised CME ES Mar-2020 peak was
+# ~8-10% of notional. Removing the cap lets the FHS VaR express its full 4%->~11% range (no flat-top
+# artifact) while staying within the empirical ES band. Real CCPs do not cap IM (EMIR Art. 28 APC tools
+# are floors/buffers, not caps). NB: if the reverse-stress (c>1) amplifier is ever reactivated, set
+# IM_CAP back to a fraction (e.g. 1.0) to restore the physical IM<=notional bound; im_fraction skips
+# the cap when None.
+IM_CAP = None
+
+# DF_STRESS_CAP — companion ceiling on the cover-2 stress move. The SLOIM coefficient is
+# (df_stress_move - im_frac); capping IM but not the stress move would let the coefficient
+# (and the fund) balloon in deep stress (DF -> ~$16B at 4x COVID, vs real CME ~$9B). A
+# 2-day extreme-but-plausible ES move ceiling (~2008/COVID scale) bounds it; it only binds
+# at high reverse-stress c (calm/COVID stress_move ~15% << cap, so normal behaviour is
+# unchanged). Keeps the fund a realistic size and lets a right-sized fund be breached at c.
+DF_STRESS_CAP = 0.35
+
+# DF_ODD_FIXED — size the cover-2 default fund on the ODD's FIXED extreme-stress scenario
+# (Simudyne ODD Mech #4 / Calibration dfPercent): DF = cover-2 of DF_ODD_PERCENT * notional,
+# independent of the live IM and vol. This decouples the fund from the margin level — removing the
+# SLOIM-IM coupling (model.md §6.2) that zeroed the fund at high flat IM — so the H2 margin arms
+# (flat vs reactive) share ONE consistent fund. DF_ODD_PERCENT=0.10 ~ a COVID-class extreme 1-day ES
+# move (worst COVID day ~-12%); gives a realistic ES-scale fund (~$12-16B; residual size = the 15-CM
+# concentration).
+# BASELINE = False (EMIR SLOIM / loss-over-IM, the regulation-accurate fund used in the descriptive
+# model, §5.1, DF/IM ~17%). The H1 MARGIN experiment turns this ON in scripts/run_thesis_experiments.py
+# only — there the IM varies across arms and SLOIM would zero the fund at high flat IM, so the arms need
+# the IM-independent ODD fund to share one consistent base.
+DF_ODD_FIXED = False
+DF_ODD_PERCENT = 0.10
+
+# DF_DECOUPLE_IM — H2 robustness lever. The cover-2 SLOIM nets posted IM out of the
+# stress loss (SLOIM = (stress_move - im_frac)*notional), so a higher reactive IM
+# mechanically SHRINKS the fund (model.md §6.2). That is faithful stress-loss-over-IM
+# accounting, so the realistic default is False; but it couples fund size to the IM mode
+# and confounds the H2 mutualisation result. Set True to size the fund on a FIXED
+# reference IM (IM_FLOOR), independent of the live IM mode, isolating the pure
+# procyclicality channel (run both arms and report the pair).
+DF_DECOUPLE_IM = False
+
+# ── H2 margin-regime experiment ───────────────────────────────────────────────
+# IM_MODE selects how the CCP margin fraction is driven (flip at runtime in
+# experiment scripts, like CALIBRATED):
+#   "reactive" — VaR on an EWMA of realised 1-min sim returns (RiskMetrics-style
+#                rolling estimator; the realistic baseline — CME raised ES IM six
+#                times over ~3 weeks in Mar-2020), read at each margin cycle.
+#   "static"   — regime-constant sigma_v (two-point procyclicality across regimes).
+#   "flat"     — fixed fraction IM_FLAT_FRAC, no vol response (H2 comparators:
+#                0.05 flat-low vs 0.12 through-the-cycle — EMIR Art. 28 APC
+#                buffer alternatives; BCBS-CPMI-IOSCO 2022 margin review).
+# The EWMA half-life is ~11 RTH days of 1-min bars — the RiskMetrics lambda~0.94 convention real
+# CCPs use (a 2-day half-life was ~5x more reactive than any real CCP EWMA and overstated the peak
+# procyclical IM spike by ~40%). Overnight gaps are excluded from the estimator (intraday convention,
+# consistent with SIGMA_V); gap risk is partially covered by the sqrt(MPOR) scaling (a documented
+# under-coverage — ~45% of stressed daily variance is overnight; close-to-close estimation is the
+# deferred refinement).
+IM_MODE = "reactive"
+IM_FLAT_FRAC = 0.05
+IM_VOL_HALFLIFE = 11 * TRADING_MINUTES_PER_DAY
+
+# Close-to-close margin coverage. The reactive EWMA is intraday-only, but the margin must cover the
+# overnight gap it marks the book across (~29% of calm / ~45% of stressed daily variance is
+# overnight). When True, a separate EWMA of squared session-boundary gap returns is added to the
+# daily variance: sigma_daily^2 = sigma_intraday^2 + sigma_gap^2 (the realised close-to-close
+# decomposition). Seeded from the regime's historical overnight gaps; gap-EWMA half-life ~11 sessions.
+IM_INCLUDE_GAPS = True
+
+# Daily-frequency IM (close-to-close). When True, CCP margin uses a daily-return RiskMetrics
+# EWMA (lambda=IM_DAILY_LAMBDA) from the rolled daily ES series, WARMED on real pre-window
+# history (data/processed/ES_front_daily_1d.csv) -> genuine recent vol at session 0 (no cold
+# start) and native overnight-gap coverage (close-to-close). Supersedes the intraday EWMA +
+# gap-EWMA above; falls back to the reactive intraday EWMA if the daily series is unavailable.
+IM_DAILY = True
+IM_DAILY_LAMBDA = 0.94
+
+# ── Open-disorder sensitivity (overnight-gap experiment) ──────────────────────
+# At a session boundary the book is repriced to the gapped V_t and each trader's
+# intraday price memory is re-anchored to the new open, so the overnight gap is not
+# read as a one-step intraday return (the clean open). Set False to leave price memory
+# at the prior close: the gap is then seen as a return — the MomentumTrader chases it
+# and the open is disorderly — which isolates whether a disorderly open changes
+# client/CM contagion vs the clean reprice. The reprice itself and the reactive-IM
+# estimator are unaffected either way.
+REANCHOR_ON_GAP = True
+
+# Physical IM escrow. When True, initial margin is moved as real cash to the CCP's
+# im_account each cycle (returned as the position shrinks, seized first on default):
+# members post on their OWN book, clients post their OWN procyclical IM via their CM.
+# A member/client that cannot fund the call defaults on LIQUIDITY. With escrow the
+# capital ratio is cash/exposure (cash is already net of posted IM), so leverage is
+# self-bounded at cash/(floor+im_frac) and the procyclicality channel runs through the
+# cash numerator (a funding squeeze) rather than the denominator.
+IM_ESCROW = True
+
+# Static own-book cap: |own notional| <= POSITION_LIMIT_X * cash (a flat gross cap, no vol input).
+# Set to 2 = a realistic dealer proprietary book. This is a CLIENT-TIER device: it bounds a
+# client-clearing bank's house account so its capital-adequacy floor is driven by the CLIENT book
+# (the channel we study) rather than a self-inflicted prop blow-up, and keeps house margin a minority
+# of the CCP's posted IM. With POSITION_LIMIT_CLIENTS_ONLY=True the 2x cap is scoped to client-clearing
+# BCMs; house-only BCMs instead get the looser POSITION_LIMIT_X_HOUSE cap below. 0.0 disables the cap.
+POSITION_LIMIT_X = 2.0
+# Scope: True = the 2x cap binds client-clearing BCMs only; house-only BCMs get POSITION_LIMIT_X_HOUSE.
+# False = the 2x cap binds all BCMs (legacy: pins house-only BCMs at kappa>=0.5, inert).
+POSITION_LIMIT_CLIENTS_ONLY = True
+# House-only BCM own-book leverage cap: |own notional| <= POSITION_LIMIT_X_HOUSE * cash (looser than
+# the 2x client-clearing cap). 5 => kappa >= ~0.20: comfortably above the 8% floor in calm, but a
+# crash's cash-side VM losses still pull kappa under the floor, so house banks RUN the leverage cycle
+# and CAN fail in deep stress -- WITHOUT over-levering to the 8% floor (~12.5x) under cheap calm
+# reactive margin, which (uncapped) inflated the house-margin share to ~50% and made house failures
+# dominate every arm. Tune to a realistic ~30-35% house / ~65-70% client IM split. 0.0 = uncapped
+# (house book bounded only by the 8% CAR floor -- the over-levered variant).
+POSITION_LIMIT_X_HOUSE = 5.0
+
+
+# ── Member solvency floor: the ODD's Basel III capital-adequacy ratio ─────────
+# All clearing members are bound by the ODD's capital-adequacy constraint: cash / cleared
+# EXPOSURE >= 8% (the ODD's "cash/|tradePosition| mirrors Basel III"; 8% = the Basel III
+# total-capital Pillar-1 minimum, CET1 4.5 + AT1 1.5 + Tier 2 2). We proxy risk-weighted assets
+# by cleared notional exposure (own + client) — a deliberate, conservative ABM simplification,
+# since there is no RWA machinery — so this is a capital-adequacy floor, NOT the 3% leverage
+# ratio and NOT a liquidity ratio. On breach a BANK member (BCM) deleverages its own book to
+# restore the ratio; a NON-BANK member (NBCM) stops out and defaults on cash (the ODD's
+# bank/non-bank asymmetry; cf. Nasdaq 2018 / LME 2022). Clients are frozen near distress by their
+# FCM (CLIENT_FREEZE_FLOOR), the house margin already capping their opening leverage at 1/im_percent.
+# DIFFERENTIATED_FLOORS just keeps the per-type constants below wired in (both hold the same 8% on
+# the cash/exposure basis); =False falls back to the single legacy cap_ratio_floor (also 8%). The
+# earlier type-differentiated variant (a separate ~4.25% leverage ratio for banks) was REVERTED and
+# is no longer used — the constants keep their legacy names but both now hold the 8% CAR floor.
+DIFFERENTIATED_FLOORS = True
+LR_FLOOR_BCM = 0.08          # BCM capital-adequacy floor: cash/exposure >= 8% (deleverage trigger). [legacy name; = 8% CAR]
+REG117_FLOOR_NBCM = 0.08     # NBCM capital-adequacy floor: cash/exposure >= 8% (stop-out trigger).
+CLIENT_FREEZE_FLOOR = 0.04    # client near-distress freeze (cash/exposure); house cap dominates (UNCHANGED)
+DELEVERAGE_TARGET_BCM = 0.10  # breaching BCM deleverages own book toward 10% (2pp buffer above the 8% CAR floor). D78 (was 0.06)
+# De-confound the two member tiers: when True, a BCM's CLIENT-clearing solvency is measured by the
+# same FCM rule as the NBCM (CFTC Reg 1.17, cash/IM on the client book, floor REG117_FLOOR_NBCM),
+# with the house book bounded separately by POSITION_LIMIT_X — so the bank's house account no longer
+# enters its client-clearing floor and the two tiers are directly comparable (removes the structural
+# bias that made only the small NBCMs default). Off by default = the 8%-CAR-on-everything BCM floor.
+UNIFIED_CLIENT_FLOOR = True
+# A bank member is a bank: ON TOP of the unified Reg 1.17 client-clearing floor, hold each BCM to the
+# 8% capital-adequacy floor on its WHOLE cleared book (cash/exposure >= LR_FLOOR_BCM = 8%). This is
+# the bank-wide constraint that binds client clearing for dealers and drives the forced-deleverage
+# cycle (Haynes-McPhail-Zhu 2019); it triggers the BCM own-book deleverage (NBCMs, non-banks, are
+# unaffected). Restores the bank deleverage cycle the unification alone dropped, without
+# re-confounding the (Reg 1.17) client-clearing solvency measure. [BASEL_LR_BCM: legacy name; = 8% CAR]
+BASEL_LR_BCM = True
+
+
+@lru_cache(maxsize=2)
+def daily_sigma_series(lam: float = IM_DAILY_LAMBDA):
+    """RiskMetrics EWMA of DAILY close-to-close ES returns (rolled front-month), warmed from
+    the start of data/processed/ES_front_daily_1d.csv. Returns a pandas Series indexed by
+    normalized date giving sigma_daily AS OF that date's open (using returns up to the prior
+    close). Returns at contract-roll dates (symbol change) are dropped so the inter-contract
+    spread does not enter the vol. Drives the daily IM (warmed -> no cold start; close-to-close
+    -> native overnight-gap coverage)."""
+    import pandas as pd
+    import numpy as np
+    d = pd.read_csv("data/processed/ES_front_daily_1d.csv", index_col=0, parse_dates=True).sort_index()
+    c = d["close"].to_numpy(float)
+    sym = d["symbol"].to_numpy()
+    r = np.diff(np.log(c))
+    roll = sym[1:] != sym[:-1]                       # return crosses a contract change
+    seed = r[:20][~roll[:20]]
+    var = float(np.var(seed)) if seed.size else float(np.nanvar(r))
+    sig = np.empty(len(r))
+    for i in range(len(r)):
+        sig[i] = var ** 0.5                          # sigma as-of this day's open
+        if not roll[i]:
+            var = lam * var + (1.0 - lam) * r[i] * r[i]
+    return pd.Series(sig, index=pd.DatetimeIndex(d.index[1:]).normalize())
 
 
 def im_fraction(sigma_t: float) -> float:
-    """Procyclical CCP initial-margin fraction (of notional), D55. VaR/SPAN scan:
+    """CCP initial-margin fraction (of notional). VaR/SPAN scan:
     z * sigma_daily * sqrt(MPOR), with sigma_daily = sigma_t(per-min) * sqrt(390),
-    floored at IM_FLOOR (anti-procyclicality). sigma_t<=0 falls back to the floor."""
+    floored at IM_FLOOR (anti-procyclicality). An optional IM_CAP (physical/APC ceiling)
+    is applied only when set; IM_CAP is None (D77) so the reactive VaR is uncapped (it
+    self-bounds at ~11% at the 1-day MPOR). sigma_t<=0 falls back to the floor. Under
+    IM_MODE == "flat" a fixed IM_FLAT_FRAC applies with no volatility response (sigma ignored)."""
+    if IM_MODE == "flat":
+        return IM_FLAT_FRAC if IM_CAP is None else min(IM_CAP, IM_FLAT_FRAC)
     s = sigma_t if (sigma_t == sigma_t and sigma_t > 0.0) else 0.0
     sigma_daily = s * sqrt(TRADING_MINUTES_PER_DAY)
-    var = IM_CONF_Z * sigma_daily * sqrt(IM_MPOR_DAYS)
-    return max(IM_FLOOR, var)
+    var = max(IM_FLOOR, IM_CONF_Z * sigma_daily * sqrt(IM_MPOR_DAYS))
+    return var if IM_CAP is None else min(IM_CAP, var)
 
 
 def df_stress_move(sigma_t: float) -> float:
     """Extreme-but-plausible stress price move (fraction) for the cover-2 SLOIM
-    default fund (D55) — the larger of a ~99.87% VaR move over the MPOR and the
-    historical 2-day ES extreme floor (Euronext A9 §2.1). Always >= im_fraction,
+    default fund — the larger of a ~99.87% VaR move over the MPOR and the historical
+    2-day ES extreme floor (Euronext A9 §2.1), capped at DF_STRESS_CAP so the IM cap does
+    not inflate the SLOIM coefficient in deep stress. Always >= im_fraction in normal use,
     so SLOIM = (df_stress_move - im_fraction) * notional is non-negative."""
     s = sigma_t if (sigma_t == sigma_t and sigma_t > 0.0) else 0.0
     sigma_daily = s * sqrt(TRADING_MINUTES_PER_DAY)
-    return max(DF_STRESS_FLOOR, DF_STRESS_Z * sigma_daily * sqrt(IM_MPOR_DAYS))
+    return min(DF_STRESS_CAP,
+               max(DF_STRESS_FLOOR, DF_STRESS_Z * sigma_daily * sqrt(IM_MPOR_DAYS)))
 
 
 @dataclass
 class ModelParams:
-    # ── Populations (50 LOB + clearing tier) ──────────────────────────────
+    # ── Populations (100 LOB + clearing tier) ─────────────────────────────
     n_fundamental: int
     n_momentum: int            # MT short-horizon (per-agent λ = params.mt_lambda)
-    n_mm: int                  # market maker count (removed from runtime; default 0)
     n_zi: int                  # ZI background flow (Cont-Stoikov 2008)
 
     # ── Asset / cadence ──────────────────────────────────────────────────
@@ -279,79 +498,45 @@ class ModelParams:
     dt_minutes: float          # 1.0 — 1-min ODD-native cadence
 
     # ── FT (ODD §Agents) ─────────────────────────────────────────────────
-    # Replace-on-new (D5d); trades every step (D36 — `ft_alpha=1.0` pinned).
-    # No dead-band — persistent z_score supplies heterogeneity. σ_t reaches
-    # the LOB via the FT belief width (D34: σ_fund_t = √390·σ_t·v0).
+    # Replace-on-new; trades every step (`ft_alpha=1.0`). No dead-band — the
+    # persistent z_score supplies heterogeneity. σ_t (EWMA realised vol of V_t)
+    # reaches the LOB via the FT reservation R = V_t·(1 + z·ft_sigma_c·σ_t).
     ft_alpha: float = 1.0
     ft_sigma_c: float = FT_SIGMA_C_DEFAULT
-    ft_delta: float = 0.0      # per-resting stochastic cancellation rate (campaign E5;
-                               # CST-2008 / Farmer ZI cancel rate). 0.0 = replace-on-new
-                               # only (D58 baseline); >0 re-tests the D36-rejected design.
+    ft_delta: float = 0.0      # per-resting stochastic cancellation rate (CST-2008 /
+                               # Farmer ZI cancel rate). 0.0 = replace-on-new only.
 
-    # ── ZI (Cont-Stoikov 2008) — three Bernoulli rates per step, all CALIBRATED.
+    # ── ZI (Cont-Stoikov 2008) — three Bernoulli rates per step, all calibrated.
     zi_alpha: float = 0.15     # limit-order arrival
     zi_mu: float = 0.025       # market-order arrival
-    zi_delta: float = 0.025    # per-resting cancellation — the SOLE order-lifetime
-                               # mechanism for ZI now (D58: the ODD §Mech #7 hard TTL
-                               # was removed; orders leave only by fill or cancellation)
+    zi_delta: float = 0.025    # per-resting cancellation — the sole order-lifetime
+                               # mechanism for ZI (orders leave only by fill or cancel)
 
-    # ── MT (single-cohort EWMA chartist, D13f / D44) ──────────────────────
-    # Limit-only (D40). Replace-on-new (D5d). EWMA decay per-agent at init
-    # (params.mt_lambda); placement k ~ shared LogNormal `_draw_depth`.
-    mt_alpha: float = 1.0         # trades every step (D36)
-    mt_delta: float = 0.0         # per-resting stochastic cancellation rate (campaign E5;
-                                  # CST-2008 / Farmer). 0.0 = replace-on-new only (baseline).
-    mt_mu: float = 0.0            # market branch off (D40)
-    mt_lambda: float = 0.05       # EWMA decay — pinned (D44)
-    mt_lambda_long: float = 0.02  # long-cohort decay (D35); n_momentum_long=0 by default
-    n_momentum_long: int = 0      # D43 long cohort dropped
+    # ── MT (single-cohort EWMA chartist) ──────────────────────────────────
+    # Limit-only. Replace-on-new. EWMA decay per-agent at init (params.mt_lambda);
+    # placement k ~ shared geometric `_draw_depth`.
+    mt_alpha: float = 1.0         # trades every step
+    mt_delta: float = 0.0         # per-resting stochastic cancellation rate (CST-2008 /
+                                  # Farmer). 0.0 = replace-on-new only.
+    mt_mu: float = 0.0            # market branch off
+    mt_lambda: float = 0.05       # EWMA decay — pinned
     mt_eps: float = 1e-6          # |M_t| floor — skips EWMA warm-up
-
-    # ── Parked agent params (kept for back-compat; cohorts not active) ───
-    vt_qty_base: float = 2.0      # VolatilityTrader (D38, removed D44)
-    ct_update_prob: float = 0.05  # ContTrader (D39, removed D44)
-    ct_qty: float = 1.0
+    mt_gamma: float = 0.5         # activation strength: P(trade)=tanh(|M_t|/(mt_gamma·sigma_v));
+                                  # the share of MTs that act scales with trend strength
 
     # ── Limit-order placement depth (shared ZI + MT) ─────────────────────
-    # GEOMETRIC k ~ Geometric(p_zi), data-fit p_zi from MBP-10 (Cont-Stoikov-
-    # Talreja 2008; reverts the D20 log-normal back to the D3 geometric). Dense
-    # at the mid (mode k=1) → thick near-mid book → market orders don't walk a
-    # sparse book (the kurtosis-amplification fix). p_zi is data-fixed, NOT in
-    # the agent loop. depth_mean/depth_sigma parked for back-compat (unused).
+    # k ~ Geometric(p_zi), data-fit p_zi from MBP-10. Dense at the mid (mode k=1)
+    # → thick near-mid book → market orders don't walk a sparse book. Calm p_zi is
+    # data-fixed; stressed p_zi is calibrated.
     p_zi: Optional[float] = None  # geometric placement param; populated from P_ZI
-    depth_sigma: float = 0.3      # parked (log-normal shape — superseded)
-    depth_mean: float = 2.5       # parked (log-normal mean — superseded)
 
-    # ── Stage-4+ fire-sale scaffolding (NOT yet wired) ───────────────────
-    # POV execution helpers for the deferred BCM/CCP distressed liquidation
-    # (Almgren-Thum-Hauptmann-Li 2005). `ac_schedule()` in agents.py + the
-    # ETA_TEMP / GAMMA_PERM dicts above carry over directly when wired.
-    mm_pov: float = 0.10
-    mm_inventory_limit: int = 1000
-    mm_inventory_safe: int = 800      # Stage 4+: post-fire-sale target
-
-    # ── MM (fundamental-anchored inventory-skewed quoting — D10g) ────────
-    # `mm_qty` regime-derived from MM_QTY dict (top-of-book passive size,
-    # structural). `mm_skew` is the inventory-skew coefficient in the MM
-    # reservation r = V_t − mm_skew·inventory·tick (Avellaneda-Stoikov
-    # 2008). STRUCTURAL — not calibrated (D10c upheld); it has no traction
-    # on the return moments (the V_t anchor pins the mid regardless), its
-    # only role is bounding MM inventory. Pinned at 0.05: keeps calm MM
-    # inventory ≲ 350.
-    mm_qty: Optional[int] = None    # populated from MM_QTY[regime]
-    mm_p_edge: float = 4.0          # MM spread (ticks) — CALIBRATED (D48);
-                                    # float for surrogate search, rounded at use
-    mm_skew: float = 0.05           # inventory skew (parked — HFABM has no skew)
-
-    # ── Clearing tier (D28 — thesis extension of ODD) ────────────────────
-    # BCM cast from FT (own-account FT-style); NBCM = pure clearing
-    # intermediary (no own position, no LOB). n_bcm_with_clients ≤ n_bcm
-    # carry client books (D29). Defaults 0 keep the calibration POP clean.
+    # ── Clearing tier (thesis extension of ODD) ──────────────────────────
+    # BCM cast from FT (own-account FT-style); NBCM = pure clearing intermediary
+    # (no own position, no LOB). n_bcm_with_clients ≤ n_bcm carry client books.
+    # Defaults 0 keep the calibration population clean.
     n_bcm: int = 0
     n_nbcm: int = 0
     n_bcm_with_clients: int = 0
-    n_vt: int = 0              # VolatilityTrader cohort — removed D44
-    n_ct: int = 0              # ContTrader cohort — removed D44
 
     # ── Regime toggle (auto-populates σ_v / fv_csv / mm_qty / qty_max) ───
     stressed: bool = False
@@ -360,7 +545,7 @@ class ModelParams:
     sigma_fundamental: Optional[float] = None   # computed in __post_init__
 
     # ── Order qty (uniform U[qty_min, qty_max], shared FT/MT/ZI). ODD
-    # §Stochasticity. Volume scale to empirical ES handled by D50 reporting
+    # §Stochasticity. Volume scale to empirical ES handled by the reporting
     # multiplier, not by per-order qty.
     qty_min: int = 1
     qty_max: Optional[int] = None     # populated from QTY_MAX[regime]
@@ -372,8 +557,6 @@ class ModelParams:
             self.sigma_v = SIGMA_V[regime]
         if self.fv_csv is None:
             self.fv_csv = FV_CSV[regime]
-        if self.mm_qty is None:
-            self.mm_qty = MM_QTY[regime]
         if self.qty_max is None:
             self.qty_max = QTY_MAX[regime]
         if self.p_zi is None:
@@ -386,15 +569,14 @@ class ModelParams:
 
 @dataclass
 class SimContext:
-    """Per-step state passed to every trader's submit_orders. V_t is
-    exogenous (loaded from CSV by Simulation). `sigma_t` is the current
-    stochastic V_t volatility (D33/D34) — piped into the FT belief width
-    so reservation dispersion tracks the vol regime; 0 → fallback to the
-    static `params.sigma_v` in agents that consume it. `last_volume` is
-    retained for the Stage-4+ CM tier."""
+    """Per-step state passed to every trader's submit_orders. V_t is exogenous
+    (loaded from CSV by Simulation). `sigma_t` is the current stochastic V_t
+    volatility — piped into the FT belief width so reservation dispersion tracks
+    the vol regime; 0 → fallback to the static `params.sigma_v` in agents that
+    consume it. `last_volume` is retained for the CM tier."""
     v: float
     mid_price: float
     tick: int
     traders_by_id: Dict[int, Any]
-    last_volume: int = 0       # prior-step transacted volume (Stage 4+)
-    sigma_t: float = 0.0       # current SV σ_t (D34); 0 → static fallback
+    last_volume: int = 0       # prior-step transacted volume
+    sigma_t: float = 0.0       # current SV σ_t; 0 → static fallback

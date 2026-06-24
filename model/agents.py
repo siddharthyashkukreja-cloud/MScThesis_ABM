@@ -13,52 +13,50 @@ class BaseTrader:
     cash: float
     inventory: int = 0
     pnl: float = 0.0
-    # Client-clearing link (D28): id of the clearing member this trader clears
-    # through; None for clearing members themselves. Set for every cleared client
-    # (FT/MT/ZI — ZI clearing is a thesis extension to the ODD).
+    # Id of the clearing member this trader clears through; None for clearing
+    # members themselves. Set for every cleared client (FT/MT/ZI).
     clearing_member_id: Optional[int] = None
-    # Client clearing-account state (D52). Cleared clients post variation margin
-    # from their own cash each margin cycle; `_stopped` freezes a client that
-    # breaches the 8% capital floor (stop-trading); `has_defaulted` marks cash
-    # exhaustion, on which its CM absorbs the shortfall. Unused by the CMs
-    # themselves (they track default on the balance sheet).
+    # Client clearing-account state. Cleared clients post variation margin from
+    # their own cash each margin cycle; `_stopped` freezes a client that breaches the
+    # 8% capital floor; `has_defaulted` marks cash exhaustion, on which its CM absorbs
+    # the shortfall. Unused by the CMs themselves (they track default on the balance
+    # sheet).
     _stopped: bool = field(default=False, init=False, repr=False)
     has_defaulted: bool = field(default=False, init=False, repr=False)
     _cm_last_mark: float = field(default=0.0, init=False, repr=False)
+    # Signed fills since the last VM mark. The margin cycle settles P&L against the
+    # average filled price (ODD §Margin Call: P/L = N·(P_market − P_filled)), not
+    # position·Δmid alone — so execution slippage (fire-sale book walks) is realised.
+    _fill_qty: int = field(default=0, init=False, repr=False)
+    _fill_cost: float = field(default=0.0, init=False, repr=False)
+    # Initial margin physically posted to the CCP (G.IM_ESCROW). Cash is moved into
+    # this account each margin cycle and released as the position shrinks or on default.
+    _posted_im: float = field(default=0.0, init=False, repr=False)
 
     def update_pnl(self, price: float):
         self.pnl = self.inventory * price
-
-    # @property
-    # def equity(self) -> float:
-    #     return self.cash + self.pnl - self.margin_posted
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _draw_qty(params: ModelParams, rng: np.random.Generator) -> int:
-    """Uniform `U[qty_min, qty_max]` order size — ODD §Stochasticity. D49
-    (Pareto) was reverted: with our discrete LOB matching, impact is
-    ~linear in qty, so the Gabaix-Plerou (2003) sqrt-impact result didn't
-    fire and power-law sizes degraded Hill instead of helping. Volume
-    scaling to empirical ES levels is handled by the `VOLUME_LOT`
-    relabeling in `globals.py` (D50) — each model qty unit represents
-    a 50-contract institutional lot."""
+    """Uniform `U[qty_min, qty_max]` order size — ODD §Stochasticity. Each model
+    qty unit represents an institutional block of contracts (the VOLUME_LOT
+    relabeling in globals.py scales to empirical ES levels)."""
     return int(rng.integers(params.qty_min, params.qty_max + 1))
 
 
 def _draw_depth(params: ModelParams, rng: np.random.Generator) -> int:
-    """Geometric placement depth in ticks, k >= 1 — SHARED by ZI and MT limit
-    orders (mid-anchored). k ~ Geometric(p_zi) with the data-fit p_zi (MBP-10
-    MLE; globals.P_ZI), reverting the D20 log-normal to the D3 Cont-Stoikov-
-    Talreja (2008) geometric. Dense at the mid (mode k=1) keeps the near-mid
-    book thick so market orders don't walk a sparse book — the fix for the ~5x
-    mid-vs-fundamental kurtosis amplification. p_zi is data-fixed, not calibrated."""
+    """Geometric placement depth in ticks, k >= 1 — shared by ZI and MT
+    mid-anchored limit orders. k ~ Geometric(p_zi), the Cont-Stoikov-Talreja
+    (2008) geometric, with p_zi fit by MBP-10 MLE (globals.P_ZI). Dense at the mid
+    (mode k=1) keeps the near-mid book thick so market orders don't walk a sparse
+    book."""
     return int(rng.geometric(params.p_zi))
 
 
 def _resting_oids(open_oids: list, lob: LOB) -> list:
-    """Drop oids that have been filled / expired / cancelled in the book."""
+    """Drop oids that have been filled or cancelled in the book."""
     return [oid for oid in open_oids if lob.is_resting(oid)]
 
 
@@ -80,16 +78,15 @@ def _bernoulli_cancel(open_oids: list, lob: LOB, delta: float,
 
 def _client_cap_qty(trader, side: int, qty: int, params: ModelParams,
                     mid: float) -> int:
-    """Position cap applied before an OPENING order (D52/D55). Two regimes:
+    """Position cap applied before an opening order. Two regimes:
     • a cleared CLIENT (clearing_member_id set) cannot open beyond what its free cash
       can margin — |pos| <= cash / (house_im · VOLUME_LOT · CONTRACT_USD · mid), where
       house_im is the broker house margin (CCP_CALIBRATION im_percent = 20%, i.e. 5×),
       uniform across clients;
-    • a banking CM's OWN account (balance_sheet.is_banking) is bounded by a VaR house
-      limit — own VaR z·σ_daily·notional <= HOUSE_VAR_BUDGET·cash, i.e.
-      |pos| <= β·cash / (z·σ_daily · VOLUME_LOT · CONTRACT_USD · mid) (regime σ; Basel
-      FRTB / prop-desk practice). This stops the unbounded prop accumulation that
-      otherwise compounds to many ×capital in a trend and inflates the cover-2 DF.
+    • a banking CM's OWN account (balance_sheet.is_banking) is bounded by the static
+      gross-leverage limit |pos| <= POSITION_LIMIT_X·cash / (VOLUME_LOT · CONTRACT_USD ·
+      mid) (POSITION_LIMIT_X > 0; respecting POSITION_LIMIT_CLIENTS_ONLY), bounding prop
+      accumulation in a trend.
     Orders that reduce/flatten the position are never capped; other agents are uncapped."""
     if qty <= 0:
         return qty
@@ -102,10 +99,17 @@ def _client_cap_qty(trader, side: int, qty: int, params: ModelParams,
     if trader.clearing_member_id is not None:        # cleared client — margin-capacity cap
         denom = CCP_CALIBRATION["im_percent"] * base
     elif getattr(trader, "balance_sheet", None) is not None and trader.balance_sheet.is_banking:
-        from .globals import IM_CONF_Z, TRADING_MINUTES_PER_DAY, HOUSE_VAR_BUDGET
-        from math import sqrt
-        sigma_daily = params.sigma_v * sqrt(TRADING_MINUTES_PER_DAY)
-        denom = (IM_CONF_Z * sigma_daily / HOUSE_VAR_BUDGET) * base if HOUSE_VAR_BUDGET > 0 else 0.0
+        from .globals import (POSITION_LIMIT_X, POSITION_LIMIT_CLIENTS_ONLY,
+                              POSITION_LIMIT_X_HOUSE)
+        if POSITION_LIMIT_X > 0.0:                    # static own-book leverage cap (no vol input)
+            if POSITION_LIMIT_CLIENTS_ONLY and not getattr(trader, "client_ids", None):
+                if POSITION_LIMIT_X_HOUSE <= 0.0:
+                    return qty                       # house-only BCM: uncapped (8% floor only)
+                denom = base / POSITION_LIMIT_X_HOUSE  # house-only BCM: looser finite leverage cap
+            else:
+                denom = base / POSITION_LIMIT_X      # client-clearing BCM: |own| <= X·cash/base
+        else:
+            return qty
     else:
         return qty                                   # uncleared / non-CM — uncapped
     if denom <= 0:
@@ -114,72 +118,32 @@ def _client_cap_qty(trader, side: int, qty: int, params: ModelParams,
     return max(0, min(int(qty), room))
 
 
-def ac_schedule(Q: float, T: int, sigma: float, eta: float, gamma: float,
-                lambda_risk: float) -> np.ndarray:
-    """Almgren-Chriss (2000) optimal liquidation schedule. Discrete-time,
-    linear-impact, constant-coefficient closed form (eqs 18-19).
-
-    Returns array [n_1, n_2, ..., n_T] of per-step trade sizes summing to Q,
-    front-loaded according to the AC tradeoff between transaction cost
-    (η, γ) and price-variance risk (σ²) under risk aversion λ.
-
-        κ² = λ·σ²/η                (curvature; γ correction omitted — small effect)
-        n_k = (2 sinh(κ/2) / sinh(κT)) · cosh(κ(T − (k − ½))) · Q
-
-    κ·T → 0 (low aversion / low impact) → near-linear schedule (≈ Q/T per step)
-    κ·T → ∞ (high aversion / high impact) → exponentially front-loaded
-
-    Reused by MM (D10e MM liquidation) and BCM/CCP fire-sale at Stage 4+.
-    """
-    if Q <= 0 or T < 1:
-        return np.array([], dtype=float)
-    if T == 1:
-        return np.array([float(Q)])
-    if eta <= 0 or lambda_risk <= 0:
-        return np.full(T, Q / T)              # degenerate: linear
-    kappa = float(np.sqrt(lambda_risk * sigma * sigma / eta))
-    if kappa * T < 1e-6:                       # near-linear regime
-        return np.full(T, Q / T)
-    ks = np.arange(1, T + 1, dtype=float)
-    n = ((2.0 * np.sinh(kappa / 2.0) / np.sinh(kappa * T))
-         * np.cosh(kappa * (T - (ks - 0.5))) * Q)
-    # Numerical safety: normalize so the schedule sums exactly to Q.
-    total = n.sum()
-    if total > 0:
-        n = n * (Q / total)
-    return n
-
-
 # ── Zero-Intelligence Trader (Cont-Stoikov 2008) — background noise floor ──
 
 @dataclass
 class ZeroIntelligenceTrader(BaseTrader):
     """
-    Cont-Stoikov (2008) noise trader — provides continuous background flow
-    that smooths per-step price impact between MM quotes and aggressive
-    agents. Re-introduced under D14e after dropping (D14b) proved the
-    burst-only model produces too-heavy tails and no clustering.
+    Cont-Stoikov (2008) noise trader — provides the continuous background
+    flow that smooths per-step price impact.
 
-    Per step, three independent Bernoulli draws (ODD-native per-step
-    probabilities at the 1-min cadence; no dt rescaling):
+    Per step, three independent Bernoulli draws (per-step probabilities at the
+    1-min cadence; no dt rescaling):
       - per-resting limit cancelled w.p. zi_delta
-      - submit one limit order   w.p. zi_alpha → random side, depth k from
-                                   the shared log-normal `_draw_depth`
-                                   (D20), qty ~ U[qty_min, qty_max]
-      - submit one market order  w.p. zi_mu    → random side, qty ~ U[…]
+      - submit one limit order w.p. zi_alpha → random side, depth k from
+                                   the shared geometric `_draw_depth`
+                                   (data-fit p_zi), qty ~ U[qty_min, qty_max]
+      - submit one market order w.p. zi_mu → random side, qty ~ U[…]
 
     zi_alpha (limit arrival) and zi_delta (per-resting cancellation) are
-    CALIBRATED (PARAM_KEYS); zi_mu (market arrival) is pinned at the
-    Cont-Stoikov-Talreja 2008 baseline (0.025). With the LOB TTL removed (D58),
-    zi_delta is the SOLE control on ZI order lifetime. Population n_zi is
-    structural; the placement depth `depth_mean` is calibrated but SHARED with
-    MT (D20 — a market-microstructure parameter, not ZI-specific).
+    calibrated; zi_mu (market arrival) is pinned at the ODD §Calibration baseline
+    0.025. zi_delta is the sole control on ZI order lifetime; the geometric
+    placement depth is shared with MT.
     """
     _open_oids: List[int] = field(default_factory=list, init=False, repr=False)
 
     def submit_orders(self, lob: LOB, params: ModelParams,
                       ctx: SimContext, rng: np.random.Generator):
-        if self._stopped or self.has_defaulted:      # D52 — frozen / defaulted client
+        if self._stopped or self.has_defaulted:      # frozen / defaulted client
             return
         self._open_oids = _bernoulli_cancel(self._open_oids, lob,
                                             params.zi_delta, rng)
@@ -204,38 +168,34 @@ class ZeroIntelligenceTrader(BaseTrader):
 @dataclass
 class FundamentalTrader(BaseTrader):
     """
-    Per agent z_score ~ N(0,1) fixed at init (persistent heterogeneous beliefs
-    — Chiarella-Iori-Perelló; see D6b). Per step:
-      σ_fundamental_t = ft_sigma_c · σ_t · v0    (D34 — stochastic; σ_t is
-                        the current Vasicek-OU SV from D33, read off
-                        SimContext; falls back to params.sigma_v when SV
-                        is off. ft_sigma_c pinned at √390 — one daily
-                        scale; see globals.FT_SIGMA_C_DEFAULT)
-      reservation     = V_t + z_score · σ_fundamental_t
-      side            = sign(reservation − mid)
-      activation      = Bernoulli(ft_alpha)
-      on activation: REPLACE-ON-NEW (D5d) — cancel the FT's standing limit
-                     (if still resting), place one fresh limit at the
-                     reservation, qty ~ U[qty_min, qty_max].
+    Per agent z_score ~ N(0,1) fixed at init — persistent heterogeneous beliefs
+    (Chiarella-Iori-Perelló). Per step:
+      reservation = V_t · (1 + z_score · ft_sigma_c · σ_t)
+                        (σ_t = EWMA realised vol of V_t, read off SimContext;
+                        falls back to params.sigma_v when absent. ft_sigma_c is
+                        calibrated per regime — the dominant return-tail lever.
+                        The offset z·ft_sigma_c·σ_t is fractional, so the belief
+                        cloud is scale-invariant around V_t — no v0 level constant.)
+      side = sign(reservation − mid)
+      activation = Bernoulli(ft_alpha)
+      on activation: replace-on-new — cancel the FT's standing limit (if still
+                     resting), place one fresh limit at the reservation,
+                     qty ~ U[qty_min, qty_max].
 
-    There is NO dead-band (D23 — removed): the persistent z_score already
-    supplies the FT heterogeneity, so the FT acts whenever its reservation
-    differs from the mid. (A flat `ft_threshold_bps` band and a wide
-    per-agent Simudyne band U[0.01·V, 0.10·V] were both trialled and
-    dropped — D9b/D22/D23.)
+    There is no dead-band: the persistent z_score supplies the FT heterogeneity,
+    so the FT acts whenever its reservation differs from the mid.
 
     Order management is replace-on-new: the FT holds at most one resting limit,
     refreshed on the next activation. It trades every step (ft_alpha=1), so the
-    order is refreshed each step in practice. No per-resting cancellation rate and
-    no TTL (D58 — the LOB hard ceiling was removed); an un-refreshed order persists
-    until filled.
+    order is refreshed each step in practice. There is no per-resting cancellation
+    rate and no TTL — an un-refreshed order persists until filled.
     """
     z_score: float = 0.0
     _open_oid: Optional[int] = field(default=None, init=False, repr=False)
 
     def submit_orders(self, lob: LOB, params: ModelParams,
                       ctx: SimContext, rng: np.random.Generator):
-        if self._stopped or self.has_defaulted:      # D52 — frozen / defaulted client
+        if self._stopped or self.has_defaulted:      # frozen / defaulted client
             return
         # Drop the standing-order reference if it was filled / TTL-expired.
         if self._open_oid is not None and not lob.is_resting(self._open_oid):
@@ -245,25 +205,28 @@ class FundamentalTrader(BaseTrader):
         # Farmer ZI cancel rate). Off by default (ft_delta=0.0, replace-on-new).
         if self._open_oid is not None and params.ft_delta > 0.0 and rng.random() < params.ft_delta:
             lob.cancel(self._open_oid); self._open_oid = None
-        # Bernoulli activation gate (campaign E5 — re-testing the D36-rejected gate):
-        # skip this step w.p. 1-ft_alpha. Off by default (ft_alpha=1.0).
+        # Optional Bernoulli activation gate: skip this step w.p. 1-ft_alpha.
+        # Off by default (ft_alpha=1.0, so FTs act every step).
         if params.ft_alpha < 1.0 and rng.random() >= params.ft_alpha:
             return
 
         ref = ctx.mid_price if not np.isnan(ctx.mid_price) else ctx.v
-        # D34 — FT belief width tracks the stochastic V_t volatility σ_t
-        # (Deloitte convention: `theta_v = sigma_fundamental`). When σ_t
-        # is high, the FT reservation cloud widens (less reactive); when
-        # low, it tightens (more reactive). This is the channel through
-        # which the SV-V_t clustering (D33) reaches the mid.
+        # Reservation as a FRACTIONAL belief offset around the current
+        # fundamental: R = V_t * (1 + z * ft_sigma_c * sigma_t). z~N(0,1) is
+        # fixed per FT, so the belief cloud's fractional std is ft_sigma_c *
+        # sigma_t — scale-invariant, with no v0 level constant in the price-
+        # formation law. sigma_t is the EWMA realised vol of V_t (read off
+        # SimContext; falls back to params.sigma_v when absent). ft_sigma_c is
+        # calibrated — the dominant return-tail lever; note it does NOT transmit
+        # volatility clustering (the adaptive width damps high-vol bursts), which
+        # enters via the V_t path and the momentum traders.
         sigma_t = ctx.sigma_t if ctx.sigma_t > 0.0 else params.sigma_v
-        sigma_fund_t = params.ft_sigma_c * sigma_t * params.v0
-        reservation = ctx.v + self.z_score * sigma_fund_t
+        reservation = ctx.v * (1.0 + self.z_score * params.ft_sigma_c * sigma_t)
         reservation = max(reservation, params.tick_size)
 
-        # Side from the sign of the FT's own mispricing (D9c: the per-agent
-        # reservation, not the collective V_t, keeps flow two-sided). No
-        # dead-band — z_score supplies the heterogeneity (D23).
+        # Side from the sign of the FT's own mispricing: using the per-agent
+        # reservation rather than the collective V_t keeps order flow two-sided.
+        # No dead-band — z_score supplies the heterogeneity.
         diff = reservation - ref
         if diff > 0:
             side = 1
@@ -272,7 +235,7 @@ class FundamentalTrader(BaseTrader):
         else:
             return
 
-        # D36 — FT trades every step (ODD §Step Sequence step 3: "CMs
+        # FT trades every step (ODD §Step Sequence step 3: "CMs
         # submit BuyOrder / SellOrder messages based on capital ratio check
         # and limit price vs market price comparison"). Replace-on-new
         # without a Bernoulli gate — `ft_alpha` is pinned at 1.0 and out of
@@ -285,54 +248,44 @@ class FundamentalTrader(BaseTrader):
         self._open_oid = lob.add_limit(self.agent_id, side, reservation, qty)
 
 
-# ── Momentum Trader (chartist — single-type, D13f; market branch, D27) ──────
+# ── Momentum Trader (single-type EWMA chartist) ─────────────────────────────
 
 @dataclass
 class MomentumTrader(BaseTrader):
     """
-    Single-type EWMA chartist (D13f — folded back from the D13e two-cohort
-    long/short split once long-horizon volatility clustering was conceded
-    as structurally unreachable, D18f). EWMA momentum on mid log-returns:
+    Single-type EWMA chartist. EWMA momentum on mid log-returns:
 
         r_t = log(mid_{t-1}) − log(mid_{t-2})
         M_t = (1 − mt_lambda) · M_{t-1} + mt_lambda · r_t
 
-    `mt_lambda` is shared by every MT and PINNED at 0.05 (D44 — out of the
-    calibration loop). Note on the timescale: Majewski et al. (2018) FIX the
-    trend horizon externally (α = 1/7, τ = 6 months, from a CTA-index
-    correlation) rather than estimating it, so pinning `mt_lambda` is
-    consistent with their practice (the earlier "estimated from data" wording
-    was a misreading and has been corrected).
+    `mt_lambda` is shared by every MT and pinned at 0.05: Majewski et al. (2018)
+    fix the trend horizon externally (α = 1/7, τ = 6 months, from a CTA-index
+    correlation) rather than estimating it, so pinning it follows their practice.
 
-    `M_t` must clear a tiny floor `mt_eps` (skips the EWMA warm-up); the
-    sign of M_t fixes the order SIDE. The MT is LIMIT-ONLY (D40 — the D27
-    market branch was reverted; trend-direction market flow corrupted the
-    return ACF). `mt_mu` stays on ModelParams at 0.0 for back-compat but is
-    unused. The MT trades every step (D36 — `mt_alpha` pinned at 1.0):
+    `M_t` must clear a tiny floor `mt_eps` (skips the EWMA warm-up); the sign of
+    M_t fixes the order side. The MT is limit-only (`mt_mu` is unused). It trades
+    every step:
 
       limit (every step) — passive quote, mid-anchored:
-        k     ~ LogNormal placement depth (_draw_depth — shared with ZI, D20)
-        price = mid - side · k · tick   (buy below mid, sell above)
+        k ~ Geometric(p_zi) placement depth (_draw_depth — shared with ZI)
+        price = mid - side · k · tick (buy below mid, sell above)
 
-    The placement depth is the shared log-normal `_draw_depth` (D20 — the
-    prior signal-driven depth k_base*sigma_v/|M_t| was removed; `depth_mean`
-    and `depth_sigma` are calibrated and shared with ZI). The limit branch is
-    REPLACE-ON-NEW (D5d) — at most one standing limit, cancelled and replaced
-    each step.
+    The placement depth is the shared data-fit geometric `_draw_depth` (see
+    globals.P_ZI). The limit branch is replace-on-new — at most one standing
+    limit, cancelled and replaced each step.
 
-    Single cohort (D44 — the D35 two-cohort long/short split was dropped;
-    `n_momentum_long = 0`). Each MT still carries its own `lambda_decay`
+    Single cohort. Each MT still carries its own `lambda_decay`
     field (per-agent init kwarg) so a long cohort can be re-enabled by
     setting `n_momentum_long > 0`, but at runtime all MTs use `mt_lambda`.
     """
-    lambda_decay: float = 0.1   # per-agent EWMA decay; set at construction (D35)
+    lambda_decay: float = 0.1   # per-agent EWMA decay; set at construction
     _M: float = field(default=0.0, init=False, repr=False)
     _prev_mid: float = field(default=float("nan"), init=False, repr=False)
     _open_oid: Optional[int] = field(default=None, init=False, repr=False)
 
     def submit_orders(self, lob: LOB, params: ModelParams,
                       ctx: SimContext, rng: np.random.Generator):
-        if self._stopped or self.has_defaulted:      # D52 — frozen / defaulted client
+        if self._stopped or self.has_defaulted:      # frozen / defaulted client
             return
         # Drop the standing-order reference if it was filled / TTL-expired.
         if self._open_oid is not None and not lob.is_resting(self._open_oid):
@@ -358,16 +311,23 @@ class MomentumTrader(BaseTrader):
         am = abs(self._M)
         if am < params.mt_eps:
             return
+        # Activation scales with trend strength: P(trade) = tanh(|M_t| / (mt_gamma·sigma_v)),
+        # so a larger SHARE of momentum traders act when the signal is strong. Replaces the old
+        # hard sign-only gate, under which a barely-above-floor M_t traded as forcefully as a
+        # strong trend (the demand now responds to signal strength via the activated fraction).
+        p_act = np.tanh(am / (params.mt_gamma * max(params.sigma_v, 1e-12)))
+        if rng.random() >= p_act:
+            return
         side = 1 if self._M > 0 else -1
 
-        # Market branch removed (D40 — reverts D27). MT is limit-only;
+        # Market branch removed. MT is limit-only;
         # `mt_mu` no longer used (kept on ModelParams default 0.0 for
         # backward compat; out of PARAM_BOUNDS).
 
         # Limit branch — passive mid-anchored quote, posted every step
-        # (D36 — `mt_alpha` pinned at 1.0 and out of the calibration loop).
+        #.
         anchor = cur_mid if not np.isnan(cur_mid) else ctx.v
-        k = _draw_depth(params, rng)          # shared log-normal depth (D20)
+        k = _draw_depth(params, rng)          # shared log-normal depth
         price = anchor - side * k * params.tick_size
         price = max(price, params.tick_size)
         qty = _client_cap_qty(self, side, _draw_qty(params, rng), params, anchor)
@@ -379,174 +339,7 @@ class MomentumTrader(BaseTrader):
         self._open_oid = lob.add_limit(self.agent_id, side, price, qty)
 
 
-# ── Cont threshold trader (Cont 2005 §4.1 — D39; DORMANT: n_ct=0, removed D44) ─
-
-@dataclass
-class ContTrader(BaseTrader):
-    """
-    Cont 2005 §4 threshold-with-inertia trader (D39). Each agent carries
-    its own threshold `θ_i(t)` representing its subjective view on
-    volatility. Per step:
-
-        ε_t = log V_t − log V_{t-1}          (common news signal)
-        if |ε_t| > θ_i(t):  market order, side = sign(ε_t), qty = ct_qty
-        else:               inactive
-        with probability `ct_update_prob`:  θ_i(t+1) = |r_mid(t)|
-
-    The asynchronous updating creates **heavy-tailed durations** of
-    inactivity vs activity regimes — Cont's mechanism for long-memory
-    |r| ACF (§3.4: Markov SV alone gives only short-range clustering;
-    long-range needs renewal switching with heavy-tailed regime durations).
-    At low `ct_update_prob` (~0.05) some agents hold a stale threshold for
-    many steps; if it's high they stay inactive across multiple regimes
-    of V_t, if it's low they fire repeatedly — producing the persistence
-    that direct vol-scaled noise (D38) cannot.
-
-    Directional (not random): when V_t innovates up, all ContTraders that
-    fire trade up. Couples FT (level-based, V_t + z·σ_fund) with a
-    rate-of-change signal — V_t innovation drives ContTrader, V_t level
-    drives FT.
-
-    Initial `θ_i(0)` set per-agent at construction (U[0, 2·σ_v]).
-    """
-    threshold: float = 0.0
-    _prev_mid: float = field(default=float("nan"), init=False, repr=False)
-    _prev_v:   float = field(default=float("nan"), init=False, repr=False)
-
-    def submit_orders(self, lob: LOB, params: ModelParams,
-                      ctx: SimContext, rng: np.random.Generator):
-        # Common news signal — V_t log-return innovation
-        if (not np.isnan(self._prev_v) and ctx.v > 0 and self._prev_v > 0):
-            eps_t = float(np.log(ctx.v) - np.log(self._prev_v))
-        else:
-            eps_t = 0.0
-        self._prev_v = ctx.v
-
-        # Recent |r_mid| for threshold update
-        cur_mid = ctx.mid_price
-        r_mid_abs = 0.0
-        if (not np.isnan(cur_mid) and not np.isnan(self._prev_mid)
-                and cur_mid > 0 and self._prev_mid > 0):
-            r_mid_abs = float(abs(np.log(cur_mid) - np.log(self._prev_mid)))
-        if not np.isnan(cur_mid):
-            self._prev_mid = cur_mid
-
-        # Asynchronous threshold update — Cont §4.1
-        if rng.random() < params.ct_update_prob:
-            self.threshold = r_mid_abs
-
-        # Trade if external signal exceeds threshold
-        if abs(eps_t) > self.threshold:
-            side = +1 if eps_t > 0 else -1
-            qty = max(1, int(round(params.ct_qty)))
-            lob.add_market(self.agent_id, side, qty)
-
-
-# ── Volatility Trader (Gao et al. 2023 §3.1.3 — D38; DORMANT: n_vt=0, removed D44) ─
-
-@dataclass
-class VolatilityTrader(BaseTrader):
-    """
-    Gao 2023 Chiarella-Heston volatility trader (D38). Submits a market
-    order every step in random direction (±1, equiprobable) with quantity
-    scaled by the current `σ_t / params.sigma_v` — the LOB-form of Gao's
-    `D^vol(t) = ω·√Σ_t · dW_t^S` continuous-time demand. Vol-scaled noise
-    directly on the mid: when V_t's stochastic vol is high, VT market-order
-    flow is correspondingly larger; when V_t vol is low, smaller. This is
-    the channel through which the D33 Vasicek-OU σ_t couples to mid-return
-    magnitude, propagating clustering to the mid (Cont 2005 §3.3 / Gao §3).
-
-    Re-introduces the D24/D25 VolatilityTrader trial under the new context.
-    Previous attempts failed because the D10g MM at `mm_qty = 50` clamped
-    spread and absorbed VT impact; under D37 (no MM, dense FT/MT-every-step
-    book) the spread widens with σ_t and VT market orders carry through.
-
-    Parameters (all structural at this stage; consider calibrating
-    `vt_qty_base` later):
-        vt_qty_base   — base quantity at `σ_t = sigma_v` (1-min total vol).
-    """
-    def submit_orders(self, lob: LOB, params: ModelParams,
-                      ctx: SimContext, rng: np.random.Generator):
-        sigma_now = ctx.sigma_t if ctx.sigma_t > 0 else params.sigma_v
-        scale = sigma_now / params.sigma_v
-        qty = max(1, int(round(params.vt_qty_base * scale)))
-        side = +1 if rng.random() < 0.5 else -1
-        lob.add_market(self.agent_id, side, qty)
-
-
-# ── Market Maker (HFABM Gao et al. 2022 §3.6 — mid-anchored, D31; n_mm=4 D48) ─
-
-@dataclass
-class MarketMaker(BaseTrader):
-    """
-    HFABM-style **mid-anchored** market maker (D31 — supersedes both the
-    D10g V_t-anchored design and the D21 MM drop). Per step:
-
-      1. Cancel all MM resting quotes from the prior step.
-      2. Quote a bid + ask around the prev-step mid (v0 fallback at t=0),
-         at a random per-side tick offset:
-           anchor      = mid_price (v0 at t=0)
-           d_bid, d_ask ~ U{0, ..., mm_p_edge}   (independent)
-           bid         = anchor − d_bid · tick_size
-           ask         = anchor + d_ask · tick_size
-         qty = mm_qty on each side. No inventory skew (HFABM Gao et al.
-         2022 §3.6 convention). The MM ALWAYS quotes — no going dark.
-         (Gao et al.'s MM also has an inventory-limit "hot-potato" regime
-         switch — central to their flash-crash study — which is NOT modelled
-         here; the always-quote variant is used instead.)
-
-    The MM is the kurtosis-fix mechanism (D31). The no-MM market layer
-    (D21–D30) produced a static-then-jump return pattern → kurt ~100–500;
-    a low-qty mid-anchored MM provides continuous near-mid liquidity, so
-    market orders no longer walk a sparse book in one go and small
-    inter-jump price movement is restored — `kurt` drops 2–10× toward the
-    empirical level. Sweep evidence (prototype): 2 HFABM MMs @ `mm_qty=1`
-    cut calm kurt 126→44 and lifted Hill 2.49→3.10 (essentially the target
-    3.00), at the cost of a small bid-ask bounce in `acf_r_1` (~−0.04).
-
-    D10g's V_t anchor pinned mid to V_t (degenerate); D21 dropped the MM
-    entirely. D31 splits the difference: **mid-anchored** (no V_t pin),
-    low `mm_qty` so the MM provides liquidity without dominating price
-    formation. As of D48 `mm_qty = 2` is PINNED structural (globals.MM_QTY)
-    and `n_mm = 4`; the calibrated MM dial is `mm_p_edge` (the spread-width
-    ceiling) — this supersedes the D31 "`mm_qty` calibrated" convention.
-    Inventory skew is dropped (Skew + low qty produced positive `acf_r_1`
-    in the prototype sweep); without skew the MM may drift in inventory
-    over long runs — a soft skew can be re-added if needed. The POV /
-    Almgren-Chriss helpers (`ac_schedule`, `mm_pov`, `mm_inventory_*`)
-    stay reserved for the Stage-4+ BCM fire-sale.
-    """
-    _open_oids: List[int] = field(default_factory=list, init=False, repr=False)
-
-    def submit_orders(self, lob: LOB, params: ModelParams,
-                      ctx: SimContext, rng: np.random.Generator):
-        for oid in self._open_oids:
-            lob.cancel(oid)
-        self._open_oids = []
-
-        # Mid-anchored: no V_t pin, no inventory skew (D31). `mm_p_edge` is
-        # CALIBRATED (D48) as a float; quantise to integer ticks for the
-        # uniform draw bound (rng.integers requires an integer endpoint).
-        anchor = ctx.mid_price if not np.isnan(ctx.mid_price) else params.v0
-        p_edge = max(1, int(round(params.mm_p_edge)))
-        d_bid = int(rng.integers(0, p_edge + 1))
-        d_ask = int(rng.integers(0, p_edge + 1))
-        bid_px = max(anchor - d_bid * params.tick_size, params.tick_size)
-        ask_px = anchor + d_ask * params.tick_size
-        qty = max(1, int(round(params.mm_qty)))   # pinned (D48); quantise to integer
-        oid_b = lob.add_limit(self.agent_id, +1, bid_px, qty)
-        oid_a = lob.add_limit(self.agent_id, -1, ask_px, qty)
-        self._open_oids = [oid_b, oid_a]
-
-
-# A VolatilityTrader was trialled here (D24) — an endogenous-volatility
-# noise trader scaling its order flow with the model's realised vol σ̂_t.
-# It did not produce clustering: random market orders wash out on
-# aggregation, vol-scaled limit orders add depth and damp. Removed (D25);
-# volatility clustering now comes from the Merton jumps in V_t (data/v_gbm.py).
-
-
-# ── Clearing tier (D28 — thesis client-clearing extension of the ODD) ───────
+# ── Clearing tier ───────
 
 @dataclass
 class BankingClearingMember(FundamentalTrader):
@@ -556,7 +349,7 @@ class BankingClearingMember(FundamentalTrader):
     from the fundamental signal — identical to the thesis FT — so the BCM
     trades its OWN account through the inherited FT `submit_orders`. At the
     pre-margin scaffold stage its order flow is exactly an FT's, so the 8-d
-    market-layer calibration is unchanged (D28).
+    market-layer calibration is unchanged.
 
     Beyond own-account trading the BCM also CLEARS a client book (thesis
     client-clearing extension). It carries a `BalanceSheet`, a CCP
@@ -581,11 +374,13 @@ class BankingClearingMember(FundamentalTrader):
         Slices are sent as LOB market orders by submit_orders — the book walk is
         the temporary impact (permanent impact GAMMA_PERM ≈ 0 empirically)."""
         from model.clearing import ac_slices
-        qty = min(int(abs(qty)), abs(self.inventory))
+        queued = sum(self._liq_slices)                       # don't double-schedule
+        qty = min(int(abs(qty)), abs(self.inventory) - queued)
         if qty <= 0:
             return
         self._liq_side = -1 if self.inventory > 0 else 1
-        self._liq_slices = ac_slices(qty, horizon, urgency)
+        self._liq_slices.extend(ac_slices(qty, horizon, urgency))  # EXTEND: clustered
+        #                                       client defaults in one cycle must all queue
 
     def submit_orders(self, lob, params, ctx, rng):
         """In a fire-sale, send the next AC liquidation slice as a market order
@@ -595,20 +390,25 @@ class BankingClearingMember(FundamentalTrader):
             if qty > 0:
                 lob.add_market(self.agent_id, self._liq_side, qty)
             return
+        if self._stopped:           # below the leverage floor / frozen: add no new own risk
+            return
         super().submit_orders(lob, params, ctx, rng)
 
     def capital_ratio(self, mid: float, sigma_t: float = 0.0) -> float:
-        """CFTC Reg 1.17 capital adequacy (D55): adjusted net capital / initial
-        margin. IM = im_fraction(sigma_t) · USD notional exposure (own +
-        client). The 8% floor (cap_ratio_floor) is the FCM net-capital minimum
-        on RISK MARGIN, not gross notional — so the stop-out / deleverage binds
-        near distress rather than routinely (FCMs clear many multiples of their
-        capital in notional). sigma_t=0 → im_fraction falls back to the APC floor."""
-        from model.globals import CONTRACT_USD, im_fraction
+        """Basel III CAPITAL ADEQUACY RATIO (D78): capital (cash, net of escrowed IM) over risk
+        exposure (own + client cleared notional). `cash/exposure >= 8%` mirrors the Basel III
+        total-capital minimum (8% of RWA; CET1 4.5 / Tier 1 6 / Total 8) and is the ODD's
+        capital-adequacy constraint (cash/|tradePosition|, "mirrors Basel III") — NOT the 3%
+        leverage ratio and NOT a liquidity ratio. On breach the BCM deleverages its own book
+        (Almgren-Chriss) to restore the ratio (the forced-deleveraging / leverage-cycle channel);
+        an own-account-only BCM is held well above 8% by POSITION_LIMIT_X, so only client-carrying
+        members bind. (sigma_t kept for signature compatibility; the CAR is exposure-based.)"""
+        from model.globals import CONTRACT_USD
         own_notional = abs(self.inventory) * self.balance_sheet.volume_lot * CONTRACT_USD * mid
         exposure = own_notional + self.balance_sheet.client_notional(mid)
-        im = im_fraction(sigma_t) * exposure
-        return float("inf") if im <= 0.0 else self.cash / im
+        if exposure <= 0.0:
+            return float("inf")
+        return self.cash / exposure
 
 
 @dataclass
@@ -626,7 +426,7 @@ class NonBankingClearingMember(BaseTrader):
     ccp_id: Optional[int] = None
     client_ids: List[int] = field(default_factory=list)
     # _stopped (ODD §Mech #2 stop-out, capital_ratio <= floor) is inherited from BaseTrader.
-    # Fire-sale queue for a DEFAULTED client's position the NBCM has assumed (D55).
+    # Fire-sale queue for a DEFAULTED client's position the NBCM has assumed.
     # The NBCM has no LOB access, so Simulation routes these slices through the CCP,
     # attributed to the NBCM, so the fills mark down its assumed `inventory` — the loss
     # is realised by marking the assumed book to market (deficit-consistent), not a flat
@@ -640,27 +440,29 @@ class NonBankingClearingMember(BaseTrader):
                                               is_banking=False)
 
     def start_firesale(self, qty: int, urgency: float, horizon: int) -> None:
-        """Almgren-Chriss liquidation of an ASSUMED defaulted-client position (D55).
+        """Almgren-Chriss liquidation of an ASSUMED defaulted-client position.
         The NBCM holds no own trading book, so `inventory` is only ever a position it
         has assumed on a client default; this schedules its disposal over `horizon`
         steps (sell if long, buy if short). Slices are sent to the LOB by Simulation
         (via the CCP, attributed to this NBCM) so the book-walk impact is endogenous."""
         from model.clearing import ac_slices
-        qty = min(int(abs(qty)), abs(self.inventory))
+        queued = sum(self._liq_slices)                       # don't double-schedule
+        qty = min(int(abs(qty)), abs(self.inventory) - queued)
         if qty <= 0:
             return
         self._liq_side = -1 if self.inventory > 0 else 1
-        self._liq_slices = ac_slices(qty, horizon, urgency)
+        self._liq_slices.extend(ac_slices(qty, horizon, urgency))  # EXTEND: clustered
+        #                                       client defaults in one cycle must all queue
 
     def capital_ratio(self, mid: float, sigma_t: float = 0.0) -> float:
-        """CFTC Reg 1.17 (D55) for a non-banking CM: adjusted net capital /
-        initial margin. IM = im_fraction(sigma_t) · (client-book notional + any
-        ASSUMED defaulted-client position still being liquidated). The 8% floor is
-        on risk margin, not gross notional — an FCM clears 8-30× its capital in
-        client notional, so cash/notional would breach routinely whereas cash/IM
-        binds only in distress (the fix that lets the operational stop-out fire)."""
-        from model.globals import im_fraction, CONTRACT_USD
+        """Basel III CAPITAL ADEQUACY RATIO for a non-banking CM (D78): capital (cash) over
+        client-book risk exposure (+ any assumed defaulted-client position still being
+        liquidated). `cash/exposure >= 8%` — the same capital-adequacy constraint as the BCM
+        (the ODD's cash/|tradePosition|), but on breach the NBCM STOPS OUT (it holds no own book
+        to deleverage) — the ODD BCM-deleverage / NBCM-stop-out asymmetry."""
+        from model.globals import CONTRACT_USD
         assumed = abs(self.inventory) * self.balance_sheet.volume_lot * CONTRACT_USD * mid
         exposure = self.balance_sheet.client_notional(mid) + assumed
-        im = im_fraction(sigma_t) * exposure
-        return float("inf") if im <= 0.0 else self.cash / im
+        if exposure <= 0.0:
+            return float("inf")
+        return self.cash / exposure

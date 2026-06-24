@@ -1,0 +1,10 @@
+[14:41:28] ======================================================================
+[14:41:28] OVERNIGHT 2-FACTOR RUN - regime=stressed max_hours=0.2 budget={'n_days': 6, 'n_runs': 1, 'sobol_init': 4, 'batch': 0, 'n_pool': 4096, 'calib_hours': 0.13999999999999999, 'n_paths': 3, 'ens_days': 6, 'agent_seed': 0, 'path_seed': 7}
+[14:41:32] STAGE A: 2-factor reverse calibration (6-D), regime=stressed, budget 0.1h
+[14:41:35]   measured-1f baseline D=34.821
+[14:41:38]   [sobol 1] f=0.372 w=0.609 a_f=5.65e-03 ratio=0.150 lamx=1.09 dx=1.65 -> D=20.256 (3s, 0m)
+[14:41:41]   [sobol 2] f=0.507 w=0.887 a_f=8.04e-04 ratio=0.310 lamx=3.46 dx=1.09 -> D=31.876 (3s, 0m)
+[14:41:44]   [sobol 3] f=0.261 w=0.221 a_f=3.21e-03 ratio=0.080 lamx=1.94 dx=2.65 -> D=28.586 (3s, 0m)
+[14:41:47]   [sobol 4] f=0.678 w=0.446 a_f=3.44e-03 ratio=0.254 lamx=2.79 dx=2.25 -> D=40.677 (3s, 0m)
+[14:41:47] STAGE A done: 2f optimum D=20.256 vs measured-1f D=34.821 (+41.8%); 4 evals in 0m; wrote calibration.json
+[14:41:51] STAGE B: validating 3-path ensembles (6d) - 2f (calibrated) vs 1f (measured)

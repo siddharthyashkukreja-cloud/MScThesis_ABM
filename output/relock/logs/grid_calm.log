@@ -1,0 +1,18 @@
+
+======================================================================
+ GRID SEARCH: calm
+======================================================================
+ grid: 4-d x 5/dim = 625 nodes (75d x 3 seeds each)
+ node 62/625 best D so far 23.8716
+ node 124/625 best D so far 19.7416
+ node 186/625 best D so far 19.7416
+ node 248/625 best D so far 19.7416
+ node 310/625 best D so far 19.7416
+ node 372/625 best D so far 19.7416
+ node 434/625 best D so far 19.7416
+ node 496/625 best D so far 19.7416
+ node 558/625 best D so far 19.7416
+ node 620/625 best D so far 19.7416
+ [calm] best D 19.7416 at {'ft_sigma_c': 0.5, 'zi_alpha': 0.5, 'zi_delta': 0.18, 'zi_mu': 0.08124999999999999} [32032s -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/calibration_grid_calm.csv]
+
+Saved output/calibrated_params_grid.json (regimes now: calm merged with any prior)

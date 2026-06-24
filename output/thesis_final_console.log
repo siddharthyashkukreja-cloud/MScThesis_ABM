@@ -1,0 +1,16 @@
+[2026-06-17_23:20:18] === THESIS-FINAL pipeline start (N_SEEDS=40, MCR_M=80) ===
+[2026-06-17_23:20:22] pre-flight OK
+[2026-06-17_23:20:23] RELOCK -> ./run_relock.sh (grid + fresh-seed + surrogate, both regimes)
+[2026-06-18_11:15:22] RELOCK done in 714 min
+[2026-06-18_11:15:22] VERIFY relock grid optima vs globals.CALIBRATED
+  calm: MATCH
+  stressed: DIFFERS {'p_zi': (0.08, 0.18), 'zi_mu': (0.05833, 0.05833), 'ft_sigma_c': (0.85, 0.25), 'zi_alpha': (0.2, 0.32)}
+  -> WARNING: relock optimum DIFFERS from globals.CALIBRATED. Review output/relock/, re-copy the chosen optimum into globals.CALIBRATED, then re-run steps 4-5 (calibrate.py mcr + run_thesis_experiments.py).
+[2026-06-18_11:15:22] MCR (Moment Coverage Ratio) — calm + stressed, M_long=80
+[2026-06-18_11:22:30] MCR calm done
+[2026-06-18_11:31:39] MCR stressed done
+[2026-06-18_11:31:39] EXPERIMENTS -> run_thesis_experiments.py (N_SEEDS=40)
+[2026-06-18_12:08:59] EXPERIMENTS done in 37 min -> output/thesis_final/experiments/
+[2026-06-18_12:08:59] === THESIS-FINAL pipeline done in 768 min ===
+[2026-06-18_12:08:59] Artifacts in output/thesis_final/: relock/ (calibration), mcr_{calm,stressed}.json (validation),
+[2026-06-18_12:08:59] experiments/ (H1/H2/NET summaries), logs_*.log. Review the VERIFY note above before writing.

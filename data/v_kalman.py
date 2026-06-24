@@ -1,11 +1,11 @@
 """
 data/v_kalman.py — Kalman-filter calibration of V_t (efficient price + noise).
 
-A state-space alternative to data/v_gbm.py. The plain GBM fit uses σ_v = std
-of observed 1-min log-returns, which conflates EFFICIENT-PRICE σ_v with
+A state-space alternative to data/v_gbm.py. A plain GBM fit takes σ_v = std of
+observed 1-min log-returns, which conflates EFFICIENT-PRICE σ_v with
 MICROSTRUCTURE NOISE σ_ε (bid-ask bounce, discreteness, transient impact).
-Since the ABM is meant to MANUFACTURE that microstructure noise endogenously,
-baking it into the exogenous V_t double-counts.
+The ABM manufactures that microstructure noise endogenously, so baking it into
+the exogenous V_t would double-count.
 
 State-space form (one independent sequence per RTH day, so the overnight
 gap is never bridged):
@@ -22,20 +22,28 @@ Sanity check: Roll (1984) closed-form, valid under the same i.i.d.-noise model
         σ_ε² = −γ_1   (lag-1 autocovariance of returns)
         σ_v² =  γ_0 + 2 γ_1
 
-This is a DIAGNOSTIC — it does not write fv CSVs. It reports σ_v_KF, σ_ε, and
-the percent change vs the GBM σ_v in output/v_gbm_params.json. If the change
-is material (≥ 10–20%) adopt the KF σ_v: copy it into v_gbm_params.json and
-regenerate the paths with `data/v_gbm.py generate-all`. Otherwise the direct
-fit is fine and you've shown it.
+`calibrate` is a diagnostic — it reports σ_v_KF, σ_ε, and the percent change vs
+the GBM σ_v in output/v_gbm_params.json, but writes no fv CSVs. If the change
+is material (≥ 10–20%), adopt the KF σ_v: copy it into v_gbm_params.json and
+regenerate the paths with `data/v_gbm.py generate-all`.
 
-Caveat: real microstructure noise is autocorrelated (bid-ask bounce → richer
+Caveat: real microstructure noise is autocorrelated (bid-ask bounce is richer
 than pure MA(1)). The close-price series (last trade in the 1-min bar) is the
-most bounce-prone — the BBO mid would be cleaner. The KF σ_ε absorbs the
-noise variance correctly; the SHAPE assumption (i.i.d.) affects σ_v slightly.
-A later refinement could extend to a colored-noise observation model.
+most bounce-prone; the BBO mid is cleaner. The KF σ_ε absorbs the noise
+variance correctly; the i.i.d. shape assumption affects σ_v slightly.
+
+On the 1-minute MID the MLE finds σ_ε ~ 1e-5 (calm) / 2e-6 (stressed) —
+steady-state gain 0.999-1.000, so the smoother is near-identity (max |smoothed −
+mid| < 0.04 pts). `generate` therefore uses the observed mid DIRECTLY (no RTS
+smoothing); the Kalman MLE is retained only as the `calibrate` diagnostic that
+verifies 1-min mid noise is negligible and so justifies the choice (the bid-ask
+bounce lives in trade prices, not the mid; i.i.d. noise is identified only by
+negative lag-1 autocovariance, which the mid lacks). Note `calibrate` diagnoses
+CLOSE prices while `generate` reads the MID, so the JSON describes the former.
 
 Usage:
-    python data/v_kalman.py calibrate
+    python data/v_kalman.py calibrate       # diagnostic (close-price based)
+    python data/v_kalman.py generate-all    # writes data/fv_{regime}.csv (mid)
 """
 
 from __future__ import annotations
@@ -61,8 +69,8 @@ def load_per_day_log_prices(regime: str, column: str = "close",
     same convention as data/v_gbm.py's open-bar exclusion). `column` is "close"
     for the diagnostic and "mid" for the fundamental generator (the mid is the
     calibration target and is less bounce-prone). With `with_ts=True` also returns
-    the matching per-day timestamp slices (D57 — so the generator can write the REAL
-    timestamps and the day boundaries are recoverable downstream)."""
+    the matching per-day timestamp slices, so the generator can write the real
+    timestamps and the day boundaries stay recoverable downstream."""
     df = pd.read_csv(PROC_DIR / f"ES_front_{regime}_1m.csv",
                      index_col=0, parse_dates=True)
     px = df[column].to_numpy(dtype=float)
@@ -89,9 +97,9 @@ def kalman_neg_loglik(theta: np.ndarray, days: list) -> float:
     (μ, σ_v, σ_ε) parameterised as (μ, log σ_v, log σ_ε). Vectorised across days:
     every day starts at P=r, so the variance/gain recursion (P, S, K) is
     data-independent and identical for all days — only the state x and innovation
-    e differ. The filter is therefore run as one length-loop over the day-stacked
-    matrix (NaN-padded for unequal session lengths), numerically identical to the
-    per-day scalar recursion but ~D× faster (D≈264 calm days)."""
+    e differ. The filter runs as one length-loop over the day-stacked matrix
+    (NaN-padded for unequal session lengths), numerically identical to the
+    per-day scalar recursion but ~D× faster (D is the number of days)."""
     mu, lsv, lse = theta
     q = float(np.exp(2.0 * lsv))   # σ_v²
     r = float(np.exp(2.0 * lse))   # σ_ε²
@@ -189,10 +197,9 @@ def _fit_params(days: list) -> tuple:
 
 
 def _local_vol(rets: np.ndarray, halflife: float = 30.0) -> np.ndarray:
-    """Per-minute local volatility = sqrt(EWMA[r²]), half-life `halflife` min.
-    This σ_t carries the REAL volatility clustering (the multi-timescale
-    persistence the synthetic single-OU SV of D33 could not) and feeds the FT
-    belief width (D34: σ_fund_t = √390·σ_t·v0)."""
+    """Per-minute local volatility = sqrt(EWMA[r²]), half-life `halflife` min
+    (EWMA realised vol; reset per session). This σ_t feeds the FT reservation
+    R = V_t·(1 + z·ft_sigma_c·σ_t) as the fractional belief-width scale."""
     if len(rets) == 0:
         return np.array([0.0])
     lam = 1.0 - np.exp(-np.log(2.0) / halflife)
@@ -203,47 +210,45 @@ def _local_vol(rets: np.ndarray, halflife: float = 30.0) -> np.ndarray:
 
 
 def generate(regime: str, out_path=None) -> np.ndarray:
-    """Write data/fv_{regime}.csv with a Kalman-SMOOTHED real fundamental
-    (V_smooth) plus the real local volatility (sigma_t). The latent efficient
-    price is RTS-smoothed per RTH day, and the per-day series are concatenated at
-    their REAL levels so the OVERNIGHT GAPS are preserved (D56 — the simulator
-    opens each new RTH day at the gapped V_t via a session reset, so the cleared
-    book is marked across the gap; gap risk is a primary CCP default driver).
-    This is the XGB-Chiarella §2.5.2 data-derived fundamental — an
-    alternative to the synthetic SV-MJD of data/v_gbm.py, and ODD-faithful (the
-    ODD §Mech #9 fundamental signal is itself a historical data series). It
-    carries the REAL return tails and REAL volatility clustering, which the
-    agent layer cannot manufacture (see the calibration residuals)."""
+    """Write data/fv_{regime}.csv with the empirical efficient mid as the
+    fundamental (column kept as `V_smooth` for downstream compatibility) plus the
+    local volatility (sigma_t). No smoothing is applied: the Kalman MLE (see
+    `calibrate`) finds sigma_eps ~ 1e-5 on the 1-min mid, so the RTS smoother is
+    near-identity and V_t is taken as the observed mid directly. The per-day series
+    are concatenated at their real levels so the overnight gaps are preserved (the
+    simulator opens each new RTH day at the gapped V_t via a session reset, marking
+    the cleared book across the gap; gap risk is a primary CCP default driver).
+    This is the XGB-Chiarella §2.5.2 data-derived fundamental — an alternative to
+    the synthetic SV-MJD of data/v_gbm.py, and ODD-faithful (the ODD §Mech #9
+    fundamental signal is itself a historical data series). It carries the real
+    return tails and volatility clustering, which the agent layer cannot fully
+    manufacture (see the calibration residuals)."""
     days, ts_days = load_per_day_log_prices(regime, column="mid", with_ts=True)
-    mu, q, r = _fit_params(days)
     logV_parts, sig_parts = [], []
     for y in days:
-        S = _kalman_smooth(y, mu, q, r)
-        # Keep each day's smoothed series at its REAL level — the per-day RTS
-        # smoother anchors S[0] at the day's open, so concatenating across days
-        # PRESERVES the overnight gaps (D56). The Kalman filter still runs per RTH
-        # day (the overnight gap is not in any single day's state evolution), but
-        # the gap IS retained in the level path so the cleared book is marked
-        # across it. The simulator opens each new RTH day at the gapped V_t via a
-        # session reset (Simulation), so the gap is a clean between-session jump,
-        # not an intraday drift. (Earlier this spliced continuously, removing the
-        # gaps; that understated COVID — the big moves were overnight limit-downs.)
-        logV_parts.append(S)
+        # V_t IS the observed efficient mid -- no smoothing. The Kalman MLE (see
+        # `calibrate`) finds sigma_eps ~ 1e-5 on the 1-min mid (steady-state gain
+        # ~ 1.0), so the RTS smoother is near-identity (max |smoothed - mid| <
+        # 0.04 pts); the raw per-day log mid is used directly and the MLE is kept
+        # only as the diagnostic that justifies it. Per-day series are concatenated
+        # at their real levels so the overnight gaps are preserved (the simulator
+        # opens each RTH day at the gapped V_t via a session reset, marking the
+        # cleared book across the gap -- gap risk is a primary CCP default driver).
+        logV_parts.append(y)
         sig = _local_vol(np.diff(y))
         sig_parts.append(np.concatenate([[sig[0]], sig]))   # length == len(y)
-    V_smooth = np.exp(np.concatenate(logV_parts))
+    V_smooth = np.exp(np.concatenate(logV_parts))           # = the observed mid
     sigma_t = np.maximum(np.concatenate(sig_parts), 1e-10)
     n = len(V_smooth)
-    # REAL per-bar timestamps (D57), aligned bar-for-bar with V_smooth — so the true
-    # RTH-session boundaries (which are ~405 bars and vary, not 390) are recoverable from
-    # the ts column by every consumer (Simulation reprice, calibration overnight exclusion,
-    # daily returns, notebook day slices). Replaces the old synthetic 390-per-day stamps.
+    # Real per-bar timestamps, aligned bar-for-bar with V_smooth, so the true
+    # RTH-session boundaries (~405 bars, and variable, not a fixed 390) are
+    # recoverable from the ts column by every consumer (Simulation reprice,
+    # calibration overnight exclusion, daily returns, notebook day slices).
     ts = pd.DatetimeIndex(np.concatenate([t.to_numpy() for t in ts_days]))
     out_path = Path(out_path) if out_path else (DATA_DIR / f"fv_{regime}.csv")
     pd.DataFrame({"ts": ts, "V_smooth": V_smooth,
                   "sigma_t": sigma_t}).to_csv(out_path, index=False)
-    print(f"[{regime}] Kalman fundamental -> {out_path}  n={n} (~{len(days)}d)  "
-          f"σ_v={np.sqrt(q):.3e} σ_ε={np.sqrt(r):.3e}  "
+    print(f"[{regime}] empirical-mid fundamental -> {out_path}  n={n} (~{len(days)}d)  "
           f"V0={V_smooth[0]:.2f} Vend={V_smooth[-1]:.2f}  σ_t mean={sigma_t.mean():.3e}")
     return V_smooth
 

@@ -1,0 +1,25 @@
+=== PRE-FLIGHT Mon Jun 15 01:10:27 CEST 2026 ===
+  dep ok: numpy
+  dep ok: pandas
+  dep ok: scipy
+  dep ok: xgboost
+  V_t reservation form: ACTIVE
+  calibration stack imports cleanly
+=== PRE-FLIGHT PASSED — launching full relock Mon Jun 15 01:10:32 CEST 2026 ===
+    Expect ~11-15h. Results land in output/relock/.  Monitor: tail -f output/relock/run.log
+[01:10:32] === D65 re-lock start (zi_mu in loop; evidence-tightened boxes; FV_GBM=0) ===
+[01:10:32] GRID calm  n_per_dim=5  (n_days=20, n_runs=3)
+[03:21:51] GRID calm  DONE in 131 min -> output/relock/grid_calm.json
+[03:21:51] GRID stressed  n_per_dim=4  (n_days=20, n_runs=3)
+[08:23:22] GRID stressed  DONE in 301 min -> output/relock/grid_stressed.json
+[08:23:22] FRESH-SEED VALIDATION calm (top-5 nodes, 2 fresh common seed sets)
+[08:25:52] FRESH calm  DONE in 2 min
+[08:25:52] FRESH-SEED VALIDATION stressed (top-5 nodes, 2 fresh common seed sets)
+[08:29:11] FRESH stressed  DONE in 3 min
+[08:29:11] SURROGATE calm  (160 LHS, 20d, 6 seeds, 2 refine, 32/round, 32 stage-2)
+[10:18:27] SURROGATE calm  DONE in 109 min -> output/relock/sur_calm.json
+[10:18:27] SURROGATE stressed  (160 LHS, 20d, 6 seeds, 2 refine, 32/round, 32 stage-2)
+[12:50:54] SURROGATE stressed  DONE in 152 min -> output/relock/sur_stressed.json
+[12:50:54] === done in 700 min — results in output/relock/ ===
+[12:50:54] Review grid vs surrogate vs fresh-seed agreement, then copy the chosen
+[12:50:54] optimum into globals.CALIBRATED (the D60 record stays in output/baseline_grid/).

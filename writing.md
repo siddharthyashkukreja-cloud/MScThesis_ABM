@@ -1,316 +1,170 @@
-# writing.md — thesis-writing context for an AI assistant
+# Thesis writing — working notes (by section)
 
-**Read this together with `README.md`. Those two files are all you need.**
-`README.md` is the *technical reference* (model mechanics, agents, clearing tier, formulas,
-parameters, how to run). **This** file is the *thesis context*: research question,
-contributions, results with exact numbers and honest caveats, how each reference is used, the
-chapter structure, and writing conventions. When a claim needs a mechanism/formula detail, the
-relevant `README.md` section is named inline. The developer change-log (`AGENT.md`) holds the
-full per-step decision history ("D-series") and is only for deep code archaeology — not needed
-for writing.
+_**writing.md** (this file) + **writing.tex** are the only two writing files. Both are now ordered by thesis
+chapter so you can go through them one section at a time; the matching draft prose lives under the same
+chapter headers in writing.tex. **Cross-cutting items are collected at the end** (editorial, independence,
+priority, bib keys, status/runs). Deeper reference: `MODEL_DEEP_DIVE.md` (H1 mechanism audit),
+`RESULTS_METHODOLOGY.md` (results + methodology)._
+
+_Priority tags: **P1** grade-limiting · **P2** band-lifter · **P3** polish. Chapter word counts: intro 844 ·
+related 1933 · model 3809 · calibration 2441 · results 1178 · **conclusion 3 (stub)** · abstract 3
+(placeholder) · appendix 0._
 
 ---
 
-## 1. Thesis at a glance
-- **Topic:** an agent-based model (ABM) of central clearing — client clearing, contagion, and
-  CCP systemic risk — on ES E-mini S&P 500 futures. MSc thesis, VU Amsterdam.
-  Repo: github.com/siddharthyashkukreja-cloud/MScThesis_ABM.
-- **One line:** a two-tier ABM — a *calibrated* limit-order-book market-microstructure layer +
-  a *central-clearing* layer (CCP, clearing members, cleared clients, with real
-  margin / default-fund / waterfall mechanics) — used to study how clearing-member tiering
-  propagates market stress.
-- **Regimes:** *calm* (2019 ES) and *stressed* (the Feb–Apr 2020 COVID crash window).
+# Abstract — `chapters/00_abstract.tex`  **(P1)**
 
-## 2. Motivation, research question & contributions
+- [ ] Write ≤250 words: problem → model → the H1 result → contribution. Uncomment
+  `\input{chapters/00_abstract}` in `main.tex`.
 
-**Motivation (literature-grounded — see §7).** CCPs mutualise counterparty risk but *concentrate*
-it in their clearing members (banking CMs / FCMs / general clearing members), which guarantee client
-trades, post collateral, and absorb the first loss. Most quantitative work is CCP-centric; the
-clearing-member perspective is comparatively under-studied (mostly qualitative / regulatory). Three
-channels make it systemically important and motivate the thesis:
-- **Single-agent dependency** — the modal client has *one* clearing agent and no backup (OFR 2026);
-  when that agent is distressed, clients lose CCP access and de-risk (Credit Suisse / Archegos).
-- **Crowding** — clearing-member positions are positively correlated ("crowded positions",
-  Menkveld 2015); correlated portfolios → simultaneous defaults that standard margin overlooks, and
-  crowding spikes with volatility (Huang-Menkveld-Yu 2021: crowding ≈ 17% of the worst CCP exposure
-  spikes).
-- **Procyclical margin in stress** — Mar-2020: IM at the four largest EU/UK CCPs rose ≈ one third,
-  daily VM on euro-area fund derivative exposures quintupled, 6% of funds couldn't cover it
-  (ESRB 2020). "The workings of the client-clearing market is an open question" (Menkveld & Vuillemey).
 
-**Research question — candidates (pick one as the thesis RQ; all are addressable with the built ABM):**
-- **RQ-A — buffer vs single point of failure:** does the clearing-member layer *stabilise or amplify*
-  systemic risk — a GCM as an extra loss-absorbing buffer between a client default and the CCP, versus
-  single-agent dependency as a single point of failure — and does **client type** (volatility/HFT-like
-  vs directional) change the answer?
-- **RQ-B — cover-2 sufficiency / contagion drivers:** under realistic *calibrated* stress, is the
-  **cover-2** default-fund framework sufficient to contain client→CM→CCP contagion, and what drives a
-  breach — the *magnitude* of the move, its *concentration / speed* (overnight gaps vs a single shock),
-  or *crowding*?
-- **RQ-C — crowding & margin methodology:** do crowded client positions / cross-product margin offsets
-  create a structural **liquidity exposure** for clearing members in stress (when CCP gross margin
-  surges while correlation haircuts become unreliable), and would a crowding-aware margin (CoMargin;
-  Menkveld's Margin(A)) reduce it?
+# Ch.5 — Results — `chapters/05_results.tex`
 
-> The built model most directly answers **RQ-B** (it already produces the cover-2 containment +
-> gaps-vs-shock results) and a version of **RQ-A** (clearing-tier / client-type effects). **RQ-C**
-> would need a crowding mechanism + a CoMargin comparison added — scope it before committing.
+**Criterion 4 — Description & analysis of results** *(gap: ch.05 is 1178 words with NO robustness /
+alternative-interpretation / limitations text — the rubric's good/very-good bands explicitly want it)* **(P1)**
 
-**Contributions:**
-1. A *calibrated* two-tier ABM coupling a realistic, ES-calibrated microstructure to a
-   *regulation-grounded* clearing tier — most CCP ABMs assume the price process; here it is calibrated
-   to the empirical ES stylised facts, so the environment the clearing layer acts in is earned, not
-   assumed. (Addresses the noted gap: little quantitative work from the clearing-member perspective.)
-2. Real margin methodology — procyclical VaR/SPAN initial margin, a cash/IM capital ratio, a cover-2
-   Stress-Loss-Over-IM default fund, a deficit-based five-level waterfall, and Almgren–Chriss
-   fire-sales — rather than placeholder haircuts.
-3. Findings on the *drivers* of contagion (concentration/speed vs magnitude; the overnight-gap
-   structure as a mitigant; cover-2 containment at COVID severity with mutualisation onset ≈ 2.5×)
-   plus a methodological result (the market calibration is not clearing-invariant under stress).
+- [ ] Sync the developed H1 material from writing.tex into ch.05 (the chapter lags the pad).
+- [ ] Add a **Robustness & limitations** subsection: seed-count sensitivity (rare member-default /
+  mutualisation counts over ~5 members swing with seed count), significance of the H1 trend (p<0.0001) vs the
+  within-noise reactive-vs-flat-8 gaps (Welch p≈0.12–0.19), the small NBCM tier, the exogenous-path caveat,
+  the fixed-DF/close-out sensitivity levers. Most of this is in `MODEL_DEEP_DIVE.md`.
+- [ ] State the corrected H1 mechanism (close-out / loss-concentration, **not** Brunnermeier–Pedersen funding
+  drain) — already fixed in writing.tex, mirror into ch.05; strip any "every risk metric" wording too.
+- [ ] Remove the stray in-body "Disclaimer" sentence in ch.05.
+- Citation: **CME client IM share** — use ~67–70% (record 67.7% cleared-IRS, Jan-2025), NOT ~82%.
 
-## 3. The model in one paragraph
-(README "The model in brief" / "Market and agents" / "Clearing tier".) A 1-minute call-auction
-LOB with **price-time priority**; trades print at the resting limit price, never the mid. Three
-calibrated agent types: **fundamental** traders (value / mean-reversion around an exogenous
-Kalman-smoothed real-ES fundamental), **momentum** traders (EWMA trend signal, limit-only), and
-**zero-intelligence** traders (Cont-Stoikov-Talreja noise: limit / market / cancel). On top: a
-**CCP**, **banking CMs** (also trade own books under a VaR house limit), **non-banking CMs**, and
-~90 **cleared clients**, with hourly variation margin, procyclical initial margin, an 8% cash/IM
-capital-ratio gate, a cover-2 default fund, a five-level loss waterfall, and Almgren–Chriss
-deleveraging. Order lifetime is governed by agent cancellation — no blanket time-to-live (D58).
+**Results to-do / replace** *(folded from the old results.tex checklist):*
+```
+  [x] H1 prose + table updated to 40-seed numbers; netting finding corrected; mechanism re-attributed
+      (close-out, not B-P drain; traced seeds 45/46); reactive overclaim softened (Welch p=0.12-0.19).
+  [ ] MIRROR the mechanism + overclaim corrections into thesis ch.05/ch.06 on merge.
+  [ ] THESIS ch.05 descriptive numbers — refresh from the overnight run (the pad numbers are pre-cap).
+  [ ] THESIS ch.05 "never reaches the mutualised fund": WRONG — NBCM failures reach L3 in ~20% of stressed
+      seeds. Scope to "client defaults alone".
+  [ ] Re-verify the NBCM-failure waterfall split now that waterfall_events.csv logs L1-L5 across all seeds.
+  [ ] Regenerate figures from the refreshed CSVs; copy into Figures/.
+  [ ] Synthetic-ensemble section (commented in writing.tex) — fill from output/overnight_joint/ or cut.
+```
 
-## 4. Key results & numbers — cite exactly; flag interim values
+**Output CSVs → new figures/tables** *(core + H1 now emit these; the base ODD has no client observables):*
+- `client_defaults.csv` — per default: client TYPE (FT/MT/ZI), carrying CM + type, position-at-default
+  (`assumed_pos`), IM, loss, timing → defaults by type/CM + the tail-concentration mechanism (median ↓ / p99 ↑).
+- `waterfall_events.csv` — per default: level + L1–L5 amounts + mutualised → waterfall-level distribution.
+- `client_freezes.csv` — freeze onsets: reason (`own_distress` vs `cm_contagion`), κ, type, CM, timing → the
+  client→CM contagion channel quantified.
+- `porting_events.csv` — per member default: `n_ported` / `n_unported` / unported position (EMIR Art. 48).
+- `member_balance_band.csv` (core) — cash / maintenance-margin / DF-contribution bands by member type.
+- **Build:** stacked waterfall L1–L5 distribution · client-defaults-by-type bar · contagion-vs-distress freeze
+  timeline · porting success rate · member balance-sheet bands.
 
-### 4.1 Market layer — stylised facts (Ch. 5)
-Reproduces the Cont (2001) stylised-fact set: **fat tails** (calm Hill ≈ 2.7–3.0 vs empirical
-≈ 2.96; stressed comparable), **volatility clustering** (positive |return| ACF), and **near-zero
-return autocorrelation**. Headline baseline loss: **D_grid = 43.8 (calm) / 7.9 (stressed)**
-(3-seed scale). *Kurtosis is a diagnostic only* — it runs above empirical (outlier-dominated);
-Hill is the tail measure the loss targets, and it matches.
-> **LOCKED (D60).** The thesis-final baseline θ is the **grid optimum** (the defensible headline;
-> calm 7³ = 343 / stressed 5⁴ = 625 nodes, 3 seeds — `output/baseline_grid/`, full loss surface in
-> `output/calibration_grid_{regime}.csv`), **cross-validated by the high-res surrogate**
-> (160 LHS / 6 seeds, `output/baseline_hires/`) which lands on the same optimum — the
-> "two methods, one answer" check passed. **calm:** ft_sigma_c=0.80, zi_alpha=0.34, zi_delta=0.05;
-> **stressed:** ft_sigma_c=0.50, zi_alpha=0.26, zi_delta=0.05, p_zi=0.15; zi_mu pinned 0.025.
-> Wired into `globals.CALIBRATED`. Report two caveats: (1) **D is comparable only at a fixed seed
-> count** — the KS component's `s_KS` is sim-sized, so it rescales with n_runs (calm KS 16.8 at
-> 2 seeds ≙ ≈28.6 at 6 seeds for the *same* fit; verified ×1.70 observed vs ×1.73 predicted);
-> (2) several stressed parameters sit at *justified* bounds (ft_sigma_c at its 0.5 floor, zi_delta
-> at the 0.05 book-stability floor, p_zi at 0.15), and zi_delta is a near-flat loss direction
-> (calm D 43.8 at 0.05 vs 44.0 at 0.48) — benign, but disclose it.
+---
 
-### 4.2 Calibration methodology (Ch. 4)
-**Surrogate-assisted simulated method of moments** (Gao et al. 2022 HFABM / XGB-Chiarella) —
-*not* Bayesian optimisation. Surrogate = a single **XGBoost** regressor θ→D (fixed
-hyperparameters, not tuned); stage-1 optimum by **Sobol pool argmin**; explore/exploit
-**active-learning** rounds (2:1); **stage-2** grid refinement on the true simulator; held-out R²
-as the surrogate-accuracy check. **Loss D** = five **Franke-standardised** components — KS
-(distribution), V (return std), ACF1 (return ACF), ACF2 (|return| ACF, clustering), Hill (banded
-tail index). Each moment distance is divided by its empirical **block-bootstrap** (Künsch 1989)
-sampling SD, making components commensurable; they are summed (L1). This is inverse-SD weighting
-(Franke-Westerhoff 2012) — *not* equal weights, *not* inverse-variance, *not* full Σ⁻¹.
+# Ch.6 — Conclusion — `chapters/06_conclusion.tex`
 
-### 4.3 Calibration robustness campaign (Ch. 5 — partly a NEGATIVE result, present it as a strength)
-Eight configurations × 2 regimes were screened, then the promising ones re-run at higher
-resolution and one re-confirmed again. Verdict:
-- **The baseline is hard to beat.** Multi-parameter extensions did not robustly improve the fit.
-- **E5** (FT/MT activation probability + per-order cancellation, 4 extra params) showed an
-  apparent **−34% stressed win at screening (D 13.8 → 9.2)** that **did NOT replicate** at higher
-  resolution (D → **16.9**, *worse* than baseline). The extra parameters are poorly identified →
-  high run-to-run variance. Crucially, surrogate **R² ≈ 0.9+ did not guarantee a reproducible
-  optimum** — replication across seeds is the real test. **Rejected.**
-- The **combo** (E2+E5) and the **two-cohort / extra momentum traders** (E4) gave no robust gain
-  → **rejected**. The two-cohort MT did **not** revive long-horizon clustering, confirming the
-  single-timescale structural limit.
-- The **only consistent improvement** was **E2** (`mt_lambda` calibrated in the loop): a small
-  (~1 D), reliable *stressed* gain — the data mildly prefers a slower trend than the pinned 0.05;
-  calm is neutral-to-slightly-worse. One well-identified extra parameter. *Optional to adopt.*
-- **Framing:** a parsimony result — the extensions don't earn their parameters; over-
-  parameterisation adds estimation *variance*, not fit. Present as a rigorous robustness study,
-  and as a methodological caution (high surrogate R² ≠ reproducible optimum).
+**Criterion 5 — Conclusion & relevance discussion** *(gap: ch.06 is a 3-word stub — the single biggest hole;
+the rubric weights "relevance for practice" / "implications for theory, methodology and practice" heavily,
+for this thesis read practice = regulatory/industry)* **(P1)**
 
-### 4.4 Clearing-tier mechanics & amounts (Ch. 6) — README "Clearing tier" / "Formulas" / "Parameters"
-- **IM** = max(6%, z·σ_daily·√MPOR), z = 2.326 (99%), MPOR = 2 d → **~6% calm / ~12% stressed** (procyclical).
-- **Capital ratio** = cash / IM, floored at **0.08** (CFTC Reg 1.17). Breach → BCM Almgren–Chriss
-  deleverage; NBCM freeze (and its clients freeze).
-- **Cover-2 default fund** = top-2 members' SLOIM = max(0, (stress_move − IM))·notional, ×1.10
-  buffer (Euronext A9). Per-notional SLOIM rate ≈ **9% calm / ≈ 3.4% stressed** (calm is *higher*
-  because the 15% stress-move floor dominates while IM sits at its 6% floor).
-- **Five-level deficit-based waterfall:** L1 defaulter's own DF → L2 CCP skin-in-the-game →
-  L3 pooled survivor DF → **L4 survivor cash pro-rata (mutualisation)** → L5 CCP cash.
-- **Amounts:** CCP $7.5B; BCM $5–10B; NBCM $50M–$1B; clients FT $100–500M / MT $30–150M /
-  ZI $60–150M. Contract $50/point (CME ES). VM hourly; DF recompute ~daily.
+- [ ] Write the full conclusion (draft scaffold is in writing.tex): summary → each RQ answered → contribution
+  to literature → limitations → future work.
+- [ ] Add an explicit **relevance / implications** passage ("who wants to know"): CCP risk managers and
+  regulators (ESMA/CFTC) — margin-procyclicality buffer design and the client-protection-vs-member-fragility
+  trade-off.
+- [ ] Reconcile the implications chapter: add a short Discussion/Implications chapter, or fold it into the
+  conclusion **and fix the intro `\ref{ch:implications}`**.
 
-### 4.5 Contagion findings (Ch. 6 — headline results)
-- **Containment at true COVID severity.** The cover-2 framework absorbs client defaults at the
-  defaulter's own margin/DF layers — **no cross-member mutualisation, CCP solvent**. Under
-  reverse-stress amplification, mutualisation (L3–L4) onsets only at **≈2.5× COVID (≈−41%)**.
-- **Gaps vs a single shock (E6) — the clean structural finding.** At **equal total drawdown**, a
-  single concentrated intraday shock is far more destructive than the real overnight-gapped path:
-  ~**3× the client defaults** (≈29 vs ≈9), and it reaches CM default + L4 mutualisation at
-  **c = 1 (−19%)** vs **c ≈ 2.5–3** for the gapped path. **Interpretation:** contagion severity
-  tracks the *concentration / speed* of the move, not its total magnitude; the overnight-gap
-  structure is a **mitigant** because variation margin collects incrementally between jumps,
-  de-risking the book before the next gap, whereas a single shock hits at full exposure before VM
-  can collect.
-- **Clearing-in-loop sensitivity (E1) — a methodology caveat.** Calibrating with the clearing
-  tier *active* leaves calm ≈ unchanged (no freezes fire) but materially alters stressed
-  (D 13.8 → 28): freezes / deleverage / defaults during the crash feed back into the price the
-  moments match. The stressed market-layer calibration is therefore **not clearing-invariant** —
-  report this, and note clearing-active calibration as future work.
+---
 
-### 4.6 Fundamental & data handling (Ch. 3–4)
-- **Fundamental** = Kalman-smoothed real ES mid (data-derived; XGB-Chiarella §2.5.2), with
-  **overnight gaps retained** (D56) so the COVID episode carries its true ≈−33% drawdown. **RTH
-  session boundaries are data-driven** (~405 bars, variable — D57), not a fixed 390. A synthetic
-  Stein–Stein/Heston SV-jump fundamental is kept as a **robustness alternative** (notebook
-  `FV_MODE` toggle): it reproduces the volatility regime but is a random path, not the real episode.
-- **Order lifetime:** no blanket TTL (D58 removed the ODD §Mech #7 10-step ceiling); ZI cancels
-  each resting order w.p. `zi_delta` (Cont-Stoikov-Talreja / Farmer), FT/MT replace-on-new.
-  Deviation from the Simudyne ODD, flagged and cited.
+# Appendix — `chapters/A_appendix.tex`  **(P3)**
 
-## 5. Honest limitations (Ch. 7 — write candidly; several are strengths when framed as rigour)
-- **Long-horizon volatility clustering** is not fully captured — a single momentum timescale
-  can't produce multi-scale memory, and the two-cohort revival didn't fix it (a structural limit
-  of this LOB).
-- **Calm fit floors at D ≈ 44**, dominated by KS + |return|-ACF residuals — the simulated calm
-  distribution body / clustering doesn't fully match empirical.
-- **High-dimensional extensions are poorly identified** → add variance, not fit; the E5
-  non-replication is the clearest case (the methodological lesson: surrogate R² ≠ reproducible
-  optimum; replicate across seeds).
-- **Contagion results are single-seed traces.** A Monte-Carlo ensemble over seeds (distributions
-  of breach multiplier, default count, waterfall depth, mutualised loss) is future work.
-- **Call-auction print convention:** crossings clear at the resting *ask* price (not a uniform
-  clearing price or the midpoint), giving buy-initiated crossings price improvement — a minor
-  asymmetry to disclose (defensible in a one-shot auction where maker/taker is ambiguous).
-- **The stressed calibration is not clearing-invariant** (E1) — the bare-market θ understates the
-  clearing-active stressed dynamics.
+- [ ] Populate (robustness tables, the synthetic-ensemble figures, full calibration moments) and uncomment it,
+  or drop the appendix refs. Populating it also helps criterion 4.
 
-## 6. References & how each is used (priority order — every design choice must cite one; flag deviations)
-1. **Simudyne CCP ODD** — clearing-tier scaffold and the ODD protocol the model description
-   follows; source for margin cadence, waterfall structure, star topology. (Deviation: TTL
-   removed, D58.)
-2. **Deloitte / Simudyne CCP paper** — clearing design conventions (FT belief width
-   `theta_v = sigma_fundamental`).
-3. **Majewski et al. (extended Chiarella)** — FT value + MT momentum design; externally-fixed
-   trend horizon (motivates pinning `mt_lambda`).
-4. **Gao et al. HFABM / XGB-Chiarella (arXiv 2208.14207)** — surrogate-assisted SMM, the
-   data-derived Kalman fundamental, the KS loss component, figure conventions.
-5. **Gao 2023** — grid-search calibration as the cross-check method.
-6. **ABM Liquidity (Vytelingum)** — liquidity / market-impact framing.
-7. **Cont-Stoikov-Talreja (2008)** — ZI limit/market/cancel rates; the per-order cancellation
-   that now governs order lifetime (replacing the TTL).
-8. **Farmer et al. (ZI)** — zero-intelligence baseline.
-- **Clearing regulation:** Euronext Clearing A9 (cover-2 SLOIM, reverse-stress), CFTC Reg 1.17
-  (cash/IM net capital), CME SPAN + EMIR Art. 41 (VaR IM), EMIR Art. 45 (exchange SITG),
-  Basel FRTB (BCM VaR house limit), CPMI-IOSCO 2017 (recovery), CME ES contract spec.
+---
+---
 
-## 7. Literature, key empirical facts & data sources (lit-review)
-*Depth = references + facts (the prose lit review is yours to write). §6 above is the
-model-construction references; this section is the motivation / clearing-member literature.*
+# General / cross-cutting
 
-**Clearing-member / CCP systemic risk & client clearing.**
-- **Menkveld & Vuillemey — "The Economics of Central Clearing"** (review): netting / insurance /
-  fire-sale rationales for CCPs; states the *client-clearing market is an open question* (how CMs
-  compete; account portability/pooling) — the gap this thesis targets.
-- **OFR 2026 — "Clearing Markets and Client Clearing Services"** (DTCC CDS): clients = **73%** of
-  margin at the largest US/EU CCPs; **modal client = single clearing agent**; Credit Suisse/Archegos
-  → single-agent clients cut cleared positions. Motivation for single-agent dependency + client type.
-- **OFR 2025 — "CCP Liquidity & Capital Demands on Clearing Members under Stress":** largest CMs can
-  meet demands even in extreme scenarios, but sufficiency varies over time and correlated cross-CCP
-  shocks stack demands.
-- **Huang, Menkveld & Yu 2021 — "CCP Exposure in Stressed Markets"** (EMCF equity HF data): extreme
-  exposure coincides with crowding + volatility; crowding ≈ **17%** of the top-100 exposure increases;
-  top-5 members' share rises **28% → 42%** in the top-1% subsample.
-- **Galbiati & Soramäki 2013 (BoE):** tiering *reduces* the CCP's total exposure but *raises* its
-  expected single exposure to the average GCM (a trade-off the model's tiering speaks to).
-- **Borovkova 2013 (network):** a CCP is not safer than bilateral for *all* nodes — depends on
-  network position.
-- **Riksbank (Blanck 2025):** margins/CCP/liquidity overview. **ESRB 2020:** Mar-2020 margin-call
-  liquidity risk (facts below).
+## Editorial quality (criterion 6)  **(P1 for refs, P3 for prose)**
+- [ ] Fix broken cross-refs: `\ref{ch:implications}`, `\ref{ch:appendix}`, `\ref{sec:model-default}`.
+- [ ] Resolve two terminology inconsistencies: κ labelled a Basel **capital-adequacy** ratio but cited to
+  **leverage-ratio** papers (pick one); **five-level** vs **six-tranche** waterfall described differently.
+- [ ] Consistent table/figure captions and number formatting across chapters.
+- (The abstract is under "Abstract" above; bib hygiene under "Bib keys" below.)
 
-**Crowding & margin methodology.**
-- **Menkveld 2014/2015 — "Crowded positions":** CrowdIx index; **Margin(A)** (delta-normal VaR of
-  aggregate exposure, decomposes across members by shadow cost); crowding spikes with volatility.
-- **Menkveld 2017:** social cost of crowding; some crowding is socially optimal; proposes a
-  **Pigovian default-fund surcharge** on crowded traders.
-- **Cruz Lopez, Harris, Hurlin & Pérignon 2017 — "CoMargin"** (CDCC data): CoVaR/copula conditional
-  margin — margin a member on its breach probability *conditional* on others breaching; backtestable,
-  no normality assumption (vs Margin(A)). The benchmark for RQ-C.
-- **Duffie & Zhu 2011** (multilateral vs bilateral netting); **Jones & Pérignon 2013** (CME margin
-  breaches cluster → systematic); **Menkveld, Pagnotta & Zoican 2015** (clearing → −8.8% vol, −9.8% volume).
+## Degree of independence (criterion 7)  *(process-graded, not a document section)*
+Keep the supervisor informed of plans/progress; be ready to **defend your design choices** (the band rewards
+"willing to defend own choices"); disclose tool/AI assistance per VU policy (the fail band penalises
+*undisclosed* third-party help) — a brief methods/acknowledgement note keeps you safe.
 
-**Market-microstructure ABM (construction — cross-ref §6).** Majewski, Ciliberti & Bouchaud 2018
-(extended Chiarella; FV as a Kalman-filtered hidden state); Almgren & Chriss 2000 (optimal execution /
-fire-sale impact); Gao et al. 2023 (Chiarella-Heston / deep hedging; volatility trader); Bookstaber,
-Paddrik & Tivnan 2014 (ABM financial vulnerability — margin calls, fire sales, crowding); Farmer et al.
-(zero-intelligence); Cont, Stoikov & Talreja 2008 (order-book dynamics); Vytelingum (ABM liquidity
-risk; ZI + Almgren-Chriss); Lamperti et al. (ML-surrogate ABM calibration); Simudyne/Deloitte CCP model
-(the clearing-tier reference implementation).
+## Priority order (grade-limiting first)
+1. **Conclusion chapter** (ch.06 stub → full) + relevance/implications — criterion 5.
+2. **Results robustness & limitations** subsection + sync H1 — criterion 4.
+3. **Abstract** + **broken refs** + the two terminology inconsistencies — criterion 6.
+4. **Explicit research question** in the intro — criterion 1.
+- P2 band-lifters: lit gap→contribution paragraph; design-choices reflection.
+- P3 polish: bib hygiene, captions, appendix population, prose pass.
 
-**Key empirical facts to cite (Mar-2020 / client clearing).**
-- IM at the four largest EU/UK CCPs rose ≈ **one third**, mainly from **client** (not house)
-  portfolios (ESRB 2020).
-- Daily VM on euro-area fund derivative exposures **quintupled**; **6%** of funds lacked pre-stress
-  liquidity to cover cumulative VM; for many, one day's VM exceeded their entire pre-crisis cash.
-- CMs can apply **counterparty-specific IM add-ons up to 50%** and change terms at short notice;
-  intraday VM is held overnight (timing asymmetry).
-- Clients = **73%** of margin; **modal client = single agent** (OFR 2026).
-- Crowding ≈ **17%** of worst exposure spikes; top-5 share 28→42% in stress (Huang et al. 2021).
-- Nasdaq Clearing 2018 (Einar Aas): **€107M of a €166M** default fund tapped (near-miss).
-- ABN AMRO Clearing: ≈ **$200M** loss on a single trade, Mar-2020 (Riksbank).
+## Bib keys to add to references.bib
+```
+  cont_2001                       — Cont (2001), "Empirical properties of asset returns…", Quant. Finance 1(2).
+  adrian_shin_2010                — Adrian & Shin (2010), "Liquidity and leverage", J. Fin. Intermediation 19(3).
+  cgfs_2010                       — CGFS (2010), "The role of margin requirements and haircuts in procyclicality", BIS.
+  murphy_vasios_vause_2014        — Murphy, Vasios & Vause (2014), BoE Financial Stability Paper No. 29.
+  glasserman_wu_2018              — Glasserman & Wu (2018), "Persistence and procyclicality in margin requirements", Mgmt Sci.
+  brunnermeier_pedersen_2009      — Brunnermeier & Pedersen (2009), "Market liquidity and funding liquidity", RFS 22(6).
+  cont_2017                       — Cont (2017), "Central clearing and risk transformation", Banque de France FSR No. 21.
+  biais_heider_hoerova_2016       — Biais, Heider & Hoerova (2016), "Risk-sharing or risk-taking?", J. Finance 71(4).
+  duffie_scheicher_vuillemey_2015 — Duffie, Scheicher & Vuillemey (2015), "Central clearing and collateral demand", JFE 116(2).
+  menkveld_vuillemey_2021         — Menkveld & Vuillemey (2021), "The economics of central clearing", ARFE 13.
+  barndorff_shephard_2001         — Barndorff-Nielsen & Shephard (2001), "Non-Gaussian OU-based models…", JRSS B 63(2). [supOU]
+(Already in bib: duffie_zhu_2011, galbiati_soramaki_2013, almgren_chriss_2000, franke_westerhoff_2012.
+ WATCH OUT: `bns_2004` is a DIFFERENT Barndorff-Nielsen–Shephard paper — add barndorff_shephard_2001 separately.)
+```
 
-**Data sources** (★ = used by the built model; others = for empirical grounding/extension).
-- ★ **CFTC FCM Financial Data** (free, monthly) — FCM adjusted net capital / segregated funds;
-  grounds the BCM/NBCM cash ranges.
-- ★ **ES E-mini 1-min futures data** (LSEG/Refinitiv-style) — the calm/stressed series the model
-  calibrates to.
-- ★ **CCP rulebooks / margin methodology** (CME SPAN, EMIR Art. 41/45, Eurex, Euronext A9, CFTC
-  Reg 1.17, Basel FRTB, CPMI-IOSCO) — the stylised replica margin / DF / waterfall.
-- **CPMI-IOSCO Public Quantitative Disclosures (PQDs)** (free, quarterly, ~25 CCPs) — CCP-level
-  IM/VM/DF/SITG/concentration; *no member-level or intraday breakdown* (limitation).
-- **ABN AMRO Clearing disclosures** (Pillar 3; public Correlation-Haircut methodology) — for the
-  crowding / correlation-haircut angle (RQ-C); consolidated-bank level only.
-- **WRDS** (OptionMetrics / Compustat / CRSP), **LSEG Workspace** — cross-asset / options for
-  extensions. Paid aggregators (Risk Quantum, ClarusFT CCPView) exist.
+## Confirmed accurate — keep as written
+Fundamental = empirical mid (ch.3, not Kalman); discrete call-auction LOB; stressed 73 / calm 75 sessions
+(~29k obs); loss weighting `w_c = 1/s_c` (per-moment); KS excluded from MCR (with the stated reason); EMIR
+Art. 28 APC floor; SPAN/FHS 99% IM; five-level EMIR waterfall ordering; agent counts (30/20/40 + 10 BCM /
+5 NBCM / 90 clients).
 
-## 8. Proposed thesis structure
-1. **Introduction** — CCP systemic risk; the client-clearing tiering question; contributions; roadmap.
-2. **Literature review** — ABM market microstructure (Chiarella, Cont-Stoikov, Farmer ZI); CCP /
-   clearing risk & contagion; ABM calibration (SMM, surrogate methods).
-3. **Model description (ODD)** — two-tier architecture; agents; the call-auction LOB; the
-   fundamental process; the clearing tier (margins, DF, waterfall, fire-sales). [README "Market
-   and agents", "Clearing tier", "Fundamental value process", "Formulas".]
-4. **Data & calibration** — ES data, calm/stressed regimes, the Kalman fundamental + overnight
-   gaps; the SMM loss + surrogate method; calibrated parameters + fit quality.
-5. **Market-layer results** — stylised-facts reproduction (figures: `model_design.ipynb`,
-   `empirical_analysis.ipynb`); the robustness campaign (§4.3) and the parsimony verdict.
-6. **Clearing layer & contagion experiments** — margin/DF/waterfall behaviour; COVID containment
-   + reverse-stress onset; gaps-vs-shock; clearing-in-loop sensitivity.
-7. **Discussion & limitations** — contagion drivers; methodological findings; limitations (§5).
-8. **Conclusion** — answers to the RQ; risk-policy implications; future work (Monte-Carlo
-   ensembles, clearing-active calibration, multi-timescale momentum).
+## Status + overnight runs (operational)
+- **Parameters LOCKED.** House-only BCMs follow the 8% capital-adequacy floor under a finite 5× cap
+  (`POSITION_LIMIT_X_HOUSE=5.0`, `POSITION_LIMIT_CLIENTS_ONLY=True`, κ ~0.10–0.20) — they run the leverage
+  cycle and can fail in deep stress, without the uncapped overshoot. Client-clearing BCMs keep the 2× cap.
+  On the re-run the H1 story is clean (member defaults NBCM-only, reactive attractive).
+- **House/client split ~50/50** left as a limitation (clients are strategy- not cash-constrained; the order-
+  size lever is calibrated). Sentence in writing.tex; doesn't affect loss allocation.
+- **Netting DROPPED everywhere** (driver, notebook, writing.tex). One contribution (model) + one result (H1).
+- **New per-run CSV logging** added (see Ch.5 "Output CSVs"). **Robustness sweeps (severity/closeout)
+  SKIPPED** for time (consistent with the writing).
+- **Overnight: 3-parallel** — `nohup bash scripts/run_parallel.sh > output/parallel.log 2>&1 &`
+  (defaults `DESC_SEEDS=100 HYP_SEEDS=150 TWOF_HOURS=12`):
 
-## 9. Writing conventions
-- **Audience:** MSc examiners (quantitative finance / complex systems). Academic, precise,
-  measured. No hype.
-- **Be honest about limitations and negative results** — the E5 non-replication and the parsimony
-  finding are *strengths* (rigorous robustness); present them as such, not as failures.
-- **Numbers:** cite exact values from the results files; mark screening/interim numbers as such
-  and don't over-state precision (screening D's are noisy). Final θ comes from the high-res
-  baseline run (pending) — don't hard-code provisional θ as final.
-- **Cite a reference for every modelling choice** (§6); flag deviations explicitly.
-- **Hill, not kurtosis, is the tail measure.** If kurtosis appears, label it a diagnostic.
-- **Figures / artefacts:** `model_design.ipynb` (design, clearing, stylised facts, intraday
-  zooms, gaps-vs-shock); `empirical_analysis.ipynb` (empirical ES); `covid_contagion.py`
-  (contagion traces); `output/campaign*/`, `output/e5_confirm/`, `output/baseline_hires/`
-  (calibration tables).
+  | # | job | script | → output dir |
+  |---|---|---|---|
+  | 1 | CORE | `run_model_descriptive.py` | `output/results/descriptive/` |
+  | 2 | H1 | `run_thesis_experiments.py` | `output/thesis_final/experiments/` |
+  | 3 | SYNTH | `overnight_joint.py --regime stressed --log-vol` | `output/overnight_joint/` (D80 log-vol two-factor: clustering + fat-tail repair vs baseline + clearing generalisation) |
 
-## 10. Where things live (so the writing agent never needs another file)
-- **Model mechanics, formulas, parameters, how-to-run** → `README.md`.
-- **Findings, numbers, narrative, structure, references-usage, limitations** → *this file*.
-- **Figures** → `model_design.ipynb`, `empirical_analysis.ipynb`. **Calibration results** →
-  `output/campaign/`, `output/campaign_v2/`, `output/e5_confirm/`, `output/baseline_hires/`.
-  **Contagion** → `covid_contagion.py`.
-- **Full code decision history** (rarely needed for writing) → `AGENT.md`.
+  **Morning:** refresh the H1 table + §5.1 numbers (pad numbers are pre-cap); confirm member defaults
+  NBCM-only / reactive attractive / client defaults fall; build the new figures; report the synthetic 2f-vs-1f
+  repair (`validation.csv`) + ensemble (`clearing.csv`).
+
+- **Synth calibration LOCKED** (`output/overnight_joint_logvol/`): joint 9-D log-vol optimum **D=6.73 vs the
+  1-factor baseline 20.86 (−68%)**; out-of-sample (80 paths, 42d) **9/10 moments in the 95% CI**, mean gap
+  0.64 SD — clustering + tail repaired; only the lag-1 bounce (`acf_r_1`, 2.7 SD) stays out, from `zi_delta`
+  calibrating to its 0.32 ceiling. Written into writing.tex Ch.4 (`tab:cal-synth`).
+- **Optional wide-bound re-run** (set up, NOT launched; SEPARATE dir, won't overwrite the locked run): unpins
+  `zi_delta` and warm-starts from the locked surface — short, may shave D (likely trading against the bounce).
+  `overnight_joint.py` gained opt-in `--out-tag` / `--zi-delta-hi` / `--warm-start` (defaults unchanged).
+  ```
+  nohup python3 scripts/overnight_joint.py --regime stressed --log-vol \
+    --out-tag wide --zi-delta-hi 0.50 \
+    --warm-start output/overnight_joint_logvol/calibration.json \
+    --max-hours 2.5 --calib-frac 0.8 --skip-clearing \
+    --sobol-init 40 --n-path-seeds 3 --path-seed 7 \
+    > output/overnight_joint_logvol_wide.out 2>&1 &
+  ```
+  → `output/overnight_joint_logvol_wide/`. Keep `--n-path-seeds 3 --path-seed 7` to match the warm-start loss;
+  compare its `validation.csv` to the locked one before adopting (watch the lag-1 bounce).

@@ -1,0 +1,178 @@
+[2026-06-16_23:43:42] === THESIS-FINAL pipeline start (N_SEEDS=40, MCR_M=80) ===
+pre-flight OK: {'calm': {'ft_sigma_c': 0.65, 'zi_alpha': 0.38, 'zi_mu': 0.08125, 'zi_delta': 0.02}, 'stressed': {'ft_sigma_c': 0.25, 'zi_alpha': 0.32, 'zi_mu': 0.05833, 'zi_delta': 0.02, 'p_zi': 0.18}}
+[2026-06-16_23:43:46] pre-flight OK
+c1949e898e6d0406ba4104f8c33b385e7d9fb36e
+ M AGENT.md
+ D MastersThesis_ClientClearingABM/ABMLiquidityRisk.pdf
+ D MastersThesis_ClientClearingABM/AlmgrenChriss.pdf
+ D MastersThesis_ClientClearingABM/DeepHedgingGao.pdf
+ D MastersThesis_ClientClearingABM/ExtendedChiarellaBouchaud.pdf
+ D MastersThesis_ClientClearingABM/HFABM.pdf
+ D MastersThesis_ClientClearingABM/Simudyne_CCPRiskModel_ODDDoc.md
+ D MastersThesis_ClientClearingABM/Thesis_ExtendedResearchProposal.pdf
+ D MastersThesis_ClientClearingABM/XGB-Chiarella.pdf
+ D MastersThesis_ClientClearingABM/XGBoostCalibration.pdf
+ D MastersThesis_ClientClearingABM/ZeroIntelligenceFarmer.pdf
+ D MastersThesis_ClientClearingABM/clustering.pdf
+ D MastersThesis_ClientClearingABM/deloitte-uk-modelling-ccp-resilience-4.pdf
+ D MastersThesis_ClientClearingABM/frank_weights_stylisedfacts.pdf
+ D MastersThesis_ClientClearingABM/orderbook.pdf
+ M README.md
+ M analysis_long_run.py
+ D baseline_grid_nohup.log
+ D baseline_hires_nohup.log
+ D build_nb.py
+ M calibrate.py
+ D calibration_campaign.md
+ D campaign_v2_nohup.log
+ M covid_contagion.py
+ M data/fv_calm.csv
+ M data/fv_gbm_calm.csv
+ M data/fv_gbm_stressed.csv
+ M data/fv_stressed.csv
+ M data/impact.py
+ M data/p_zi.py
+ M data/roll.py
+ M data/v_gbm.py
+ M data/v_kalman.py
+ D e5_confirm_nohup.log
+ D empirical_analysis.ipynb
+ D introduction.tex
+ D introduction_refs.bib
+ M model/agents.py
+ M model/clearing.py
+ M model/globals.py
+ M model/lob.py
+ M model/simulation.py
+ D model_design.ipynb
+ D output/baseline_grid/grid_calm.json
+ D output/baseline_grid/grid_stressed.json
+ D output/baseline_grid/logs/grid_calm.log
+ D output/baseline_grid/logs/grid_stressed.log
+ D output/baseline_grid/run.log
+ D output/baseline_hires/E0_calm.json
+ D output/baseline_hires/E0_stressed.json
+ D output/baseline_hires/logs/E0_calm.log
+ D output/baseline_hires/logs/E0_stressed.log
+ D output/baseline_hires/run.log
+ D output/calib_all.log
+ D output/calib_logs_20260603_220107/grid_calm.log
+ D output/calib_logs_20260603_220107/surrogate_calm.log
+ D output/calib_logs_20260603_220107/surrogate_stressed.log
+ D output/calib_logs_20260603_220107/targets.txt
+ M output/calibration_lhs_calm.csv
+ M output/calibration_lhs_stressed.csv
+ D output/campaign/E0_calm.json
+ D output/campaign/E0_stressed.json
+ D output/campaign/E1_calm.json
+ D output/campaign/E1_stressed.json
+ D output/campaign/E2_calm.json
+ D output/campaign/E2_stressed.json
+ D output/campaign/E3_calm.json
+ D output/campaign/E3_stressed.json
+ D output/campaign/E4a_calm.json
+ D output/campaign/E4a_stressed.json
+ D output/campaign/E4b_calm.json
+ D output/campaign/E4b_stressed.json
+ D output/campaign/E5_calm.json
+ D output/campaign/E5_stressed.json
+ D output/campaign/E6_gaps_vs_shock.csv
+ D output/campaign/FINDINGS.md
+ D output/campaign/SUMMARY.md
+ D output/campaign/_depth_probe.py
+ D output/campaign/campaign_results.json
+ D output/campaign/driver.log
+ D output/campaign/logs/E0_calm.log
+ D output/campaign/logs/E0_stressed.log
+ D output/campaign/logs/E1_calm.log
+ D output/campaign/logs/E1_stressed.log
+ D output/campaign/logs/E2_calm.log
+ D output/campaign/logs/E2_stressed.log
+ D output/campaign/logs/E3_calm.log
+ D output/campaign/logs/E3_stressed.log
+ D output/campaign/logs/E4a_calm.log
+ D output/campaign/logs/E4a_stressed.log
+ D output/campaign/logs/E4b_calm.log
+ D output/campaign/logs/E4b_stressed.log
+ D output/campaign/logs/E5_calm.log
+ D output/campaign/logs/E5_stressed.log
+ D output/campaign/logs/E6.log
+ D output/campaign/run.log
+ D output/campaign/run_campaign.py
+ D output/campaign_v2/COMBO_calm.json
+ D output/campaign_v2/COMBO_stressed.json
+ D output/campaign_v2/E2_calm.json
+ D output/campaign_v2/E2_stressed.json
+ D output/campaign_v2/E5_calm.json
+ D output/campaign_v2/E5_stressed.json
+ D output/campaign_v2/logs/COMBO_calm.log
+ D output/campaign_v2/logs/COMBO_stressed.log
+ D output/campaign_v2/logs/E2_calm.log
+ D output/campaign_v2/logs/E2_stressed.log
+ D output/campaign_v2/logs/E5_calm.log
+ D output/campaign_v2/logs/E5_stressed.log
+ D output/campaign_v2/run.log
+ M output/clearing_calm.csv
+ D output/e5_confirm/E5_calm.json
+ D output/e5_confirm/E5_stressed.json
+ D output/e5_confirm/logs/E5_calm.log
+ D output/e5_confirm/logs/E5_stressed.log
+ D output/e5_confirm/run.log
+ D output/quick_calm.log
+ D output/quick_stressed.log
+ M output/run_calm.csv
+ D output/surrogate_calm_short.log
+ D output/surrogate_stressed_short.log
+ M output/v_gbm_params.json
+ D run_baseline_grid.sh
+ D run_baseline_hires.sh
+ D run_calibration_all.sh
+ D run_campaign_v2.sh
+ D run_e5_confirm.sh
+ D run_overnight.sh
+ M run_simulation.py
+ D writing.md
+?? CALIBRATION_VALIDATION.md
+?? CLEARING_LAYER_REVIEW.md
+?? CLEARING_METHODOLOGY_PROMPT.md
+?? DESIGN_REVIEW.md
+?? clearing_topology.ipynb
+?? clearing_topology.png
+?? extras/
+?? model.ipynb
+?? model.md
+?? output/_ci_calm.json
+?? output/_ci_stressed.json
+?? output/_mcr2.py
+?? output/_mcr_prototype.py
+?? output/_runs_calm.csv
+?? output/_runs_stressed.csv
+?? output/experiments/
+?? output/recalib_vt_console.log
+?? output/relock/
+?? output/relock_gbm/
+?? output/thesis_final/
+?? output/thesis_final_console.log
+?? plot_experiments.py
+?? results.ipynb
+?? run_experiments.py
+?? run_overnight_experiments.sh
+?? run_recalib_vt.sh
+?? run_relock.sh
+?? run_thesis_experiments.py
+?? run_thesis_final.sh
+?? validate_grid_fresh.py
+[2026-06-16_23:43:47] RELOCK -> ./run_relock.sh (grid + fresh-seed + surrogate, both regimes)
+[2026-06-17_10:33:23] RELOCK done in 649 min
+[2026-06-17_10:33:23] VERIFY relock grid optima vs globals.CALIBRATED
+  calm: MATCH
+  stressed: DIFFERS {'zi_mu': (0.05833, 0.05833), 'zi_alpha': (0.2, 0.32), 'ft_sigma_c': (0.85, 0.25), 'p_zi': (0.08, 0.18)}
+  -> WARNING: relock optimum DIFFERS from globals.CALIBRATED. Review output/relock/, re-copy the chosen optimum into globals.CALIBRATED, then re-run steps 4-5 (calibrate.py mcr + run_thesis_experiments.py).
+[2026-06-17_10:33:23] MCR (Moment Coverage Ratio) — calm + stressed, M_long=80
+[2026-06-17_10:40:04] MCR calm done
+[2026-06-17_10:48:16] MCR stressed done
+[2026-06-17_10:48:16] EXPERIMENTS -> run_thesis_experiments.py (N_SEEDS=40)
+[2026-06-17_11:28:38] EXPERIMENTS done in 40 min -> output/thesis_final/experiments/
+[2026-06-17_11:28:38] === THESIS-FINAL pipeline done in 704 min ===
+[2026-06-17_11:28:38] Artifacts in output/thesis_final/: relock/ (calibration), mcr_{calm,stressed}.json (validation),
+[2026-06-17_11:28:38] experiments/ (H1/H2/NET summaries), logs_*.log. Review the VERIFY note above before writing.

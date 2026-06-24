@@ -1,0 +1,616 @@
+[15:47:59] ======================================================================
+[15:47:59] OVERNIGHT JOINT RUN - regime=stressed max_hours=1.5 budget={'n_days': 30, 'n_runs': 3, 'sobol_init': 110, 'batch': 16, 'n_pool': 4096, 'calib_hours': 1.5, 'n_paths': 30, 'ens_days': 42, 'agent_seed': 0, 'path_seed': 7, 'drift': -2.1329779981944435e-05, 'drawdown': 0.3, 'window_days': 42}
+[15:48:01] STAGE A: JOINT agent+FV calibration (9-D), regime=stressed, budget 1.5h, drift=-2.133e-05/min (~30% over 42d)
+[stressed] seed=7 n_days=30 n=11700: 36 jumps, 29 gaps (gap mean +0.0014), V0=3387.38 Vend=2300.81 maxDD=-32.7%; sigma_t mean=8.597e-04 (theta_eff=1.018e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:48:19]   measured baseline D=20.018  (CALIBRATED agents + 1-factor FV)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2920.96 maxDD=-13.8%; sigma_t mean=4.243e-04 (theta_eff=3.775e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:48:35]   [sobol 1] mt_gamma=0.683 ft_sigma_c=0.378 f=1.25 w=0.83 ratio=0.384 sigma_d=0.00132 zi_alpha=0.227 zi_mu=0.0626 zi_delta=0.2 -> D=24.324 (15s, 1m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2641.11 maxDD=-22.5%; sigma_t mean=1.151e-03 (theta_eff=1.125e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:48:53]   [sobol 2] mt_gamma=1.81 ft_sigma_c=0.55 f=0.585 w=0.302 ratio=0.2 sigma_d=0.00202 zi_alpha=0.426 zi_mu=0.118 zi_delta=0.0491 -> D=22.996 (18s, 1m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2717.21 maxDD=-20.1%; sigma_t mean=8.288e-04 (theta_eff=7.897e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:49:10]   [sobol 3] mt_gamma=1.5 ft_sigma_c=0.148 f=0.798 w=0.538 ratio=0.0273 sigma_d=0.00175 zi_alpha=0.128 zi_mu=0.108 zi_delta=0.104 -> D=26.431 (17s, 1m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2723.09 maxDD=-20.0%; sigma_t mean=8.701e-04 (theta_eff=8.826e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:49:29]   [sobol 4] mt_gamma=0.255 ft_sigma_c=0.73 f=0.366 w=0.216 ratio=0.223 sigma_d=0.00127 zi_alpha=0.345 zi_mu=0.0353 zi_delta=0.251 -> D=26.502 (18s, 1m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2679.52 maxDD=-21.2%; sigma_t mean=8.115e-04 (theta_eff=7.472e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:49:44]   [sobol 5] mt_gamma=0.53 ft_sigma_c=0.279 f=0.74 w=0.116 ratio=0.293 sigma_d=0.00157 zi_alpha=0.116 zi_mu=0.0842 zi_delta=0.155 -> D=21.847 (15s, 2m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2798.03 maxDD=-17.5%; sigma_t mean=7.442e-04 (theta_eff=6.916e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:50:00]   [sobol 6] mt_gamma=1.18 ft_sigma_c=0.834 f=1.09 w=0.638 ratio=0.109 sigma_d=0.00206 zi_alpha=0.271 zi_mu=0.0283 zi_delta=0.303 -> D=19.765 (16s, 2m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2637.68 maxDD=-23.1%; sigma_t mean=1.359e-03 (theta_eff=1.406e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:50:16]   [sobol 7] mt_gamma=1.61 ft_sigma_c=0.438 f=0.207 w=0.402 ratio=0.124 sigma_d=0.00173 zi_alpha=0.198 zi_mu=0.0695 zi_delta=0.225 -> D=58.002 (16s, 2m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2903.97 maxDD=-14.3%; sigma_t mean=4.118e-04 (theta_eff=3.881e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:50:33]   [sobol 8] mt_gamma=0.84 ft_sigma_c=0.631 f=0.953 w=0.73 ratio=0.32 sigma_d=0.00101 zi_alpha=0.37 zi_mu=0.143 zi_delta=0.0719 -> D=27.573 (17s, 3m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2761.73 maxDD=-19.0%; sigma_t mean=9.977e-04 (theta_eff=1.035e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:50:47]   [sobol 9] mt_gamma=1.04 ft_sigma_c=0.111 f=0.148 w=0.663 ratio=0.177 sigma_d=0.0012 zi_alpha=0.0851 zi_mu=0.09 zi_delta=0.14 -> D=42.349 (14s, 3m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2695.84 maxDD=-20.6%; sigma_t mean=7.631e-04 (theta_eff=6.607e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:51:03]   [sobol 10] mt_gamma=1.69 ft_sigma_c=0.678 f=1.02 w=0.192 ratio=0.361 sigma_d=0.00183 zi_alpha=0.302 zi_mu=0.0169 zi_delta=0.287 -> D=14.929 (16s, 3m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2790.23 maxDD=-17.9%; sigma_t mean=1.069e-03 (theta_eff=1.067e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:51:18]   [sobol 11] mt_gamma=1.15 ft_sigma_c=0.324 f=0.601 w=0.756 ratio=0.246 sigma_d=0.00195 zi_alpha=0.184 zi_mu=0.0807 zi_delta=0.239 -> D=33.403 (15s, 3m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2821.75 maxDD=-16.7%; sigma_t mean=4.617e-04 (theta_eff=4.040e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:51:35]   [sobol 12] mt_gamma=0.372 ft_sigma_c=0.504 f=1.24 w=0.478 ratio=0.0505 sigma_d=0.00139 zi_alpha=0.384 zi_mu=0.137 zi_delta=0.0875 -> D=25.268 (17s, 4m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2818.55 maxDD=-16.8%; sigma_t mean=4.961e-04 (theta_eff=4.581e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:51:51]   [sobol 13] mt_gamma=0.172 ft_sigma_c=0.381 f=0.861 w=0.378 ratio=0.0846 sigma_d=0.00108 zi_alpha=0.24 zi_mu=0.0512 zi_delta=0.188 -> D=22.112 (16s, 4m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2780.83 maxDD=-18.4%; sigma_t mean=1.188e-03 (theta_eff=1.214e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:52:10]   [sobol 14] mt_gamma=1.3 ft_sigma_c=0.588 f=0.308 w=0.856 ratio=0.269 sigma_d=0.00165 zi_alpha=0.412 zi_mu=0.124 zi_delta=0.0358 -> D=38.897 (18s, 4m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2736.94 maxDD=-19.2%; sigma_t mean=6.582e-04 (theta_eff=5.298e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:52:23]   [sobol 15] mt_gamma=1.97 ft_sigma_c=0.239 f=1.39 w=0.292 ratio=0.344 sigma_d=0.00214 zi_alpha=0.159 zi_mu=0.102 zi_delta=0.116 -> D=26.920 (14s, 4m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2758.34 maxDD=-18.9%; sigma_t mean=9.436e-04 (theta_eff=9.548e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:52:39]   [sobol 16] mt_gamma=0.723 ft_sigma_c=0.785 f=0.444 w=0.563 ratio=0.148 sigma_d=0.00149 zi_alpha=0.314 zi_mu=0.0465 zi_delta=0.265 -> D=30.173 (16s, 5m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2797.14 maxDD=-17.5%; sigma_t mean=6.318e-04 (theta_eff=5.754e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:52:55]   [sobol 17] mt_gamma=0.802 ft_sigma_c=0.199 f=1.03 w=0.447 ratio=0.216 sigma_d=0.00162 zi_alpha=0.433 zi_mu=0.105 zi_delta=0.295 -> D=23.192 (16s, 5m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2734.68 maxDD=-20.0%; sigma_t mean=9.886e-04 (theta_eff=1.009e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:53:10]   [sobol 18] mt_gamma=1.93 ft_sigma_c=0.778 f=0.127 w=0.719 ratio=0.0323 sigma_d=0.00114 zi_alpha=0.222 zi_mu=0.0404 zi_delta=0.142 -> D=63.417 (15s, 5m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2747.73 maxDD=-18.9%; sigma_t mean=5.582e-04 (theta_eff=4.599e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:53:26]   [sobol 19] mt_gamma=1.38 ft_sigma_c=0.424 f=1.17 w=0.133 ratio=0.195 sigma_d=0.00148 zi_alpha=0.329 zi_mu=0.0494 zi_delta=0.0855 -> D=23.018 (16s, 5m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2729.68 maxDD=-19.7%; sigma_t mean=1.160e-03 (theta_eff=1.133e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:53:42]   [sobol 20] mt_gamma=0.136 ft_sigma_c=0.593 f=0.659 w=0.612 ratio=0.391 sigma_d=0.00219 zi_alpha=0.146 zi_mu=0.131 zi_delta=0.232 -> D=20.995 (16s, 6m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2665.93 maxDD=-22.1%; sigma_t mean=1.379e-03 (theta_eff=1.427e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:54:00]   [sobol 21] mt_gamma=0.412 ft_sigma_c=0.294 f=0.285 w=0.512 ratio=0.315 sigma_d=0.0019 zi_alpha=0.276 zi_mu=0.0746 zi_delta=0.0238 -> D=49.193 (18s, 6m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2787.01 maxDD=-17.8%; sigma_t mean=5.402e-04 (theta_eff=4.882e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:54:14]   [sobol 22] mt_gamma=1.06 ft_sigma_c=0.489 f=0.879 w=0.233 ratio=0.131 sigma_d=0.00118 zi_alpha=0.11 zi_mu=0.139 zi_delta=0.172 -> D=25.591 (14s, 6m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2813.24 maxDD=-17.2%; sigma_t mean=8.651e-04 (theta_eff=8.653e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:54:30]   [sobol 23] mt_gamma=1.73 ft_sigma_c=0.139 f=0.503 w=0.819 ratio=0.102 sigma_d=0.00143 zi_alpha=0.351 zi_mu=0.0968 zi_delta=0.281 -> D=37.028 (16s, 6m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2768.66 maxDD=-18.3%; sigma_t mean=6.132e-04 (theta_eff=5.107e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:54:45]   [sobol 24] mt_gamma=0.959 ft_sigma_c=0.697 f=1.33 w=0.347 ratio=0.298 sigma_d=0.00193 zi_alpha=0.214 zi_mu=0.0151 zi_delta=0.128 -> D=16.329 (15s, 7m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2563.42 maxDD=-25.1%; sigma_t mean=1.287e-03 (theta_eff=1.248e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:55:04]   [sobol 25] mt_gamma=0.923 ft_sigma_c=0.467 f=0.525 w=0.259 ratio=0.0559 sigma_d=0.00211 zi_alpha=0.285 zi_mu=0.0676 zi_delta=0.0465 -> D=38.237 (18s, 7m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2858.24 maxDD=-15.6%; sigma_t mean=4.750e-04 (theta_eff=4.200e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:55:19]   [sobol 26] mt_gamma=1.57 ft_sigma_c=0.65 f=1.31 w=0.587 ratio=0.24 sigma_d=0.00156 zi_alpha=0.102 zi_mu=0.149 zi_delta=0.194 -> D=25.373 (16s, 7m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2792.23 maxDD=-17.8%; sigma_t mean=7.113e-04 (theta_eff=7.231e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:55:38]   [sobol 27] mt_gamma=1.26 ft_sigma_c=0.247 f=0.389 w=0.373 ratio=0.367 sigma_d=0.00107 zi_alpha=0.388 zi_mu=0.0865 zi_delta=0.258 -> D=27.658 (19s, 8m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2872.95 maxDD=-15.3%; sigma_t mean=7.978e-04 (theta_eff=7.781e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:55:54]   [sobol 28] mt_gamma=0.49 ft_sigma_c=0.817 f=0.78 w=0.895 ratio=0.171 sigma_d=0.0017 zi_alpha=0.177 zi_mu=0.0221 zi_delta=0.106 -> D=30.164 (16s, 8m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2863.94 maxDD=-15.5%; sigma_t mean=6.739e-04 (theta_eff=6.326e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:56:11]   [sobol 29] mt_gamma=0.291 ft_sigma_c=0.19 f=1.15 w=0.795 ratio=0.155 sigma_d=0.00201 zi_alpha=0.396 zi_mu=0.115 zi_delta=0.32 -> D=22.633 (18s, 8m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2796.82 maxDD=-17.6%; sigma_t mean=7.089e-04 (theta_eff=6.873e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:56:27]   [sobol 30] mt_gamma=1.42 ft_sigma_c=0.734 f=0.682 w=0.473 ratio=0.339 sigma_d=0.00136 zi_alpha=0.258 zi_mu=0.0334 zi_delta=0.167 -> D=20.508 (16s, 8m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2875.68 maxDD=-15.1%; sigma_t mean=5.163e-04 (theta_eff=4.897e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:56:44]   [sobol 31] mt_gamma=1.85 ft_sigma_c=0.339 f=0.937 w=0.687 ratio=0.274 sigma_d=0.00125 zi_alpha=0.32 zi_mu=0.0563 zi_delta=0.0604 -> D=25.433 (16s, 9m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2566.20 maxDD=-25.4%; sigma_t mean=1.413e-03 (theta_eff=1.449e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:57:00]   [sobol 32] mt_gamma=0.604 ft_sigma_c=0.543 f=0.23 w=0.159 ratio=0.0781 sigma_d=0.00182 zi_alpha=0.154 zi_mu=0.121 zi_delta=0.208 -> D=50.387 (16s, 9m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2707.78 maxDD=-20.4%; sigma_t mean=9.403e-04 (theta_eff=9.154e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:57:17]   [sobol 33] mt_gamma=0.63 ft_sigma_c=0.168 f=0.608 w=0.33 ratio=0.327 sigma_d=0.00168 zi_alpha=0.338 zi_mu=0.146 zi_delta=0.149 -> D=20.652 (17s, 9m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2919.69 maxDD=-13.8%; sigma_t mean=3.386e-04 (theta_eff=3.168e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:57:31]   [sobol 34] mt_gamma=1.87 ft_sigma_c=0.714 f=1.2 w=0.802 ratio=0.119 sigma_d=0.00106 zi_alpha=0.138 zi_mu=0.0643 zi_delta=0.3 -> D=36.354 (14s, 9m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2643.21 maxDD=-22.9%; sigma_t mean=1.240e-03 (theta_eff=1.286e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:57:51]   [sobol 35] mt_gamma=1.45 ft_sigma_c=0.359 f=0.177 w=0.238 ratio=0.114 sigma_d=0.00153 zi_alpha=0.436 zi_mu=0.0249 zi_delta=0.227 -> D=45.715 (20s, 10m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2761.12 maxDD=-18.6%; sigma_t mean=8.330e-04 (theta_eff=7.664e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:58:08]   [sobol 36] mt_gamma=0.317 ft_sigma_c=0.566 f=1 w=0.516 ratio=0.286 sigma_d=0.00209 zi_alpha=0.219 zi_mu=0.0894 zi_delta=0.0794 -> D=14.690 (18s, 10m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2851.03 maxDD=-15.8%; sigma_t mean=5.218e-04 (theta_eff=4.607e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:58:25]   [sobol 37] mt_gamma=0.457 ft_sigma_c=0.442 f=1.36 w=0.616 ratio=0.228 sigma_d=0.0018 zi_alpha=0.36 zi_mu=0.0298 zi_delta=0.175 -> D=19.688 (17s, 10m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2691.36 maxDD=-21.1%; sigma_t mean=8.003e-04 (theta_eff=7.811e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:58:42]   [sobol 38] mt_gamma=1.23 ft_sigma_c=0.623 f=0.453 w=0.138 ratio=0.0202 sigma_d=0.00123 zi_alpha=0.205 zi_mu=0.111 zi_delta=0.0273 -> D=31.526 (17s, 11m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2862.13 maxDD=-15.5%; sigma_t mean=5.949e-04 (theta_eff=5.753e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:59:01]   [sobol 39] mt_gamma=1.54 ft_sigma_c=0.275 f=0.848 w=0.702 ratio=0.207 sigma_d=0.00134 zi_alpha=0.278 zi_mu=0.124 zi_delta=0.124 -> D=26.372 (19s, 11m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2642.05 maxDD=-22.8%; sigma_t mean=1.388e-03 (theta_eff=1.425e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:59:18]   [sobol 40] mt_gamma=0.889 ft_sigma_c=0.841 f=0.335 w=0.43 ratio=0.379 sigma_d=0.00199 zi_alpha=0.106 zi_mu=0.0595 zi_delta=0.278 -> D=46.029 (17s, 11m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2599.55 maxDD=-23.7%; sigma_t mean=1.044e-03 (theta_eff=9.436e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:59:36]   [sobol 41] mt_gamma=0.985 ft_sigma_c=0.323 f=0.83 w=0.163 ratio=0.143 sigma_d=0.00216 zi_alpha=0.391 zi_mu=0.041 zi_delta=0.19 -> D=19.922 (18s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2784.37 maxDD=-18.2%; sigma_t mean=9.974e-04 (theta_eff=1.022e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[15:59:53]   [sobol 42] mt_gamma=1.76 ft_sigma_c=0.514 f=0.358 w=0.692 ratio=0.351 sigma_d=0.00146 zi_alpha=0.174 zi_mu=0.105 zi_delta=0.0433 -> D=52.593 (17s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2869.17 maxDD=-15.3%; sigma_t mean=3.669e-04 (theta_eff=3.187e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:00:12]   [sobol 43] mt_gamma=1.09 ft_sigma_c=0.113 f=1.26 w=0.456 ratio=0.262 sigma_d=0.00113 zi_alpha=0.292 zi_mu=0.13 zi_delta=0.11 -> D=32.964 (18s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2789.13 maxDD=-18.0%; sigma_t mean=9.260e-04 (theta_eff=9.222e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:00:27]   [sobol 44] mt_gamma=0.438 ft_sigma_c=0.669 f=0.556 w=0.778 ratio=0.0902 sigma_d=0.00161 zi_alpha=0.092 zi_mu=0.0481 zi_delta=0.262 -> D=34.484 (16s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2633.77 maxDD=-23.4%; sigma_t mean=1.558e-03 (theta_eff=1.569e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:00:47]   [sobol 45] mt_gamma=0.102 ft_sigma_c=0.217 f=0.199 w=0.878 ratio=0.0442 sigma_d=0.00191 zi_alpha=0.324 zi_mu=0.14 zi_delta=0.161 -> D=54.874 (20s, 13m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2795.07 maxDD=-17.5%; sigma_t mean=5.858e-04 (theta_eff=5.297e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:01:02]   [sobol 46] mt_gamma=1.35 ft_sigma_c=0.799 f=0.987 w=0.356 ratio=0.252 sigma_d=0.00142 zi_alpha=0.152 zi_mu=0.0755 zi_delta=0.314 -> D=22.032 (15s, 13m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2848.26 maxDD=-16.0%; sigma_t mean=5.822e-04 (theta_eff=5.648e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:01:19]   [sobol 47] mt_gamma=1.9 ft_sigma_c=0.403 f=0.713 w=0.592 ratio=0.355 sigma_d=0.00115 zi_alpha=0.405 zi_mu=0.0136 zi_delta=0.214 -> D=22.965 (17s, 13m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2723.69 maxDD=-19.7%; sigma_t mean=7.180e-04 (theta_eff=6.221e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:01:36]   [sobol 48] mt_gamma=0.769 ft_sigma_c=0.574 f=1.1 w=0.263 ratio=0.183 sigma_d=0.00188 zi_alpha=0.25 zi_mu=0.0952 zi_delta=0.0658 -> D=16.432 (17s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2813.15 maxDD=-17.2%; sigma_t mean=9.111e-04 (theta_eff=9.274e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:01:52]   [sobol 49] mt_gamma=0.749 ft_sigma_c=0.41 f=0.417 w=0.747 ratio=0.304 sigma_d=0.00141 zi_alpha=0.133 zi_mu=0.0204 zi_delta=0.0547 -> D=43.019 (16s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2694.75 maxDD=-20.7%; sigma_t mean=9.588e-04 (theta_eff=9.080e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:02:09]   [sobol 50] mt_gamma=1.99 ft_sigma_c=0.614 f=0.768 w=0.419 ratio=0.0965 sigma_d=0.00196 zi_alpha=0.344 zi_mu=0.0934 zi_delta=0.207 -> D=23.975 (17s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2738.47 maxDD=-19.5%; sigma_t mean=1.084e-03 (theta_eff=1.086e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:02:26]   [sobol 51] mt_gamma=1.33 ft_sigma_c=0.213 f=0.534 w=0.633 ratio=0.136 sigma_d=0.00185 zi_alpha=0.237 zi_mu=0.134 zi_delta=0.245 -> D=33.026 (17s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2792.76 maxDD=-17.6%; sigma_t mean=4.286e-04 (theta_eff=3.400e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:02:46]   [sobol 52] mt_gamma=0.198 ft_sigma_c=0.757 f=1.28 w=0.112 ratio=0.309 sigma_d=0.00122 zi_alpha=0.42 zi_mu=0.078 zi_delta=0.0985 -> D=44.012 (19s, 15m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2737.22 maxDD=-19.3%; sigma_t mean=6.772e-04 (theta_eff=6.016e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:03:02]   [sobol 53] mt_gamma=0.338 ft_sigma_c=0.13 f=0.923 w=0.212 ratio=0.396 sigma_d=0.00151 zi_alpha=0.198 zi_mu=0.128 zi_delta=0.307 -> D=22.225 (16s, 15m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2614.49 maxDD=-23.8%; sigma_t mean=1.611e-03 (theta_eff=1.668e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:03:22]   [sobol 54] mt_gamma=1.11 ft_sigma_c=0.7 f=0.259 w=0.533 ratio=0.188 sigma_d=0.00216 zi_alpha=0.364 zi_mu=0.0549 zi_delta=0.158 -> D=53.728 (20s, 15m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2732.16 maxDD=-19.5%; sigma_t mean=6.339e-04 (theta_eff=5.440e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:03:37]   [sobol 55] mt_gamma=1.66 ft_sigma_c=0.303 f=1.12 w=0.319 ratio=0.0386 sigma_d=0.00167 zi_alpha=0.123 zi_mu=0.0435 zi_delta=0.0684 -> D=27.833 (16s, 16m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2897.03 maxDD=-14.5%; sigma_t mean=5.565e-04 (theta_eff=5.493e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:03:55]   [sobol 56] mt_gamma=1.01 ft_sigma_c=0.486 f=0.689 w=0.847 ratio=0.211 sigma_d=0.00109 zi_alpha=0.261 zi_mu=0.0994 zi_delta=0.221 -> D=28.497 (17s, 16m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2849.81 maxDD=-15.9%; sigma_t mean=4.411e-04 (theta_eff=3.975e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:04:13]   [sobol 57] mt_gamma=0.866 ft_sigma_c=0.256 f=1.18 w=0.559 ratio=0.0733 sigma_d=0.0013 zi_alpha=0.19 zi_mu=0.118 zi_delta=0.284 -> D=27.858 (18s, 16m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2684.62 maxDD=-21.1%; sigma_t mean=9.764e-04 (theta_eff=9.436e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:04:32]   [sobol 58] mt_gamma=1.64 ft_sigma_c=0.814 f=0.631 w=0.287 ratio=0.281 sigma_d=0.00177 zi_alpha=0.373 zi_mu=0.0618 zi_delta=0.137 -> D=19.233 (19s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2891.64 maxDD=-14.7%; sigma_t mean=7.551e-04 (theta_eff=6.990e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:04:49]   [sobol 59] mt_gamma=1.21 ft_sigma_c=0.458 f=1.07 w=0.873 ratio=0.332 sigma_d=0.00203 zi_alpha=0.0863 zi_mu=0.0365 zi_delta=0.0914 -> D=30.057 (17s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2701.19 maxDD=-21.1%; sigma_t mean=1.133e-03 (theta_eff=1.182e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:05:08]   [sobol 60] mt_gamma=0.556 ft_sigma_c=0.653 f=0.118 w=0.395 ratio=0.16 sigma_d=0.00133 zi_alpha=0.297 zi_mu=0.109 zi_delta=0.243 -> D=48.320 (19s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2822.30 maxDD=-16.8%; sigma_t mean=6.313e-04 (theta_eff=6.356e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:05:27]   [sobol 61] mt_gamma=0.221 ft_sigma_c=0.354 f=0.475 w=0.495 ratio=0.164 sigma_d=0.00102 zi_alpha=0.169 zi_mu=0.0273 zi_delta=0.0294 -> D=26.010 (18s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2888.70 maxDD=-14.7%; sigma_t mean=5.190e-04 (theta_eff=4.545e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:05:45]   [sobol 62] mt_gamma=1.47 ft_sigma_c=0.523 f=1.34 w=0.773 ratio=0.372 sigma_d=0.00174 zi_alpha=0.307 zi_mu=0.0831 zi_delta=0.183 -> D=19.409 (18s, 18m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2547.44 maxDD=-25.9%; sigma_t mean=1.536e-03 (theta_eff=1.581e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:06:02]   [sobol 63] mt_gamma=1.78 ft_sigma_c=0.175 f=0.278 w=0.187 ratio=0.235 sigma_d=0.00209 zi_alpha=0.246 zi_mu=0.144 zi_delta=0.27 -> D=42.486 (18s, 18m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2806.37 maxDD=-17.3%; sigma_t mean=6.698e-04 (theta_eff=6.372e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:06:22]   [sobol 64] mt_gamma=0.65 ft_sigma_c=0.754 f=0.912 w=0.659 ratio=0.0629 sigma_d=0.00159 zi_alpha=0.412 zi_mu=0.0709 zi_delta=0.122 -> D=25.597 (20s, 18m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2756.57 maxDD=-19.0%; sigma_t mean=7.753e-04 (theta_eff=7.888e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:06:41]   [sobol 65] mt_gamma=0.638 ft_sigma_c=0.266 f=0.323 w=0.276 ratio=0.117 sigma_d=0.00109 zi_alpha=0.355 zi_mu=0.0785 zi_delta=0.0763 -> D=27.378 (19s, 19m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2801.09 maxDD=-17.4%; sigma_t mean=7.329e-04 (theta_eff=6.917e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:06:59]   [sobol 66] mt_gamma=1.76 ft_sigma_c=0.844 f=0.867 w=0.554 ratio=0.325 sigma_d=0.00165 zi_alpha=0.212 zi_mu=0.134 zi_delta=0.229 -> D=21.843 (18s, 19m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2628.98 maxDD=-23.1%; sigma_t mean=1.368e-03 (theta_eff=1.384e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:07:18]   [sobol 67] mt_gamma=1.48 ft_sigma_c=0.451 f=0.43 w=0.393 ratio=0.282 sigma_d=0.00213 zi_alpha=0.274 zi_mu=0.0928 zi_delta=0.298 -> D=40.534 (19s, 19m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2918.61 maxDD=-13.8%; sigma_t mean=4.052e-04 (theta_eff=3.740e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:07:36]   [sobol 68] mt_gamma=0.235 ft_sigma_c=0.62 f=1.39 w=0.866 ratio=0.11 sigma_d=0.0015 zi_alpha=0.113 zi_mu=0.0198 zi_delta=0.15 -> D=26.401 (18s, 20m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2859.71 maxDD=-15.6%; sigma_t mean=4.411e-04 (theta_eff=4.238e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:07:56]   [sobol 69] mt_gamma=0.568 ft_sigma_c=0.368 f=1.03 w=0.766 ratio=0.0251 sigma_d=0.00119 zi_alpha=0.331 zi_mu=0.0998 zi_delta=0.275 -> D=35.751 (19s, 20m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2633.69 maxDD=-23.3%; sigma_t mean=1.508e-03 (theta_eff=1.575e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:08:16]   [sobol 70] mt_gamma=1.22 ft_sigma_c=0.563 f=0.154 w=0.493 ratio=0.233 sigma_d=0.00184 zi_alpha=0.143 zi_mu=0.0439 zi_delta=0.127 -> D=70.609 (20s, 20m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2832.20 maxDD=-16.4%; sigma_t mean=6.512e-04 (theta_eff=5.760e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:08:41]   [sobol 71] mt_gamma=1.62 ft_sigma_c=0.159 f=1.22 w=0.654 ratio=0.38 sigma_d=0.00195 zi_alpha=0.429 zi_mu=0.0543 zi_delta=0.0259 -> D=20.626 (25s, 21m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2714.75 maxDD=-20.1%; sigma_t mean=7.929e-04 (theta_eff=7.631e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:08:59]   [sobol 72] mt_gamma=0.852 ft_sigma_c=0.717 f=0.595 w=0.176 ratio=0.208 sigma_d=0.00138 zi_alpha=0.224 zi_mu=0.127 zi_delta=0.177 -> D=20.003 (18s, 21m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2796.90 maxDD=-17.5%; sigma_t mean=6.044e-04 (theta_eff=5.366e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:09:17]   [sobol 73] mt_gamma=0.992 ft_sigma_c=0.394 f=1.08 w=0.417 ratio=0.349 sigma_d=0.00157 zi_alpha=0.317 zi_mu=0.111 zi_delta=0.26 -> D=21.915 (18s, 21m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2784.39 maxDD=-18.0%; sigma_t mean=1.002e-03 (theta_eff=9.843e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:09:34]   [sobol 74] mt_gamma=1.65 ft_sigma_c=0.577 f=0.736 w=0.739 ratio=0.142 sigma_d=0.00205 zi_alpha=0.156 zi_mu=0.0381 zi_delta=0.111 -> D=46.457 (17s, 22m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2659.58 maxDD=-21.7%; sigma_t mean=7.640e-04 (theta_eff=6.522e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:09:55]   [sobol 75] mt_gamma=1.12 ft_sigma_c=0.226 f=0.969 w=0.101 ratio=0.0855 sigma_d=0.00172 zi_alpha=0.398 zi_mu=0.0603 zi_delta=0.0404 -> D=19.501 (21s, 22m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2809.55 maxDD=-17.4%; sigma_t mean=7.912e-04 (theta_eff=8.228e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:10:15]   [sobol 76] mt_gamma=0.356 ft_sigma_c=0.796 f=0.212 w=0.629 ratio=0.258 sigma_d=0.00102 zi_alpha=0.254 zi_mu=0.116 zi_delta=0.193 -> D=34.374 (20s, 22m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2802.85 maxDD=-17.4%; sigma_t mean=7.426e-04 (theta_eff=7.398e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:10:38]   [sobol 77] mt_gamma=0.214 ft_sigma_c=0.122 f=0.569 w=0.529 ratio=0.256 sigma_d=0.00131 zi_alpha=0.386 zi_mu=0.0726 zi_delta=0.0642 -> D=21.813 (23s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2670.07 maxDD=-21.3%; sigma_t mean=7.238e-04 (theta_eff=5.847e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:10:55]   [sobol 78] mt_gamma=1.34 ft_sigma_c=0.666 f=1.24 w=0.201 ratio=0.0484 sigma_d=0.00203 zi_alpha=0.181 zi_mu=0.146 zi_delta=0.216 -> D=19.977 (17s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2776.02 maxDD=-18.5%; sigma_t mean=1.182e-03 (theta_eff=1.201e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:11:12]   [sobol 79] mt_gamma=1.98 ft_sigma_c=0.314 f=0.382 w=0.839 ratio=0.185 sigma_d=0.00176 zi_alpha=0.288 zi_mu=0.0816 zi_delta=0.311 -> D=45.378 (17s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2788.74 maxDD=-17.8%; sigma_t mean=6.100e-04 (theta_eff=5.675e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:11:30]   [sobol 80] mt_gamma=0.731 ft_sigma_c=0.517 f=0.803 w=0.317 ratio=0.357 sigma_d=0.00127 zi_alpha=0.0993 zi_mu=0.0258 zi_delta=0.164 -> D=21.647 (18s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2748.67 maxDD=-19.2%; sigma_t mean=1.033e-03 (theta_eff=1.015e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:11:51]   [sobol 81] mt_gamma=0.756 ft_sigma_c=0.306 f=0.677 w=0.696 ratio=0.0925 sigma_d=0.002 zi_alpha=0.194 zi_mu=0.0878 zi_delta=0.0953 -> D=38.269 (21s, 24m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2774.15 maxDD=-18.1%; sigma_t mean=5.220e-04 (theta_eff=4.376e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:12:13]   [sobol 82] mt_gamma=1.88 ft_sigma_c=0.477 f=1.14 w=0.174 ratio=0.3 sigma_d=0.00137 zi_alpha=0.371 zi_mu=0.0233 zi_delta=0.248 -> D=24.350 (22s, 24m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2798.86 maxDD=-17.8%; sigma_t mean=9.658e-04 (theta_eff=9.974e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:12:32]   [sobol 83] mt_gamma=1.36 ft_sigma_c=0.127 f=0.235 w=0.786 ratio=0.307 sigma_d=0.00126 zi_alpha=0.119 zi_mu=0.0659 zi_delta=0.205 -> D=41.588 (19s, 25m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2761.43 maxDD=-18.6%; sigma_t mean=7.562e-04 (theta_eff=7.000e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:12:55]   [sobol 84] mt_gamma=0.117 ft_sigma_c=0.708 f=0.951 w=0.458 ratio=0.134 sigma_d=0.00181 zi_alpha=0.267 zi_mu=0.147 zi_delta=0.0565 -> D=18.235 (23s, 25m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2750.08 maxDD=-18.9%; sigma_t mean=6.782e-04 (theta_eff=5.743e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:13:13]   [sobol 85] mt_gamma=0.449 ft_sigma_c=0.21 f=1.31 w=0.358 ratio=0.189 sigma_d=0.00212 zi_alpha=0.126 zi_mu=0.0578 zi_delta=0.218 -> D=21.273 (18s, 25m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2854.70 maxDD=-16.0%; sigma_t mean=9.358e-04 (theta_eff=9.289e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:13:35]   [sobol 86] mt_gamma=1.11 ft_sigma_c=0.765 f=0.511 w=0.886 ratio=0.397 sigma_d=0.00155 zi_alpha=0.348 zi_mu=0.122 zi_delta=0.0715 -> D=25.505 (22s, 26m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2810.93 maxDD=-17.1%; sigma_t mean=5.172e-04 (theta_eff=4.830e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:13:56]   [sobol 87] mt_gamma=1.74 ft_sigma_c=0.413 f=0.785 w=0.274 ratio=0.216 sigma_d=0.00106 zi_alpha=0.23 zi_mu=0.113 zi_delta=0.157 -> D=26.490 (21s, 26m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2680.69 maxDD=-21.6%; sigma_t mean=1.133e-03 (theta_eff=1.139e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:14:17]   [sobol 88] mt_gamma=0.971 ft_sigma_c=0.605 f=0.403 w=0.596 ratio=0.0435 sigma_d=0.0017 zi_alpha=0.425 zi_mu=0.0313 zi_delta=0.309 -> D=39.464 (21s, 26m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2854.86 maxDD=-15.8%; sigma_t mean=8.133e-04 (theta_eff=7.808e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:14:35]   [sobol 89] mt_gamma=0.873 ft_sigma_c=0.178 f=0.883 w=0.809 ratio=0.276 sigma_d=0.00189 zi_alpha=0.162 zi_mu=0.0476 zi_delta=0.241 -> D=22.589 (17s, 27m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2732.21 maxDD=-19.8%; sigma_t mean=8.636e-04 (theta_eff=8.773e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:14:54]   [sobol 90] mt_gamma=1.53 ft_sigma_c=0.745 f=0.3 w=0.332 ratio=0.0686 sigma_d=0.00118 zi_alpha=0.311 zi_mu=0.129 zi_delta=0.093 -> D=31.502 (19s, 27m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2855.12 maxDD=-15.7%; sigma_t mean=4.370e-04 (theta_eff=3.834e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:15:11]   [sobol 91] mt_gamma=1.24 ft_sigma_c=0.351 f=1.33 w=0.521 ratio=0.158 sigma_d=0.00144 zi_alpha=0.239 zi_mu=0.106 zi_delta=0.134 -> D=27.639 (18s, 27m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2628.73 maxDD=-23.0%; sigma_t mean=1.187e-03 (theta_eff=1.178e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:15:32]   [sobol 92] mt_gamma=0.475 ft_sigma_c=0.531 f=0.488 w=0.249 ratio=0.331 sigma_d=0.00192 zi_alpha=0.416 zi_mu=0.0416 zi_delta=0.287 -> D=25.747 (20s, 28m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2613.73 maxDD=-24.0%; sigma_t mean=1.366e-03 (theta_eff=1.432e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:15:53]   [sobol 93] mt_gamma=0.332 ft_sigma_c=0.455 f=0.131 w=0.149 ratio=0.374 sigma_d=0.00163 zi_alpha=0.186 zi_mu=0.0948 zi_delta=0.121 -> D=54.309 (21s, 28m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2880.13 maxDD=-15.0%; sigma_t mean=4.241e-04 (theta_eff=3.960e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:16:11]   [sobol 94] mt_gamma=1.46 ft_sigma_c=0.662 f=1.05 w=0.621 ratio=0.166 sigma_d=0.00113 zi_alpha=0.38 zi_mu=0.0131 zi_delta=0.272 -> D=26.573 (19s, 28m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2739.90 maxDD=-19.4%; sigma_t mean=7.969e-04 (theta_eff=7.674e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:16:25]   [sobol 95] mt_gamma=1.86 ft_sigma_c=0.259 f=0.655 w=0.432 ratio=0.0671 sigma_d=0.00148 zi_alpha=0.0818 zi_mu=0.0761 zi_delta=0.18 -> D=27.206 (14s, 28m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2830.02 maxDD=-16.5%; sigma_t mean=7.491e-04 (theta_eff=6.913e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:16:45]   [sobol 96] mt_gamma=0.613 ft_sigma_c=0.805 f=1.16 w=0.709 ratio=0.239 sigma_d=0.0022 zi_alpha=0.304 zi_mu=0.141 zi_delta=0.0326 -> D=14.786 (19s, 29m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2793.80 maxDD=-17.6%; sigma_t mean=7.631e-04 (theta_eff=7.153e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:17:00]   [sobol 97] mt_gamma=0.587 ft_sigma_c=0.43 f=0.982 w=0.576 ratio=0.201 sigma_d=0.00191 zi_alpha=0.12 zi_mu=0.133 zi_delta=0.254 -> D=18.686 (16s, 29m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2681.18 maxDD=-21.6%; sigma_t mean=1.135e-03 (theta_eff=1.186e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:17:17]   [sobol 98] mt_gamma=1.84 ft_sigma_c=0.633 f=0.185 w=0.254 ratio=0.386 sigma_d=0.00143 zi_alpha=0.264 zi_mu=0.0509 zi_delta=0.101 -> D=52.195 (17s, 29m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2934.70 maxDD=-13.4%; sigma_t mean=4.095e-04 (theta_eff=3.837e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:17:32]   [sobol 99] mt_gamma=1.43 ft_sigma_c=0.287 f=1.11 w=0.893 ratio=0.227 sigma_d=0.00116 zi_alpha=0.202 zi_mu=0.0387 zi_delta=0.051 -> D=29.045 (16s, 30m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2651.18 maxDD=-22.2%; sigma_t mean=9.583e-04 (theta_eff=9.011e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:17:51]   [sobol 100] mt_gamma=0.306 ft_sigma_c=0.831 f=0.727 w=0.366 ratio=0.0314 sigma_d=0.00186 zi_alpha=0.362 zi_mu=0.103 zi_delta=0.199 -> D=23.119 (19s, 30m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2598.58 maxDD=-24.2%; sigma_t mean=1.504e-03 (theta_eff=1.528e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:18:09]   [sobol 101] mt_gamma=0.508 ft_sigma_c=0.157 f=0.353 w=0.466 ratio=0.104 sigma_d=0.00217 zi_alpha=0.233 zi_mu=0.0167 zi_delta=0.0745 -> D=50.769 (18s, 30m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2873.59 maxDD=-15.2%; sigma_t mean=6.636e-04 (theta_eff=6.421e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:18:27]   [sobol 102] mt_gamma=1.28 ft_sigma_c=0.727 f=0.816 w=0.793 ratio=0.288 sigma_d=0.00145 zi_alpha=0.422 zi_mu=0.0983 zi_delta=0.222 -> D=21.818 (18s, 30m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2756.96 maxDD=-18.8%; sigma_t mean=6.603e-04 (theta_eff=6.391e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:18:42]   [sobol 103] mt_gamma=1.56 ft_sigma_c=0.37 f=0.562 w=0.154 ratio=0.319 sigma_d=0.00112 zi_alpha=0.135 zi_mu=0.137 zi_delta=0.305 -> D=25.198 (15s, 31m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2865.64 maxDD=-15.4%; sigma_t mean=4.936e-04 (theta_eff=4.501e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:18:59]   [sobol 104] mt_gamma=0.907 ft_sigma_c=0.553 f=1.28 w=0.676 ratio=0.123 sigma_d=0.00161 zi_alpha=0.341 zi_mu=0.073 zi_delta=0.153 -> D=21.059 (17s, 31m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2770.26 maxDD=-18.6%; sigma_t mean=1.122e-03 (theta_eff=1.134e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:19:15]   [sobol 105] mt_gamma=0.945 ft_sigma_c=0.23 f=0.457 w=0.717 ratio=0.362 sigma_d=0.00179 zi_alpha=0.248 zi_mu=0.0227 zi_delta=0.0893 -> D=37.979 (16s, 31m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2864.03 maxDD=-15.4%; sigma_t mean=3.656e-04 (theta_eff=3.116e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:19:33]   [sobol 106] mt_gamma=1.72 ft_sigma_c=0.788 f=1.38 w=0.439 ratio=0.178 sigma_d=0.00123 zi_alpha=0.408 zi_mu=0.0871 zi_delta=0.238 -> D=30.906 (18s, 32m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2735.12 maxDD=-19.8%; sigma_t mean=9.604e-04 (theta_eff=9.729e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:19:48]   [sobol 107] mt_gamma=1.08 ft_sigma_c=0.39 f=0.331 w=0.601 ratio=0.0554 sigma_d=0.00135 zi_alpha=0.166 zi_mu=0.149 zi_delta=0.29 -> D=42.448 (16s, 32m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2623.21 maxDD=-22.9%; sigma_t mean=9.559e-04 (theta_eff=8.614e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:20:11]   [sobol 108] mt_gamma=0.423 ft_sigma_c=0.585 f=0.833 w=0.129 ratio=0.251 sigma_d=0.00198 zi_alpha=0.31 zi_mu=0.0671 zi_delta=0.138 -> D=12.474 (22s, 32m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2751.59 maxDD=-18.8%; sigma_t mean=6.051e-04 (theta_eff=5.061e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:20:30]   [sobol 109] mt_gamma=0.15 ft_sigma_c=0.333 f=1.21 w=0.229 ratio=0.265 sigma_d=0.00169 zi_alpha=0.0893 zi_mu=0.121 zi_delta=0.266 -> D=20.000 (19s, 32m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2820.23 maxDD=-16.9%; sigma_t mean=5.737e-04 (theta_eff=5.598e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:20:47]   [sobol 110] mt_gamma=1.4 ft_sigma_c=0.501 f=0.624 w=0.501 ratio=0.0807 sigma_d=0.00104 zi_alpha=0.295 zi_mu=0.0569 zi_delta=0.114 -> D=27.026 (17s, 33m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2677.68 maxDD=-21.1%; sigma_t mean=7.644e-04 (theta_eff=6.637e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:21:05]   [active 111] mt_gamma=0.322 ft_sigma_c=0.638 f=0.963 w=0.118 ratio=0.265 sigma_d=0.00174 zi_alpha=0.264 zi_mu=0.0958 zi_delta=0.214 -> D=10.352 (17s, 33m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2749.30 maxDD=-19.0%; sigma_t mean=8.532e-04 (theta_eff=7.914e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:21:25]   [active 112] mt_gamma=0.407 ft_sigma_c=0.714 f=0.944 w=0.481 ratio=0.274 sigma_d=0.00203 zi_alpha=0.342 zi_mu=0.0407 zi_delta=0.0278 -> D=15.036 (20s, 33m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2665.27 maxDD=-21.6%; sigma_t mean=8.730e-04 (theta_eff=7.894e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:21:43]   [active 113] mt_gamma=0.63 ft_sigma_c=0.687 f=0.85 w=0.173 ratio=0.262 sigma_d=0.00185 zi_alpha=0.315 zi_mu=0.132 zi_delta=0.199 -> D=12.666 (18s, 34m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2677.90 maxDD=-21.1%; sigma_t mean=8.833e-04 (theta_eff=7.832e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:22:02]   [active 114] mt_gamma=0.256 ft_sigma_c=0.796 f=0.996 w=0.265 ratio=0.28 sigma_d=0.00212 zi_alpha=0.353 zi_mu=0.0936 zi_delta=0.0758 -> D=21.936 (19s, 34m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2640.02 maxDD=-22.3%; sigma_t mean=9.701e-04 (theta_eff=8.613e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:22:20]   [active 115] mt_gamma=0.233 ft_sigma_c=0.587 f=0.931 w=0.222 ratio=0.397 sigma_d=0.00219 zi_alpha=0.348 zi_mu=0.0211 zi_delta=0.189 -> D=13.207 (18s, 34m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2700.55 maxDD=-20.4%; sigma_t mean=7.964e-04 (theta_eff=7.084e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:22:37]   [active 116] mt_gamma=1.23 ft_sigma_c=0.617 f=0.972 w=0.241 ratio=0.21 sigma_d=0.00187 zi_alpha=0.31 zi_mu=0.0257 zi_delta=0.151 -> D=15.994 (17s, 35m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2755.09 maxDD=-18.9%; sigma_t mean=9.825e-04 (theta_eff=9.427e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:22:56]   [active 117] mt_gamma=0.314 ft_sigma_c=0.807 f=0.844 w=0.598 ratio=0.223 sigma_d=0.00219 zi_alpha=0.258 zi_mu=0.113 zi_delta=0.146 -> D=18.304 (19s, 35m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2700.43 maxDD=-20.4%; sigma_t mean=7.996e-04 (theta_eff=6.911e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:23:16]   [active 118] mt_gamma=0.412 ft_sigma_c=0.68 f=1.12 w=0.278 ratio=0.244 sigma_d=0.00213 zi_alpha=0.371 zi_mu=0.139 zi_delta=0.288 -> D=16.997 (19s, 35m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2793.13 maxDD=-17.6%; sigma_t mean=6.342e-04 (theta_eff=5.565e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:23:35]   [active 119] mt_gamma=0.251 ft_sigma_c=0.83 f=1.24 w=0.468 ratio=0.238 sigma_d=0.00192 zi_alpha=0.334 zi_mu=0.0515 zi_delta=0.261 -> D=23.704 (19s, 36m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2700.81 maxDD=-20.5%; sigma_t mean=8.415e-04 (theta_eff=7.615e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:23:53]   [active 120] mt_gamma=0.568 ft_sigma_c=0.777 f=0.937 w=0.29 ratio=0.193 sigma_d=0.00194 zi_alpha=0.248 zi_mu=0.044 zi_delta=0.0665 -> D=15.920 (19s, 36m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2664.39 maxDD=-22.3%; sigma_t mean=1.439e-03 (theta_eff=1.503e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:24:13]   [active 121] mt_gamma=0.274 ft_sigma_c=0.128 f=0.163 w=0.573 ratio=0.306 sigma_d=0.00177 zi_alpha=0.305 zi_mu=0.0628 zi_delta=0.18 -> D=47.968 (19s, 36m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2900.79 maxDD=-14.4%; sigma_t mean=6.041e-04 (theta_eff=5.492e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:24:30]   [active 122] mt_gamma=0.655 ft_sigma_c=0.51 f=1.15 w=0.845 ratio=0.365 sigma_d=0.00173 zi_alpha=0.107 zi_mu=0.104 zi_delta=0.206 -> D=19.018 (17s, 36m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2692.59 maxDD=-21.0%; sigma_t mean=1.079e-03 (theta_eff=1.050e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:24:47]   [active 123] mt_gamma=1.29 ft_sigma_c=0.815 f=0.686 w=0.616 ratio=0.0534 sigma_d=0.00209 zi_alpha=0.121 zi_mu=0.0564 zi_delta=0.0988 -> D=51.956 (17s, 37m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2822.86 maxDD=-16.7%; sigma_t mean=5.843e-04 (theta_eff=5.272e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:25:05]   [active 124] mt_gamma=0.301 ft_sigma_c=0.516 f=1.12 w=0.523 ratio=0.27 sigma_d=0.00162 zi_alpha=0.3 zi_mu=0.0248 zi_delta=0.266 -> D=16.608 (18s, 37m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2610.61 maxDD=-24.1%; sigma_t mean=1.687e-03 (theta_eff=1.756e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:25:30]   [active 125] mt_gamma=0.503 ft_sigma_c=0.552 f=0.181 w=0.582 ratio=0.21 sigma_d=0.0021 zi_alpha=0.432 zi_mu=0.0839 zi_delta=0.295 -> D=53.663 (25s, 37m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2806.33 maxDD=-17.2%; sigma_t mean=7.274e-04 (theta_eff=6.864e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:25:52]   [active 126] mt_gamma=1.77 ft_sigma_c=0.736 f=0.949 w=0.588 ratio=0.203 sigma_d=0.00177 zi_alpha=0.28 zi_mu=0.132 zi_delta=0.0558 -> D=17.233 (22s, 38m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2655.81 maxDD=-21.8%; sigma_t mean=9.087e-04 (theta_eff=8.065e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:26:11]   [active 127] mt_gamma=0.435 ft_sigma_c=0.626 f=0.96 w=0.216 ratio=0.203 sigma_d=0.00211 zi_alpha=0.317 zi_mu=0.0332 zi_delta=0.225 -> D=11.194 (19s, 38m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2687.09 maxDD=-20.8%; sigma_t mean=6.953e-04 (theta_eff=5.584e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:26:34]   [active 128] mt_gamma=0.155 ft_sigma_c=0.56 f=1.23 w=0.123 ratio=0.392 sigma_d=0.00191 zi_alpha=0.336 zi_mu=0.0367 zi_delta=0.198 -> D=21.766 (23s, 39m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2631.33 maxDD=-22.6%; sigma_t mean=9.059e-04 (theta_eff=7.777e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:26:56]   [active 129] mt_gamma=0.663 ft_sigma_c=0.729 f=1.03 w=0.152 ratio=0.306 sigma_d=0.00218 zi_alpha=0.263 zi_mu=0.023 zi_delta=0.127 -> D=14.348 (22s, 39m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2782.22 maxDD=-17.9%; sigma_t mean=6.513e-04 (theta_eff=5.765e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:27:17]   [active 130] mt_gamma=0.52 ft_sigma_c=0.623 f=1.14 w=0.423 ratio=0.266 sigma_d=0.0018 zi_alpha=0.379 zi_mu=0.0162 zi_delta=0.202 -> D=16.675 (22s, 39m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2624.44 maxDD=-22.8%; sigma_t mean=9.271e-04 (theta_eff=8.174e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:27:39]   [active 131] mt_gamma=1.21 ft_sigma_c=0.515 f=0.911 w=0.125 ratio=0.263 sigma_d=0.00203 zi_alpha=0.242 zi_mu=0.106 zi_delta=0.281 -> D=20.586 (21s, 40m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2696.53 maxDD=-20.5%; sigma_t mean=7.166e-04 (theta_eff=6.134e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:27:59]   [active 132] mt_gamma=0.143 ft_sigma_c=0.613 f=1.04 w=0.14 ratio=0.22 sigma_d=0.00173 zi_alpha=0.103 zi_mu=0.0149 zi_delta=0.173 -> D=12.064 (20s, 40m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2723.75 maxDD=-19.7%; sigma_t mean=7.271e-04 (theta_eff=6.370e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:28:18]   [active 133] mt_gamma=0.6 ft_sigma_c=0.667 f=1.04 w=0.255 ratio=0.251 sigma_d=0.00181 zi_alpha=0.318 zi_mu=0.118 zi_delta=0.169 -> D=13.164 (19s, 40m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2696.19 maxDD=-20.6%; sigma_t mean=8.784e-04 (theta_eff=8.071e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:28:37]   [active 134] mt_gamma=0.739 ft_sigma_c=0.711 f=0.874 w=0.298 ratio=0.205 sigma_d=0.00194 zi_alpha=0.287 zi_mu=0.0607 zi_delta=0.204 -> D=13.920 (19s, 41m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2679.41 maxDD=-21.1%; sigma_t mean=8.308e-04 (theta_eff=7.397e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:28:59]   [active 135] mt_gamma=0.3 ft_sigma_c=0.416 f=0.91 w=0.189 ratio=0.35 sigma_d=0.00184 zi_alpha=0.321 zi_mu=0.0186 zi_delta=0.191 -> D=12.851 (22s, 41m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2648.96 maxDD=-22.1%; sigma_t mean=8.911e-04 (theta_eff=7.934e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:29:25]   [active 136] mt_gamma=0.509 ft_sigma_c=0.774 f=0.9 w=0.156 ratio=0.235 sigma_d=0.00195 zi_alpha=0.428 zi_mu=0.111 zi_delta=0.268 -> D=18.928 (26s, 41m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2859.91 maxDD=-15.6%; sigma_t mean=7.021e-04 (theta_eff=6.615e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:29:45]   [active 137] mt_gamma=1.78 ft_sigma_c=0.726 f=0.96 w=0.765 ratio=0.326 sigma_d=0.00173 zi_alpha=0.148 zi_mu=0.0708 zi_delta=0.109 -> D=28.369 (19s, 42m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2788.71 maxDD=-17.8%; sigma_t mean=5.852e-04 (theta_eff=5.332e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:30:04]   [active 138] mt_gamma=1.59 ft_sigma_c=0.257 f=0.944 w=0.4 ratio=0.0792 sigma_d=0.00137 zi_alpha=0.326 zi_mu=0.0463 zi_delta=0.109 -> D=26.213 (19s, 42m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2803.39 maxDD=-17.3%; sigma_t mean=5.290e-04 (theta_eff=4.999e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:30:22]   [active 139] mt_gamma=1.89 ft_sigma_c=0.246 f=0.703 w=0.226 ratio=0.222 sigma_d=0.00101 zi_alpha=0.314 zi_mu=0.0151 zi_delta=0.143 -> D=28.552 (18s, 42m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2696.39 maxDD=-20.5%; sigma_t mean=7.272e-04 (theta_eff=6.095e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:30:41]   [active 140] mt_gamma=0.132 ft_sigma_c=0.379 f=1.19 w=0.275 ratio=0.0648 sigma_d=0.00201 zi_alpha=0.121 zi_mu=0.0688 zi_delta=0.11 -> D=17.933 (19s, 43m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2644.24 maxDD=-22.6%; sigma_t mean=1.395e-03 (theta_eff=1.424e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:30:59]   [active 141] mt_gamma=1.16 ft_sigma_c=0.62 f=0.383 w=0.457 ratio=0.343 sigma_d=0.00209 zi_alpha=0.19 zi_mu=0.0549 zi_delta=0.294 -> D=45.947 (18s, 43m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2611.94 maxDD=-23.6%; sigma_t mean=1.243e-03 (theta_eff=1.249e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:31:15]   [active 142] mt_gamma=0.714 ft_sigma_c=0.688 f=0.409 w=0.211 ratio=0.399 sigma_d=0.00188 zi_alpha=0.214 zi_mu=0.0647 zi_delta=0.208 -> D=36.559 (17s, 43m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2658.69 maxDD=-21.7%; sigma_t mean=8.206e-04 (theta_eff=6.958e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:31:32]   [active 143] mt_gamma=0.409 ft_sigma_c=0.727 f=1.09 w=0.213 ratio=0.0832 sigma_d=0.00208 zi_alpha=0.216 zi_mu=0.0945 zi_delta=0.182 -> D=12.426 (17s, 44m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2819.52 maxDD=-16.8%; sigma_t mean=6.443e-04 (theta_eff=5.868e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:31:51]   [active 144] mt_gamma=0.501 ft_sigma_c=0.739 f=1.1 w=0.575 ratio=0.292 sigma_d=0.00176 zi_alpha=0.29 zi_mu=0.0577 zi_delta=0.0481 -> D=16.162 (19s, 44m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2642.33 maxDD=-22.2%; sigma_t mean=8.763e-04 (theta_eff=7.588e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:32:10]   [active 145] mt_gamma=0.213 ft_sigma_c=0.54 f=0.994 w=0.144 ratio=0.278 sigma_d=0.00205 zi_alpha=0.17 zi_mu=0.0238 zi_delta=0.042 -> D=18.158 (19s, 44m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2663.22 maxDD=-21.6%; sigma_t mean=8.730e-04 (theta_eff=7.643e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:32:28]   [active 146] mt_gamma=0.606 ft_sigma_c=0.674 f=1 w=0.206 ratio=0.29 sigma_d=0.00208 zi_alpha=0.394 zi_mu=0.0891 zi_delta=0.286 -> D=13.574 (18s, 44m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2685.19 maxDD=-20.9%; sigma_t mean=7.103e-04 (theta_eff=5.851e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:32:48]   [active 147] mt_gamma=0.2 ft_sigma_c=0.658 f=1.14 w=0.117 ratio=0.37 sigma_d=0.00183 zi_alpha=0.367 zi_mu=0.0466 zi_delta=0.0375 -> D=27.281 (20s, 45m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2690.42 maxDD=-20.7%; sigma_t mean=7.339e-04 (theta_eff=6.336e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:33:07]   [active 148] mt_gamma=0.672 ft_sigma_c=0.581 f=0.989 w=0.128 ratio=0.299 sigma_d=0.0017 zi_alpha=0.312 zi_mu=0.083 zi_delta=0.15 -> D=12.344 (19s, 45m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2668.51 maxDD=-21.4%; sigma_t mean=9.221e-04 (theta_eff=8.243e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:33:26]   [active 149] mt_gamma=0.603 ft_sigma_c=0.633 f=0.95 w=0.266 ratio=0.328 sigma_d=0.00213 zi_alpha=0.285 zi_mu=0.0202 zi_delta=0.125 -> D=14.002 (19s, 45m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2684.00 maxDD=-21.0%; sigma_t mean=9.386e-04 (theta_eff=8.695e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:33:45]   [active 150] mt_gamma=0.448 ft_sigma_c=0.628 f=0.849 w=0.314 ratio=0.201 sigma_d=0.00203 zi_alpha=0.234 zi_mu=0.132 zi_delta=0.311 -> D=13.154 (19s, 46m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2786.93 maxDD=-17.8%; sigma_t mean=7.676e-04 (theta_eff=6.970e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:34:05]   [active 151] mt_gamma=0.514 ft_sigma_c=0.811 f=1.04 w=0.561 ratio=0.378 sigma_d=0.00197 zi_alpha=0.224 zi_mu=0.0803 zi_delta=0.0337 -> D=14.409 (20s, 46m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2718.31 maxDD=-19.8%; sigma_t mean=6.433e-04 (theta_eff=5.277e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:34:25]   [active 152] mt_gamma=0.178 ft_sigma_c=0.696 f=1.21 w=0.155 ratio=0.237 sigma_d=0.00177 zi_alpha=0.262 zi_mu=0.115 zi_delta=0.233 -> D=20.001 (20s, 46m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2636.87 maxDD=-22.8%; sigma_t mean=1.386e-03 (theta_eff=1.399e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:34:44]   [active 153] mt_gamma=1.78 ft_sigma_c=0.222 f=0.448 w=0.44 ratio=0.343 sigma_d=0.00219 zi_alpha=0.284 zi_mu=0.0984 zi_delta=0.137 -> D=41.349 (19s, 47m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2709.52 maxDD=-20.3%; sigma_t mean=8.689e-04 (theta_eff=8.277e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:35:02]   [active 154] mt_gamma=0.911 ft_sigma_c=0.733 f=0.702 w=0.287 ratio=0.219 sigma_d=0.00167 zi_alpha=0.274 zi_mu=0.0293 zi_delta=0.248 -> D=17.245 (18s, 47m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2825.91 maxDD=-16.7%; sigma_t mean=6.548e-04 (theta_eff=6.427e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:35:19]   [active 155] mt_gamma=1.78 ft_sigma_c=0.745 f=0.668 w=0.556 ratio=0.267 sigma_d=0.00125 zi_alpha=0.124 zi_mu=0.0273 zi_delta=0.188 -> D=30.607 (17s, 47m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2692.48 maxDD=-21.1%; sigma_t mean=1.050e-03 (theta_eff=1.046e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:35:37]   [active 156] mt_gamma=0.407 ft_sigma_c=0.306 f=0.469 w=0.482 ratio=0.0698 sigma_d=0.00167 zi_alpha=0.111 zi_mu=0.0833 zi_delta=0.0525 -> D=42.606 (18s, 48m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2889.67 maxDD=-14.7%; sigma_t mean=5.734e-04 (theta_eff=5.175e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:35:56]   [active 157] mt_gamma=0.969 ft_sigma_c=0.73 f=1.24 w=0.803 ratio=0.323 sigma_d=0.0018 zi_alpha=0.345 zi_mu=0.0372 zi_delta=0.244 -> D=15.753 (19s, 48m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2862.00 maxDD=-15.5%; sigma_t mean=3.901e-04 (theta_eff=3.383e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:36:13]   [active 158] mt_gamma=1.41 ft_sigma_c=0.152 f=1.18 w=0.446 ratio=0.39 sigma_d=0.0011 zi_alpha=0.222 zi_mu=0.0438 zi_delta=0.223 -> D=31.008 (17s, 48m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2627.49 maxDD=-22.7%; sigma_t mean=8.750e-04 (theta_eff=7.509e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:36:33]   [active 159] mt_gamma=0.39 ft_sigma_c=0.691 f=0.988 w=0.101 ratio=0.299 sigma_d=0.00202 zi_alpha=0.271 zi_mu=0.0516 zi_delta=0.21 -> D=11.448 (19s, 49m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2657.86 maxDD=-21.8%; sigma_t mean=9.448e-04 (theta_eff=8.555e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:36:52]   [active 160] mt_gamma=0.18 ft_sigma_c=0.586 f=0.866 w=0.233 ratio=0.373 sigma_d=0.00203 zi_alpha=0.117 zi_mu=0.0176 zi_delta=0.255 -> D=14.136 (19s, 49m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2722.98 maxDD=-19.8%; sigma_t mean=7.544e-04 (theta_eff=6.730e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:37:12]   [active 161] mt_gamma=0.398 ft_sigma_c=0.719 f=0.938 w=0.265 ratio=0.399 sigma_d=0.00172 zi_alpha=0.338 zi_mu=0.0898 zi_delta=0.183 -> D=16.215 (20s, 49m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2696.25 maxDD=-20.6%; sigma_t mean=7.912e-04 (theta_eff=7.098e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:37:31]   [active 162] mt_gamma=0.144 ft_sigma_c=0.661 f=0.897 w=0.195 ratio=0.272 sigma_d=0.00174 zi_alpha=0.14 zi_mu=0.123 zi_delta=0.287 -> D=9.480 (19s, 50m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2737.92 maxDD=-19.3%; sigma_t mean=7.614e-04 (theta_eff=6.617e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:37:51]   [active 163] mt_gamma=0.351 ft_sigma_c=0.634 f=1.17 w=0.386 ratio=0.306 sigma_d=0.00214 zi_alpha=0.275 zi_mu=0.0187 zi_delta=0.264 -> D=10.178 (20s, 50m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2605.82 maxDD=-23.4%; sigma_t mean=8.633e-04 (theta_eff=7.178e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:38:12]   [active 164] mt_gamma=0.31 ft_sigma_c=0.667 f=1.06 w=0.134 ratio=0.0375 sigma_d=0.00207 zi_alpha=0.255 zi_mu=0.102 zi_delta=0.221 -> D=10.047 (21s, 50m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2685.25 maxDD=-20.9%; sigma_t mean=8.140e-04 (theta_eff=7.202e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:38:34]   [active 165] mt_gamma=0.652 ft_sigma_c=0.556 f=0.939 w=0.197 ratio=0.354 sigma_d=0.00184 zi_alpha=0.257 zi_mu=0.0622 zi_delta=0.0711 -> D=16.482 (22s, 51m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2709.62 maxDD=-20.2%; sigma_t mean=9.024e-04 (theta_eff=8.389e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:38:54]   [active 166] mt_gamma=0.638 ft_sigma_c=0.576 f=0.85 w=0.363 ratio=0.295 sigma_d=0.00196 zi_alpha=0.379 zi_mu=0.142 zi_delta=0.234 -> D=12.366 (20s, 51m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2671.57 maxDD=-21.3%; sigma_t mean=7.771e-04 (theta_eff=6.687e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:39:11]   [active 167] mt_gamma=0.665 ft_sigma_c=0.837 f=0.999 w=0.122 ratio=0.276 sigma_d=0.00182 zi_alpha=0.0875 zi_mu=0.0913 zi_delta=0.28 -> D=15.977 (17s, 51m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2715.18 maxDD=-20.1%; sigma_t mean=8.888e-04 (theta_eff=8.331e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:39:29]   [active 168] mt_gamma=0.362 ft_sigma_c=0.523 f=0.813 w=0.359 ratio=0.28 sigma_d=0.00188 zi_alpha=0.201 zi_mu=0.036 zi_delta=0.257 -> D=15.231 (19s, 51m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2748.32 maxDD=-18.9%; sigma_t mean=6.134e-04 (theta_eff=5.055e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:39:49]   [active 169] mt_gamma=1.41 ft_sigma_c=0.609 f=1.24 w=0.238 ratio=0.383 sigma_d=0.00174 zi_alpha=0.213 zi_mu=0.15 zi_delta=0.0694 -> D=21.631 (19s, 52m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2784.01 maxDD=-17.9%; sigma_t mean=6.966e-04 (theta_eff=6.420e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:40:09]   [active 170] mt_gamma=1.08 ft_sigma_c=0.768 f=0.912 w=0.447 ratio=0.364 sigma_d=0.0016 zi_alpha=0.328 zi_mu=0.0514 zi_delta=0.177 -> D=16.089 (20s, 52m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2845.55 maxDD=-16.0%; sigma_t mean=4.223e-04 (theta_eff=3.615e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:40:27]   [active 171] mt_gamma=1.24 ft_sigma_c=0.745 f=1.35 w=0.432 ratio=0.173 sigma_d=0.00139 zi_alpha=0.174 zi_mu=0.123 zi_delta=0.0593 -> D=27.234 (19s, 52m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2860.92 maxDD=-15.6%; sigma_t mean=6.304e-04 (theta_eff=5.591e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:40:48]   [active 172] mt_gamma=0.659 ft_sigma_c=0.786 f=1.24 w=0.741 ratio=0.389 sigma_d=0.00193 zi_alpha=0.336 zi_mu=0.15 zi_delta=0.0288 -> D=20.381 (20s, 53m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2771.80 maxDD=-18.2%; sigma_t mean=7.043e-04 (theta_eff=6.248e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:41:06]   [active 173] mt_gamma=1.34 ft_sigma_c=0.115 f=1.15 w=0.447 ratio=0.269 sigma_d=0.00196 zi_alpha=0.18 zi_mu=0.0908 zi_delta=0.115 -> D=23.990 (18s, 53m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2856.45 maxDD=-15.7%; sigma_t mean=3.483e-04 (theta_eff=2.931e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:41:22]   [active 174] mt_gamma=1.17 ft_sigma_c=0.589 f=1.3 w=0.322 ratio=0.186 sigma_d=0.00107 zi_alpha=0.0944 zi_mu=0.12 zi_delta=0.316 -> D=25.726 (16s, 53m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2689.55 maxDD=-20.8%; sigma_t mean=8.622e-04 (theta_eff=7.604e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:41:47]   [active 175] mt_gamma=0.301 ft_sigma_c=0.693 f=1.04 w=0.294 ratio=0.27 sigma_d=0.00216 zi_alpha=0.243 zi_mu=0.0495 zi_delta=0.205 -> D=11.049 (25s, 54m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2608.79 maxDD=-23.4%; sigma_t mean=9.671e-04 (theta_eff=8.621e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:42:12]   [active 176] mt_gamma=0.165 ft_sigma_c=0.624 f=0.855 w=0.118 ratio=0.152 sigma_d=0.00203 zi_alpha=0.1 zi_mu=0.132 zi_delta=0.289 -> D=14.184 (25s, 54m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2769.08 maxDD=-18.3%; sigma_t mean=6.522e-04 (theta_eff=5.679e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:42:31]   [active 177] mt_gamma=0.342 ft_sigma_c=0.686 f=1.13 w=0.366 ratio=0.349 sigma_d=0.00175 zi_alpha=0.272 zi_mu=0.1 zi_delta=0.242 -> D=14.247 (19s, 54m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2597.39 maxDD=-23.7%; sigma_t mean=1.054e-03 (theta_eff=9.552e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:42:49]   [active 178] mt_gamma=0.401 ft_sigma_c=0.659 f=0.808 w=0.145 ratio=0.397 sigma_d=0.00214 zi_alpha=0.32 zi_mu=0.0238 zi_delta=0.297 -> D=14.726 (18s, 55m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2647.23 maxDD=-22.2%; sigma_t mean=8.619e-04 (theta_eff=7.612e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:43:09]   [active 179] mt_gamma=0.156 ft_sigma_c=0.607 f=0.905 w=0.216 ratio=0.0506 sigma_d=0.00188 zi_alpha=0.132 zi_mu=0.0439 zi_delta=0.272 -> D=11.025 (20s, 55m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2659.79 maxDD=-21.7%; sigma_t mean=9.195e-04 (theta_eff=8.186e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:43:26]   [active 180] mt_gamma=0.308 ft_sigma_c=0.639 f=0.932 w=0.231 ratio=0.372 sigma_d=0.00208 zi_alpha=0.119 zi_mu=0.103 zi_delta=0.161 -> D=16.673 (18s, 55m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2773.65 maxDD=-18.2%; sigma_t mean=7.274e-04 (theta_eff=6.588e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:43:46]   [active 181] mt_gamma=0.451 ft_sigma_c=0.733 f=1.08 w=0.468 ratio=0.235 sigma_d=0.00193 zi_alpha=0.308 zi_mu=0.0508 zi_delta=0.188 -> D=14.764 (19s, 56m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2678.57 maxDD=-21.1%; sigma_t mean=7.963e-04 (theta_eff=6.859e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:44:06]   [active 182] mt_gamma=0.547 ft_sigma_c=0.65 f=1.06 w=0.207 ratio=0.127 sigma_d=0.00197 zi_alpha=0.35 zi_mu=0.0653 zi_delta=0.153 -> D=12.216 (20s, 56m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2656.65 maxDD=-21.9%; sigma_t mean=8.970e-04 (theta_eff=8.159e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:44:22]   [active 183] mt_gamma=0.828 ft_sigma_c=0.631 f=0.847 w=0.31 ratio=0.0421 sigma_d=0.0019 zi_alpha=0.27 zi_mu=0.0131 zi_delta=0.181 -> D=18.945 (16s, 56m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2675.42 maxDD=-21.3%; sigma_t mean=9.941e-04 (theta_eff=9.278e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:44:39]   [active 184] mt_gamma=0.591 ft_sigma_c=0.643 f=0.815 w=0.327 ratio=0.272 sigma_d=0.0021 zi_alpha=0.13 zi_mu=0.122 zi_delta=0.171 -> D=24.948 (16s, 57m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2735.65 maxDD=-19.9%; sigma_t mean=9.675e-04 (theta_eff=1.015e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:44:57]   [active 185] mt_gamma=0.238 ft_sigma_c=0.583 f=0.133 w=0.309 ratio=0.399 sigma_d=0.00116 zi_alpha=0.136 zi_mu=0.0288 zi_delta=0.0421 -> D=49.367 (18s, 57m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2706.79 maxDD=-20.5%; sigma_t mean=9.285e-04 (theta_eff=9.305e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:45:13]   [active 186] mt_gamma=0.511 ft_sigma_c=0.838 f=0.415 w=0.282 ratio=0.122 sigma_d=0.00141 zi_alpha=0.122 zi_mu=0.099 zi_delta=0.144 -> D=35.360 (17s, 57m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2731.81 maxDD=-19.6%; sigma_t mean=7.734e-04 (theta_eff=7.502e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:45:30]   [active 187] mt_gamma=1.51 ft_sigma_c=0.588 f=0.581 w=0.213 ratio=0.274 sigma_d=0.00134 zi_alpha=0.199 zi_mu=0.106 zi_delta=0.0388 -> D=30.887 (16s, 57m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2805.75 maxDD=-17.2%; sigma_t mean=7.862e-04 (theta_eff=7.323e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:45:47]   [active 188] mt_gamma=1.73 ft_sigma_c=0.387 f=1.09 w=0.657 ratio=0.179 sigma_d=0.00219 zi_alpha=0.434 zi_mu=0.0782 zi_delta=0.253 -> D=18.344 (17s, 58m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2775.05 maxDD=-18.6%; sigma_t mean=1.243e-03 (theta_eff=1.265e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:46:03]   [active 189] mt_gamma=1.97 ft_sigma_c=0.65 f=0.35 w=0.867 ratio=0.218 sigma_d=0.00179 zi_alpha=0.249 zi_mu=0.0482 zi_delta=0.299 -> D=55.206 (16s, 58m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2815.13 maxDD=-17.1%; sigma_t mean=7.128e-04 (theta_eff=7.146e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:46:20]   [active 190] mt_gamma=0.183 ft_sigma_c=0.126 f=0.502 w=0.544 ratio=0.374 sigma_d=0.00118 zi_alpha=0.0986 zi_mu=0.0648 zi_delta=0.0366 -> D=24.244 (17s, 58m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2742.52 maxDD=-19.1%; sigma_t mean=7.579e-04 (theta_eff=6.769e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:46:37]   [active 191] mt_gamma=0.393 ft_sigma_c=0.657 f=1.05 w=0.371 ratio=0.278 sigma_d=0.00193 zi_alpha=0.325 zi_mu=0.0536 zi_delta=0.221 -> D=13.989 (17s, 59m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2649.93 maxDD=-21.9%; sigma_t mean=8.030e-04 (theta_eff=6.551e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:46:55]   [active 192] mt_gamma=0.357 ft_sigma_c=0.733 f=1.19 w=0.131 ratio=0.334 sigma_d=0.00216 zi_alpha=0.316 zi_mu=0.0341 zi_delta=0.303 -> D=15.303 (18s, 59m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2681.72 maxDD=-21.0%; sigma_t mean=8.896e-04 (theta_eff=7.960e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:47:12]   [active 193] mt_gamma=0.727 ft_sigma_c=0.62 f=0.986 w=0.288 ratio=0.198 sigma_d=0.00213 zi_alpha=0.296 zi_mu=0.0634 zi_delta=0.306 -> D=12.809 (17s, 59m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2688.10 maxDD=-20.8%; sigma_t mean=7.896e-04 (theta_eff=6.804e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:47:28]   [active 194] mt_gamma=0.682 ft_sigma_c=0.758 f=1.08 w=0.211 ratio=0.236 sigma_d=0.002 zi_alpha=0.146 zi_mu=0.0402 zi_delta=0.204 -> D=16.024 (16s, 59m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2642.43 maxDD=-22.2%; sigma_t mean=8.088e-04 (theta_eff=6.722e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:47:46]   [active 195] mt_gamma=0.145 ft_sigma_c=0.715 f=1.11 w=0.115 ratio=0.133 sigma_d=0.00203 zi_alpha=0.249 zi_mu=0.087 zi_delta=0.311 -> D=16.626 (18s, 60m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2692.01 maxDD=-20.8%; sigma_t mean=8.898e-04 (theta_eff=8.079e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:48:04]   [active 196] mt_gamma=0.128 ft_sigma_c=0.639 f=0.954 w=0.377 ratio=0.0948 sigma_d=0.0021 zi_alpha=0.241 zi_mu=0.141 zi_delta=0.211 -> D=13.956 (18s, 60m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2658.68 maxDD=-21.8%; sigma_t mean=8.074e-04 (theta_eff=7.024e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:48:21]   [active 197] mt_gamma=0.754 ft_sigma_c=0.614 f=0.936 w=0.152 ratio=0.0788 sigma_d=0.00179 zi_alpha=0.321 zi_mu=0.13 zi_delta=0.259 -> D=11.776 (17s, 60m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2739.03 maxDD=-19.3%; sigma_t mean=8.210e-04 (theta_eff=7.709e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:48:38]   [active 198] mt_gamma=0.54 ft_sigma_c=0.581 f=0.835 w=0.389 ratio=0.2 sigma_d=0.00178 zi_alpha=0.274 zi_mu=0.0831 zi_delta=0.158 -> D=15.566 (17s, 61m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2734.18 maxDD=-19.4%; sigma_t mean=7.941e-04 (theta_eff=7.345e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:48:55]   [active 199] mt_gamma=0.299 ft_sigma_c=0.709 f=0.856 w=0.336 ratio=0.297 sigma_d=0.00173 zi_alpha=0.151 zi_mu=0.106 zi_delta=0.265 -> D=13.658 (17s, 61m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2658.74 maxDD=-21.7%; sigma_t mean=8.273e-04 (theta_eff=7.033e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:49:13]   [active 200] mt_gamma=0.396 ft_sigma_c=0.586 f=1.08 w=0.162 ratio=0.232 sigma_d=0.00208 zi_alpha=0.355 zi_mu=0.101 zi_delta=0.132 -> D=13.738 (18s, 61m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2826.30 maxDD=-16.6%; sigma_t mean=5.016e-04 (theta_eff=4.311e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:49:29]   [active 201] mt_gamma=1.72 ft_sigma_c=0.493 f=1.37 w=0.467 ratio=0.175 sigma_d=0.00169 zi_alpha=0.316 zi_mu=0.0515 zi_delta=0.16 -> D=23.078 (16s, 61m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2663.95 maxDD=-21.7%; sigma_t mean=8.232e-04 (theta_eff=7.486e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:49:44]   [active 202] mt_gamma=1.43 ft_sigma_c=0.735 f=0.765 w=0.101 ratio=0.146 sigma_d=0.00161 zi_alpha=0.132 zi_mu=0.0423 zi_delta=0.0969 -> D=32.219 (15s, 62m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2809.82 maxDD=-17.1%; sigma_t mean=6.674e-04 (theta_eff=6.400e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:50:03]   [active 203] mt_gamma=1.65 ft_sigma_c=0.205 f=0.813 w=0.547 ratio=0.139 sigma_d=0.00144 zi_alpha=0.31 zi_mu=0.129 zi_delta=0.062 -> D=25.891 (19s, 62m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2816.72 maxDD=-17.2%; sigma_t mean=1.063e-03 (theta_eff=1.077e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:50:22]   [active 204] mt_gamma=0.584 ft_sigma_c=0.623 f=0.378 w=0.869 ratio=0.348 sigma_d=0.00157 zi_alpha=0.26 zi_mu=0.131 zi_delta=0.0559 -> D=40.142 (19s, 62m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2760.89 maxDD=-18.8%; sigma_t mean=9.213e-04 (theta_eff=9.259e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:50:43]   [active 205] mt_gamma=0.398 ft_sigma_c=0.794 f=0.486 w=0.509 ratio=0.355 sigma_d=0.00151 zi_alpha=0.436 zi_mu=0.101 zi_delta=0.0676 -> D=25.512 (20s, 63m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2740.80 maxDD=-19.8%; sigma_t mean=1.460e-03 (theta_eff=1.492e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:51:00]   [active 206] mt_gamma=0.466 ft_sigma_c=0.736 f=0.3 w=0.871 ratio=0.283 sigma_d=0.00201 zi_alpha=0.293 zi_mu=0.0287 zi_delta=0.214 -> D=48.655 (18s, 63m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2649.81 maxDD=-22.0%; sigma_t mean=8.817e-04 (theta_eff=7.715e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:51:18]   [active 207] mt_gamma=0.253 ft_sigma_c=0.586 f=0.982 w=0.178 ratio=0.174 sigma_d=0.00206 zi_alpha=0.306 zi_mu=0.0196 zi_delta=0.283 -> D=11.515 (17s, 63m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2617.46 maxDD=-23.1%; sigma_t mean=9.706e-04 (theta_eff=8.706e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:51:35]   [active 208] mt_gamma=0.591 ft_sigma_c=0.718 f=0.852 w=0.142 ratio=0.164 sigma_d=0.00204 zi_alpha=0.285 zi_mu=0.0726 zi_delta=0.253 -> D=12.682 (17s, 64m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2732.09 maxDD=-19.5%; sigma_t mean=7.884e-04 (theta_eff=7.218e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:51:53]   [active 209] mt_gamma=0.364 ft_sigma_c=0.664 f=0.929 w=0.348 ratio=0.183 sigma_d=0.00183 zi_alpha=0.276 zi_mu=0.146 zi_delta=0.142 -> D=13.208 (18s, 64m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2705.39 maxDD=-20.3%; sigma_t mean=7.414e-04 (theta_eff=6.345e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:52:09]   [active 210] mt_gamma=0.507 ft_sigma_c=0.632 f=1.07 w=0.212 ratio=0.384 sigma_d=0.00185 zi_alpha=0.259 zi_mu=0.0361 zi_delta=0.264 -> D=11.277 (16s, 64m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2657.87 maxDD=-21.7%; sigma_t mean=8.330e-04 (theta_eff=7.167e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:52:25]   [active 211] mt_gamma=0.552 ft_sigma_c=0.602 f=1.03 w=0.152 ratio=0.238 sigma_d=0.002 zi_alpha=0.193 zi_mu=0.147 zi_delta=0.294 -> D=14.287 (16s, 64m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2729.38 maxDD=-19.6%; sigma_t mean=8.044e-04 (theta_eff=7.204e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:52:42]   [active 212] mt_gamma=0.854 ft_sigma_c=0.609 f=0.997 w=0.367 ratio=0.362 sigma_d=0.00195 zi_alpha=0.275 zi_mu=0.0284 zi_delta=0.239 -> D=14.316 (16s, 65m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2702.95 maxDD=-20.3%; sigma_t mean=7.727e-04 (theta_eff=6.705e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:52:58]   [active 213] mt_gamma=0.655 ft_sigma_c=0.803 f=1.09 w=0.263 ratio=0.149 sigma_d=0.00199 zi_alpha=0.241 zi_mu=0.0934 zi_delta=0.298 -> D=10.907 (16s, 65m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2655.91 maxDD=-21.9%; sigma_t mean=8.554e-04 (theta_eff=7.666e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:53:15]   [active 214] mt_gamma=0.636 ft_sigma_c=0.698 f=0.901 w=0.296 ratio=0.0305 sigma_d=0.00189 zi_alpha=0.347 zi_mu=0.115 zi_delta=0.319 -> D=14.863 (17s, 65m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2663.57 maxDD=-21.7%; sigma_t mean=9.166e-04 (theta_eff=8.255e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:53:32]   [active 215] mt_gamma=0.677 ft_sigma_c=0.578 f=0.973 w=0.392 ratio=0.0485 sigma_d=0.00218 zi_alpha=0.252 zi_mu=0.138 zi_delta=0.231 -> D=17.904 (17s, 66m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2774.13 maxDD=-18.2%; sigma_t mean=7.651e-04 (theta_eff=7.202e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:53:48]   [active 216] mt_gamma=0.23 ft_sigma_c=0.694 f=0.89 w=0.485 ratio=0.192 sigma_d=0.00175 zi_alpha=0.225 zi_mu=0.0606 zi_delta=0.222 -> D=16.221 (17s, 66m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2868.77 maxDD=-15.4%; sigma_t mean=6.268e-04 (theta_eff=6.221e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:54:05]   [active 217] mt_gamma=1.78 ft_sigma_c=0.486 f=0.654 w=0.785 ratio=0.168 sigma_d=0.0012 zi_alpha=0.389 zi_mu=0.0205 zi_delta=0.319 -> D=27.584 (16s, 66m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2790.43 maxDD=-17.8%; sigma_t mean=7.144e-04 (theta_eff=7.218e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:54:23]   [active 218] mt_gamma=0.144 ft_sigma_c=0.62 f=0.438 w=0.389 ratio=0.235 sigma_d=0.00112 zi_alpha=0.278 zi_mu=0.146 zi_delta=0.156 -> D=22.777 (18s, 66m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2763.57 maxDD=-18.5%; sigma_t mean=5.444e-04 (theta_eff=4.615e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:54:40]   [active 219] mt_gamma=0.722 ft_sigma_c=0.175 f=1.09 w=0.153 ratio=0.252 sigma_d=0.00137 zi_alpha=0.425 zi_mu=0.0863 zi_delta=0.315 -> D=25.974 (17s, 67m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2829.51 maxDD=-16.8%; sigma_t mean=1.128e-03 (theta_eff=1.107e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:54:57]   [active 220] mt_gamma=0.161 ft_sigma_c=0.416 f=0.62 w=0.868 ratio=0.381 sigma_d=0.00206 zi_alpha=0.176 zi_mu=0.0254 zi_delta=0.0841 -> D=32.127 (17s, 67m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2808.32 maxDD=-17.3%; sigma_t mean=1.074e-03 (theta_eff=1.057e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:55:16]   [active 221] mt_gamma=0.215 ft_sigma_c=0.273 f=0.713 w=0.804 ratio=0.251 sigma_d=0.00216 zi_alpha=0.14 zi_mu=0.119 zi_delta=0.229 -> D=24.250 (19s, 67m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2527.09 maxDD=-26.7%; sigma_t mean=1.598e-03 (theta_eff=1.622e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:55:34]   [active 222] mt_gamma=0.433 ft_sigma_c=0.423 f=0.293 w=0.325 ratio=0.0521 sigma_d=0.00217 zi_alpha=0.138 zi_mu=0.0647 zi_delta=0.241 -> D=50.013 (18s, 68m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2637.35 maxDD=-22.4%; sigma_t mean=9.394e-04 (theta_eff=8.329e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:55:54]   [active 223] mt_gamma=0.37 ft_sigma_c=0.587 f=0.918 w=0.176 ratio=0.346 sigma_d=0.00209 zi_alpha=0.309 zi_mu=0.0191 zi_delta=0.265 -> D=11.028 (20s, 68m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2709.60 maxDD=-20.2%; sigma_t mean=7.374e-04 (theta_eff=6.458e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:56:15]   [active 224] mt_gamma=0.335 ft_sigma_c=0.616 f=1.03 w=0.292 ratio=0.0725 sigma_d=0.0018 zi_alpha=0.242 zi_mu=0.0398 zi_delta=0.286 -> D=13.538 (20s, 68m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2670.52 maxDD=-21.3%; sigma_t mean=7.993e-04 (theta_eff=6.869e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:56:33]   [active 225] mt_gamma=0.267 ft_sigma_c=0.6 f=1.04 w=0.162 ratio=0.179 sigma_d=0.00194 zi_alpha=0.185 zi_mu=0.0825 zi_delta=0.277 -> D=10.785 (18s, 69m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2672.74 maxDD=-21.3%; sigma_t mean=8.847e-04 (theta_eff=7.933e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:56:50]   [active 226] mt_gamma=0.603 ft_sigma_c=0.806 f=0.914 w=0.229 ratio=0.322 sigma_d=0.00198 zi_alpha=0.242 zi_mu=0.102 zi_delta=0.144 -> D=13.794 (18s, 69m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2703.37 maxDD=-20.3%; sigma_t mean=7.386e-04 (theta_eff=6.327e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:57:08]   [active 227] mt_gamma=0.584 ft_sigma_c=0.728 f=1.08 w=0.201 ratio=0.295 sigma_d=0.00186 zi_alpha=0.33 zi_mu=0.0938 zi_delta=0.168 -> D=13.544 (18s, 69m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2641.14 maxDD=-22.4%; sigma_t mean=9.061e-04 (theta_eff=8.136e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:57:26]   [active 228] mt_gamma=0.487 ft_sigma_c=0.642 f=0.84 w=0.171 ratio=0.098 sigma_d=0.00189 zi_alpha=0.261 zi_mu=0.137 zi_delta=0.163 -> D=13.461 (17s, 69m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2797.06 maxDD=-17.5%; sigma_t mean=7.451e-04 (theta_eff=7.052e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:57:43]   [active 229] mt_gamma=0.348 ft_sigma_c=0.608 f=0.884 w=0.552 ratio=0.261 sigma_d=0.00171 zi_alpha=0.257 zi_mu=0.0877 zi_delta=0.22 -> D=16.319 (17s, 70m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2722.91 maxDD=-19.8%; sigma_t mean=8.745e-04 (theta_eff=8.181e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:58:00]   [active 230] mt_gamma=0.356 ft_sigma_c=0.768 f=0.824 w=0.376 ratio=0.311 sigma_d=0.00186 zi_alpha=0.233 zi_mu=0.0609 zi_delta=0.172 -> D=14.059 (17s, 70m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2732.01 maxDD=-19.5%; sigma_t mean=7.610e-04 (theta_eff=6.836e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:58:17]   [active 231] mt_gamma=0.785 ft_sigma_c=0.635 f=1 w=0.328 ratio=0.19 sigma_d=0.00186 zi_alpha=0.316 zi_mu=0.102 zi_delta=0.218 -> D=13.885 (17s, 70m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2654.19 maxDD=-21.9%; sigma_t mean=8.808e-04 (theta_eff=7.978e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:58:35]   [active 232] mt_gamma=0.462 ft_sigma_c=0.67 f=0.82 w=0.143 ratio=0.189 sigma_d=0.00181 zi_alpha=0.38 zi_mu=0.0578 zi_delta=0.23 -> D=14.680 (18s, 71m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2618.42 maxDD=-23.1%; sigma_t mean=1.025e-03 (theta_eff=9.397e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:58:52]   [active 233] mt_gamma=1.15 ft_sigma_c=0.594 f=0.776 w=0.167 ratio=0.398 sigma_d=0.00204 zi_alpha=0.248 zi_mu=0.0715 zi_delta=0.319 -> D=20.689 (17s, 71m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2790.43 maxDD=-17.8%; sigma_t mean=9.459e-04 (theta_eff=8.998e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:59:07]   [active 234] mt_gamma=1.26 ft_sigma_c=0.187 f=0.891 w=0.685 ratio=0.307 sigma_d=0.00219 zi_alpha=0.113 zi_mu=0.139 zi_delta=0.144 -> D=24.492 (15s, 71m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2777.84 maxDD=-18.1%; sigma_t mean=6.883e-04 (theta_eff=6.193e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:59:24]   [active 235] mt_gamma=0.767 ft_sigma_c=0.578 f=1.2 w=0.561 ratio=0.0728 sigma_d=0.00205 zi_alpha=0.127 zi_mu=0.146 zi_delta=0.132 -> D=23.167 (17s, 71m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2844.40 maxDD=-16.2%; sigma_t mean=6.776e-04 (theta_eff=6.627e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[16:59:43]   [active 236] mt_gamma=1.01 ft_sigma_c=0.653 f=0.745 w=0.842 ratio=0.0678 sigma_d=0.0014 zi_alpha=0.421 zi_mu=0.145 zi_delta=0.18 -> D=28.846 (19s, 72m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2721.51 maxDD=-19.9%; sigma_t mean=9.812e-04 (theta_eff=9.368e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:00:00]   [active 237] mt_gamma=1.03 ft_sigma_c=0.793 f=0.813 w=0.516 ratio=0.131 sigma_d=0.00211 zi_alpha=0.255 zi_mu=0.0281 zi_delta=0.059 -> D=28.663 (18s, 72m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2845.15 maxDD=-16.2%; sigma_t mean=6.254e-04 (theta_eff=6.183e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:00:16]   [active 238] mt_gamma=1.32 ft_sigma_c=0.195 f=0.599 w=0.839 ratio=0.053 sigma_d=0.00112 zi_alpha=0.12 zi_mu=0.0842 zi_delta=0.0889 -> D=39.247 (15s, 72m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2633.75 maxDD=-22.5%; sigma_t mean=9.271e-04 (theta_eff=8.332e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:00:33]   [active 239] mt_gamma=0.271 ft_sigma_c=0.692 f=0.838 w=0.131 ratio=0.338 sigma_d=0.00193 zi_alpha=0.168 zi_mu=0.0363 zi_delta=0.278 -> D=11.135 (17s, 73m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2712.92 maxDD=-20.1%; sigma_t mean=8.107e-04 (theta_eff=7.282e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:00:51]   [active 240] mt_gamma=0.447 ft_sigma_c=0.567 f=0.967 w=0.3 ratio=0.281 sigma_d=0.00191 zi_alpha=0.329 zi_mu=0.0594 zi_delta=0.208 -> D=11.284 (18s, 73m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2686.23 maxDD=-20.9%; sigma_t mean=8.512e-04 (theta_eff=7.714e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:01:08]   [active 241] mt_gamma=0.337 ft_sigma_c=0.734 f=0.875 w=0.226 ratio=0.288 sigma_d=0.00185 zi_alpha=0.118 zi_mu=0.0828 zi_delta=0.292 -> D=12.168 (17s, 73m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2658.06 maxDD=-21.8%; sigma_t mean=8.456e-04 (theta_eff=7.375e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:01:27]   [active 242] mt_gamma=0.601 ft_sigma_c=0.611 f=0.981 w=0.163 ratio=0.173 sigma_d=0.00197 zi_alpha=0.417 zi_mu=0.129 zi_delta=0.307 -> D=14.911 (19s, 73m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2642.47 maxDD=-22.3%; sigma_t mean=8.830e-04 (theta_eff=7.648e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:01:45]   [active 243] mt_gamma=0.107 ft_sigma_c=0.536 f=1.03 w=0.257 ratio=0.057 sigma_d=0.00214 zi_alpha=0.195 zi_mu=0.123 zi_delta=0.226 -> D=10.633 (18s, 74m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2656.89 maxDD=-21.8%; sigma_t mean=7.767e-04 (theta_eff=6.497e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:02:03]   [active 244] mt_gamma=0.304 ft_sigma_c=0.405 f=1.08 w=0.109 ratio=0.155 sigma_d=0.00192 zi_alpha=0.237 zi_mu=0.0567 zi_delta=0.195 -> D=16.067 (18s, 74m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2694.12 maxDD=-20.6%; sigma_t mean=7.649e-04 (theta_eff=6.502e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:02:20]   [active 245] mt_gamma=0.501 ft_sigma_c=0.66 f=1.16 w=0.286 ratio=0.0843 sigma_d=0.00208 zi_alpha=0.21 zi_mu=0.0825 zi_delta=0.147 -> D=14.682 (17s, 74m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2683.53 maxDD=-21.0%; sigma_t mean=8.194e-04 (theta_eff=7.273e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:02:38]   [active 246] mt_gamma=0.394 ft_sigma_c=0.514 f=0.93 w=0.194 ratio=0.326 sigma_d=0.00184 zi_alpha=0.29 zi_mu=0.147 zi_delta=0.194 -> D=11.222 (18s, 75m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2733.39 maxDD=-19.4%; sigma_t mean=7.715e-04 (theta_eff=6.704e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:02:57]   [active 247] mt_gamma=0.419 ft_sigma_c=0.716 f=1.12 w=0.374 ratio=0.381 sigma_d=0.00206 zi_alpha=0.34 zi_mu=0.0374 zi_delta=0.252 -> D=14.614 (19s, 75m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2652.52 maxDD=-22.0%; sigma_t mean=8.400e-04 (theta_eff=7.429e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:03:15]   [active 248] mt_gamma=0.654 ft_sigma_c=0.651 f=0.936 w=0.268 ratio=0.03 sigma_d=0.00189 zi_alpha=0.366 zi_mu=0.0763 zi_delta=0.246 -> D=13.395 (18s, 75m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2682.55 maxDD=-21.2%; sigma_t mean=1.164e-03 (theta_eff=1.156e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:03:32]   [active 249] mt_gamma=1.21 ft_sigma_c=0.815 f=0.551 w=0.44 ratio=0.305 sigma_d=0.00201 zi_alpha=0.168 zi_mu=0.0193 zi_delta=0.0928 -> D=45.032 (16s, 76m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2916.04 maxDD=-13.9%; sigma_t mean=4.684e-04 (theta_eff=4.199e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:03:47]   [active 250] mt_gamma=1.46 ft_sigma_c=0.101 f=1.28 w=0.839 ratio=0.332 sigma_d=0.00151 zi_alpha=0.143 zi_mu=0.0998 zi_delta=0.287 -> D=25.522 (15s, 76m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2881.99 maxDD=-14.9%; sigma_t mean=5.314e-04 (theta_eff=4.976e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:04:02]   [active 251] mt_gamma=1.69 ft_sigma_c=0.531 f=1.07 w=0.742 ratio=0.243 sigma_d=0.00146 zi_alpha=0.129 zi_mu=0.0573 zi_delta=0.318 -> D=28.493 (15s, 76m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2874.46 maxDD=-15.1%; sigma_t mean=4.363e-04 (theta_eff=3.722e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:04:20]   [active 252] mt_gamma=1.01 ft_sigma_c=0.728 f=1.4 w=0.644 ratio=0.385 sigma_d=0.0015 zi_alpha=0.412 zi_mu=0.0582 zi_delta=0.232 -> D=26.075 (18s, 76m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2709.47 maxDD=-20.3%; sigma_t mean=8.191e-04 (theta_eff=7.744e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:04:38]   [active 253] mt_gamma=1.36 ft_sigma_c=0.413 f=0.683 w=0.217 ratio=0.364 sigma_d=0.00153 zi_alpha=0.434 zi_mu=0.0659 zi_delta=0.252 -> D=18.317 (19s, 77m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2836.67 maxDD=-16.3%; sigma_t mean=6.304e-04 (theta_eff=6.198e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:04:56]   [active 254] mt_gamma=0.765 ft_sigma_c=0.776 f=0.618 w=0.576 ratio=0.386 sigma_d=0.00115 zi_alpha=0.257 zi_mu=0.0783 zi_delta=0.236 -> D=22.321 (17s, 77m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2690.12 maxDD=-20.7%; sigma_t mean=8.521e-04 (theta_eff=7.491e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:05:13]   [active 255] mt_gamma=0.559 ft_sigma_c=0.579 f=1.06 w=0.29 ratio=0.229 sigma_d=0.00217 zi_alpha=0.197 zi_mu=0.0325 zi_delta=0.226 -> D=16.503 (16s, 77m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2638.62 maxDD=-22.4%; sigma_t mean=8.561e-04 (theta_eff=7.485e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:05:30]   [active 256] mt_gamma=0.221 ft_sigma_c=0.457 f=0.906 w=0.153 ratio=0.0638 sigma_d=0.00185 zi_alpha=0.195 zi_mu=0.0268 zi_delta=0.185 -> D=16.144 (17s, 77m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2600.59 maxDD=-23.6%; sigma_t mean=1.069e-03 (theta_eff=9.711e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:05:48]   [active 257] mt_gamma=0.332 ft_sigma_c=0.827 f=0.817 w=0.17 ratio=0.379 sigma_d=0.0022 zi_alpha=0.302 zi_mu=0.0614 zi_delta=0.284 -> D=17.480 (18s, 78m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2725.75 maxDD=-19.6%; sigma_t mean=7.633e-04 (theta_eff=6.693e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:06:05]   [active 258] mt_gamma=0.271 ft_sigma_c=0.743 f=1.05 w=0.315 ratio=0.372 sigma_d=0.00191 zi_alpha=0.199 zi_mu=0.0212 zi_delta=0.144 -> D=11.273 (17s, 78m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2659.21 maxDD=-21.7%; sigma_t mean=8.726e-04 (theta_eff=7.800e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:06:22]   [active 259] mt_gamma=0.366 ft_sigma_c=0.826 f=0.893 w=0.177 ratio=0.163 sigma_d=0.0019 zi_alpha=0.166 zi_mu=0.0878 zi_delta=0.295 -> D=11.817 (17s, 78m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2653.89 maxDD=-21.9%; sigma_t mean=8.056e-04 (theta_eff=6.870e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:06:40]   [active 260] mt_gamma=0.515 ft_sigma_c=0.63 f=1.01 w=0.105 ratio=0.354 sigma_d=0.00188 zi_alpha=0.253 zi_mu=0.118 zi_delta=0.193 -> D=12.008 (18s, 79m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2722.38 maxDD=-19.8%; sigma_t mean=8.126e-04 (theta_eff=7.537e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:06:58]   [active 261] mt_gamma=0.524 ft_sigma_c=0.682 f=0.835 w=0.305 ratio=0.247 sigma_d=0.00174 zi_alpha=0.356 zi_mu=0.0651 zi_delta=0.286 -> D=16.306 (18s, 79m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2675.06 maxDD=-21.2%; sigma_t mean=8.056e-04 (theta_eff=6.792e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:07:17]   [active 262] mt_gamma=0.483 ft_sigma_c=0.669 f=1.13 w=0.199 ratio=0.336 sigma_d=0.0021 zi_alpha=0.292 zi_mu=0.0225 zi_delta=0.157 -> D=12.097 (20s, 79m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2722.38 maxDD=-19.7%; sigma_t mean=7.219e-04 (theta_eff=6.173e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:07:37]   [active 263] mt_gamma=0.63 ft_sigma_c=0.654 f=1.13 w=0.264 ratio=0.319 sigma_d=0.00192 zi_alpha=0.125 zi_mu=0.135 zi_delta=0.298 -> D=14.945 (20s, 80m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2643.57 maxDD=-22.3%; sigma_t mean=1.001e-03 (theta_eff=9.178e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:07:55]   [active 264] mt_gamma=0.296 ft_sigma_c=0.423 f=0.84 w=0.243 ratio=0.188 sigma_d=0.00213 zi_alpha=0.251 zi_mu=0.147 zi_delta=0.227 -> D=15.307 (18s, 80m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2643.98 maxDD=-22.5%; sigma_t mean=1.129e-03 (theta_eff=1.112e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:08:14]   [active 265] mt_gamma=0.856 ft_sigma_c=0.427 f=0.528 w=0.262 ratio=0.25 sigma_d=0.00189 zi_alpha=0.434 zi_mu=0.0212 zi_delta=0.268 -> D=22.653 (19s, 80m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2864.05 maxDD=-15.5%; sigma_t mean=6.253e-04 (theta_eff=5.899e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:08:34]   [active 266] mt_gamma=0.13 ft_sigma_c=0.771 f=0.88 w=0.724 ratio=0.396 sigma_d=0.00142 zi_alpha=0.382 zi_mu=0.09 zi_delta=0.155 -> D=28.793 (21s, 81m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2733.92 maxDD=-20.0%; sigma_t mean=1.018e-03 (theta_eff=1.040e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:08:51]   [active 267] mt_gamma=1.67 ft_sigma_c=0.409 f=0.14 w=0.7 ratio=0.0506 sigma_d=0.0012 zi_alpha=0.211 zi_mu=0.0761 zi_delta=0.157 -> D=59.630 (16s, 81m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2737.59 maxDD=-19.9%; sigma_t mean=1.276e-03 (theta_eff=1.319e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:09:11]   [active 268] mt_gamma=1.6 ft_sigma_c=0.358 f=0.158 w=0.82 ratio=0.371 sigma_d=0.00154 zi_alpha=0.311 zi_mu=0.0961 zi_delta=0.167 -> D=57.821 (21s, 81m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2815.23 maxDD=-17.1%; sigma_t mean=1.037e-03 (theta_eff=1.028e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:09:28]   [active 269] mt_gamma=1.77 ft_sigma_c=0.478 f=0.658 w=0.82 ratio=0.218 sigma_d=0.00198 zi_alpha=0.0931 zi_mu=0.0674 zi_delta=0.227 -> D=40.638 (17s, 81m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2785.93 maxDD=-17.8%; sigma_t mean=4.681e-04 (theta_eff=4.038e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:09:45]   [active 270] mt_gamma=1.93 ft_sigma_c=0.623 f=0.954 w=0.15 ratio=0.0615 sigma_d=0.00105 zi_alpha=0.169 zi_mu=0.0607 zi_delta=0.0578 -> D=26.542 (17s, 82m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2735.13 maxDD=-19.3%; sigma_t mean=7.012e-04 (theta_eff=6.053e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:10:04]   [active 271] mt_gamma=0.38 ft_sigma_c=0.655 f=1.12 w=0.283 ratio=0.289 sigma_d=0.00186 zi_alpha=0.16 zi_mu=0.0335 zi_delta=0.29 -> D=13.112 (18s, 82m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2626.49 maxDD=-22.8%; sigma_t mean=8.524e-04 (theta_eff=7.271e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:10:22]   [active 272] mt_gamma=0.654 ft_sigma_c=0.725 f=0.979 w=0.114 ratio=0.0789 sigma_d=0.00193 zi_alpha=0.326 zi_mu=0.0453 zi_delta=0.167 -> D=12.699 (19s, 82m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2683.55 maxDD=-20.9%; sigma_t mean=8.448e-04 (theta_eff=7.373e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:10:42]   [active 273] mt_gamma=0.395 ft_sigma_c=0.518 f=1.02 w=0.251 ratio=0.381 sigma_d=0.00205 zi_alpha=0.291 zi_mu=0.029 zi_delta=0.31 -> D=12.396 (19s, 83m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2721.76 maxDD=-19.8%; sigma_t mean=7.763e-04 (theta_eff=6.923e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:10:58]   [active 274] mt_gamma=0.484 ft_sigma_c=0.652 f=1.03 w=0.356 ratio=0.108 sigma_d=0.00195 zi_alpha=0.186 zi_mu=0.0246 zi_delta=0.263 -> D=14.326 (16s, 83m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2687.71 maxDD=-20.8%; sigma_t mean=7.612e-04 (theta_eff=6.519e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:11:16]   [active 275] mt_gamma=0.423 ft_sigma_c=0.548 f=1.06 w=0.171 ratio=0.251 sigma_d=0.00188 zi_alpha=0.326 zi_mu=0.115 zi_delta=0.251 -> D=11.982 (19s, 83m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2649.63 maxDD=-22.1%; sigma_t mean=8.449e-04 (theta_eff=7.436e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:11:34]   [active 276] mt_gamma=0.264 ft_sigma_c=0.47 f=0.899 w=0.133 ratio=0.115 sigma_d=0.00183 zi_alpha=0.291 zi_mu=0.0304 zi_delta=0.271 -> D=13.102 (17s, 84m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2725.40 maxDD=-19.7%; sigma_t mean=7.962e-04 (theta_eff=7.306e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:11:50]   [active 277] mt_gamma=0.345 ft_sigma_c=0.668 f=0.856 w=0.305 ratio=0.355 sigma_d=0.00172 zi_alpha=0.149 zi_mu=0.0786 zi_delta=0.21 -> D=13.821 (17s, 84m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2703.12 maxDD=-20.3%; sigma_t mean=7.828e-04 (theta_eff=6.801e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:12:08]   [active 278] mt_gamma=0.585 ft_sigma_c=0.563 f=1.1 w=0.269 ratio=0.178 sigma_d=0.00204 zi_alpha=0.227 zi_mu=0.0204 zi_delta=0.213 -> D=15.563 (17s, 84m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2654.19 maxDD=-21.9%; sigma_t mean=8.538e-04 (theta_eff=7.417e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:12:28]   [active 279] mt_gamma=0.69 ft_sigma_c=0.647 f=0.996 w=0.182 ratio=0.124 sigma_d=0.00201 zi_alpha=0.439 zi_mu=0.0934 zi_delta=0.179 -> D=14.858 (21s, 84m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2678.45 maxDD=-21.1%; sigma_t mean=7.961e-04 (theta_eff=6.774e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:12:45]   [active 280] mt_gamma=0.411 ft_sigma_c=0.598 f=1.08 w=0.188 ratio=0.348 sigma_d=0.002 zi_alpha=0.083 zi_mu=0.0849 zi_delta=0.269 -> D=16.783 (17s, 85m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2686.49 maxDD=-20.8%; sigma_t mean=7.411e-04 (theta_eff=6.132e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:13:03]   [active 281] mt_gamma=0.632 ft_sigma_c=0.191 f=1.19 w=0.169 ratio=0.285 sigma_d=0.00201 zi_alpha=0.294 zi_mu=0.124 zi_delta=0.284 -> D=21.540 (18s, 85m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2866.18 maxDD=-15.4%; sigma_t mean=4.180e-04 (theta_eff=3.789e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:13:20]   [active 282] mt_gamma=1.94 ft_sigma_c=0.164 f=1.11 w=0.513 ratio=0.224 sigma_d=0.00115 zi_alpha=0.183 zi_mu=0.12 zi_delta=0.205 -> D=28.244 (17s, 85m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2685.16 maxDD=-20.8%; sigma_t mean=7.257e-04 (theta_eff=5.923e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:13:38]   [active 283] mt_gamma=1.43 ft_sigma_c=0.537 f=1.23 w=0.157 ratio=0.219 sigma_d=0.00204 zi_alpha=0.368 zi_mu=0.0388 zi_delta=0.0575 -> D=17.834 (18s, 86m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2816.39 maxDD=-17.0%; sigma_t mean=6.096e-04 (theta_eff=5.990e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:13:56]   [active 284] mt_gamma=1.05 ft_sigma_c=0.306 f=0.576 w=0.415 ratio=0.396 sigma_d=0.00107 zi_alpha=0.416 zi_mu=0.144 zi_delta=0.274 -> D=23.089 (18s, 86m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2898.09 maxDD=-14.4%; sigma_t mean=3.710e-04 (theta_eff=3.311e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:14:12]   [active 285] mt_gamma=1.76 ft_sigma_c=0.815 f=1.16 w=0.66 ratio=0.396 sigma_d=0.00106 zi_alpha=0.215 zi_mu=0.0386 zi_delta=0.0715 -> D=24.662 (16s, 86m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2784.24 maxDD=-18.0%; sigma_t mean=7.117e-04 (theta_eff=7.127e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:14:29]   [active 286] mt_gamma=0.758 ft_sigma_c=0.582 f=0.481 w=0.362 ratio=0.224 sigma_d=0.00115 zi_alpha=0.361 zi_mu=0.0191 zi_delta=0.15 -> D=22.382 (17s, 86m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2669.75 maxDD=-21.4%; sigma_t mean=7.612e-04 (theta_eff=6.471e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:14:46]   [active 287] mt_gamma=0.307 ft_sigma_c=0.689 f=1.03 w=0.112 ratio=0.188 sigma_d=0.00182 zi_alpha=0.214 zi_mu=0.0187 zi_delta=0.21 -> D=10.634 (17s, 87m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2649.95 maxDD=-22.1%; sigma_t mean=8.056e-04 (theta_eff=6.915e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:15:03]   [active 288] mt_gamma=0.266 ft_sigma_c=0.713 f=1.05 w=0.253 ratio=0.0256 sigma_d=0.00197 zi_alpha=0.224 zi_mu=0.12 zi_delta=0.193 -> D=11.198 (17s, 87m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2624.53 maxDD=-22.8%; sigma_t mean=9.706e-04 (theta_eff=8.650e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:15:19]   [active 289] mt_gamma=0.188 ft_sigma_c=0.661 f=0.906 w=0.169 ratio=0.215 sigma_d=0.00214 zi_alpha=0.141 zi_mu=0.0558 zi_delta=0.248 -> D=12.008 (16s, 87m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2718.49 maxDD=-19.9%; sigma_t mean=8.276e-04 (theta_eff=7.398e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:15:36]   [active 290] mt_gamma=0.372 ft_sigma_c=0.529 f=1.06 w=0.365 ratio=0.209 sigma_d=0.00213 zi_alpha=0.219 zi_mu=0.148 zi_delta=0.14 -> D=15.727 (17s, 88m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2686.80 maxDD=-20.9%; sigma_t mean=7.604e-04 (theta_eff=6.667e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:15:53]   [active 291] mt_gamma=0.545 ft_sigma_c=0.678 f=0.943 w=0.137 ratio=0.253 sigma_d=0.00171 zi_alpha=0.274 zi_mu=0.146 zi_delta=0.224 -> D=10.808 (17s, 88m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2632.57 maxDD=-22.6%; sigma_t mean=8.499e-04 (theta_eff=7.395e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:16:09]   [active 292] mt_gamma=0.31 ft_sigma_c=0.578 f=0.931 w=0.184 ratio=0.0322 sigma_d=0.00188 zi_alpha=0.0958 zi_mu=0.121 zi_delta=0.138 -> D=18.886 (16s, 88m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2770.94 maxDD=-18.2%; sigma_t mean=6.523e-04 (theta_eff=5.698e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:16:26]   [active 293] mt_gamma=0.15 ft_sigma_c=0.649 f=1.13 w=0.374 ratio=0.319 sigma_d=0.00177 zi_alpha=0.181 zi_mu=0.0434 zi_delta=0.161 -> D=14.428 (17s, 88m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2722.69 maxDD=-19.7%; sigma_t mean=7.826e-04 (theta_eff=6.855e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:16:42]   [active 294] mt_gamma=0.686 ft_sigma_c=0.777 f=1.11 w=0.337 ratio=0.27 sigma_d=0.00208 zi_alpha=0.301 zi_mu=0.0375 zi_delta=0.315 -> D=10.949 (16s, 89m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2614.47 maxDD=-23.1%; sigma_t mean=8.909e-04 (theta_eff=7.459e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:16:59]   [active 295] mt_gamma=0.529 ft_sigma_c=0.762 f=1.08 w=0.103 ratio=0.316 sigma_d=0.00219 zi_alpha=0.246 zi_mu=0.121 zi_delta=0.244 -> D=10.780 (17s, 89m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2670.49 maxDD=-21.4%; sigma_t mean=9.215e-04 (theta_eff=8.190e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:17:17]   [active 296] mt_gamma=0.504 ft_sigma_c=0.746 f=0.969 w=0.278 ratio=0.373 sigma_d=0.00216 zi_alpha=0.332 zi_mu=0.0406 zi_delta=0.206 -> D=14.031 (17s, 89m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2869.89 maxDD=-15.3%; sigma_t mean=6.192e-04 (theta_eff=5.662e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:17:34]   [active 297] mt_gamma=0.345 ft_sigma_c=0.653 f=1.32 w=0.775 ratio=0.192 sigma_d=0.00211 zi_alpha=0.256 zi_mu=0.04 zi_delta=0.0348 -> D=15.447 (18s, 90m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2849.84 maxDD=-16.0%; sigma_t mean=7.001e-04 (theta_eff=7.009e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:17:51]   [active 298] mt_gamma=1.98 ft_sigma_c=0.465 f=0.445 w=0.864 ratio=0.101 sigma_d=0.00109 zi_alpha=0.358 zi_mu=0.104 zi_delta=0.276 -> D=40.830 (17s, 90m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2886.54 maxDD=-14.8%; sigma_t mean=6.609e-04 (theta_eff=6.397e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_logvol.csv
+[17:18:07]   [active 299] mt_gamma=1.37 ft_sigma_c=0.795 f=0.798 w=0.839 ratio=0.299 sigma_d=0.00142 zi_alpha=0.296 zi_mu=0.102 zi_delta=0.159 -> D=19.568 (17s, 90m)
+[17:18:07] STAGE A done: joint optimum D=9.480 vs baseline D=20.018 (+52.6%); 299 evals in 90m
+[17:18:07] calib-only mode: skipping path simulation (STAGE B) + clearing (STAGE C)
+Traceback (most recent call last):
+  File "/Users/siddharth/Desktop/GitHub/mscthesis_abm/scripts/overnight_joint.py", line 424, in <module>
+    main()
+    ~~~~^^
+  File "/Users/siddharth/Desktop/GitHub/mscthesis_abm/scripts/overnight_joint.py", line 419, in main
+    write_summary(opt, vs, cs)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/siddharth/Desktop/GitHub/mscthesis_abm/scripts/overnight_joint.py", line 339, in write_summary
+    f"{opt['fixed']['window_days']}d), jumps x{ro['delta_mult']:.2f} size\n", "## Stage B - validation"]
+                                               ~~^^^^^^^^^^^^^^
+KeyError: 'delta_mult'

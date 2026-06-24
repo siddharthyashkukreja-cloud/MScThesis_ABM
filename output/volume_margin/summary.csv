@@ -1,0 +1,9 @@
+regime,type,vol_share_pct,mean_posted_im_B
+calm,ZI,35.75,0.487
+calm,FT,32.78,2.004
+calm,MT,10.48,0.238
+calm,BCM,20.99,21.686
+stressed,ZI,33.48,0.666
+stressed,FT,36.17,2.245
+stressed,MT,12.38,0.265
+stressed,BCM,17.97,26.352

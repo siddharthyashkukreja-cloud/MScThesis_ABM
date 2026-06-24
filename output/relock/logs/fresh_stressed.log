@@ -1,0 +1,7 @@
+[stressed] fresh-seed validation of top-5 grid nodes (75d x 3 runs x seeds (777, 8888))
+  node 0: ft_sigma_c=0.25  zi_alpha=0.32  zi_delta=0.02  p_zi=0.38  zi_mu=0.15  D_grid=8.92  D_fresh=10.48
+  node 1: ft_sigma_c=0.45  zi_alpha=0.32  zi_delta=0.02  p_zi=0.28  zi_mu=0.104167  D_grid=9.03  D_fresh=9.57
+  node 2: ft_sigma_c=0.45  zi_alpha=0.32  zi_delta=0.02  p_zi=0.28  zi_mu=0.0583333  D_grid=9.12  D_fresh=9.54
+  node 3: ft_sigma_c=0.45  zi_alpha=0.32  zi_delta=0.02  p_zi=0.28  zi_mu=0.15  D_grid=9.59  D_fresh=9.43
+  node 4: ft_sigma_c=0.25  zi_alpha=0.32  zi_delta=0.02  p_zi=0.18  zi_mu=0.104167  D_grid=9.91  D_fresh=11.53
+  fresh-seed best: ft_sigma_c=0.45  zi_alpha=0.32  zi_delta=0.02  p_zi=0.28  zi_mu=0.15  (D_fresh 9.43)  -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/grid_freshseed_stressed.json

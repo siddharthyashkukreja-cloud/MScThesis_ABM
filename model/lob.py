@@ -5,17 +5,12 @@ Design
 ------
 - Single-asset, price-time priority, bids/asks stored as sorted dicts.
 - Call auction: orders accumulate during a step, then clear once.
-- Resting orders leave the book only by FILL or explicit CANCELLATION — there is
-  no blanket time-to-live (D58: the ODD §Mech #7 TTL was removed). Order lifetime
-  is governed by the agents: ZI cancels each resting order w.p. `zi_delta` per step
-  (Cont-Stoikov-Talreja 2008 / Farmer et al.), FT/MT are replace-on-new.
+- Resting orders leave the book only by fill or explicit cancellation — there is
+  no blanket time-to-live. Order lifetime is governed by the agents: ZI cancels each
+  resting order w.p. `zi_delta` per step (Cont-Stoikov-Talreja 2008 / Farmer et al.),
+  FT/MT are replace-on-new.
 - Mid-price = (best_bid + best_ask) / 2 after each auction.
 - Spread and depth are outputs, not inputs -- they emerge from order flow.
-
-Extension hooks
----------------
-- `record` list stores per-step snapshots; add fields here for CCP layer.
-- `execute_large_order()` stub reserved for Almgren-Chriss liquidation (Stage 5).
 """
 
 from dataclasses import dataclass
@@ -69,7 +64,7 @@ class LOB:
         return oid
 
     def is_resting(self, order_id: int) -> bool:
-        """Returns True if the order is still in the book (not filled / expired / cancelled)."""
+        """True if the order is still in the book (not filled or cancelled)."""
         return order_id in self._order_index
 
     def add_market(self, agent_id: int, side: int, qty: int) -> List[Fill]:
@@ -118,7 +113,7 @@ class LOB:
         return fills
 
     def cancel(self, order_id: int):
-        """Remove a resting limit order by ID. No-op if already filled/expired."""
+        """Remove a resting limit order by ID. No-op if already filled."""
         if order_id not in self._order_index:
             return
         side, price = self._order_index.pop(order_id)
@@ -130,11 +125,10 @@ class LOB:
 
     def reprice(self, factor: float):
         """Scale every resting order's price by `factor` — an overnight session
-        gap (D56). The book reopens at the gapped level with its shape (depth,
-        order ids, sizes) intact, so the new RTH day starts at the gapped V_t with
-        a normal spread: no empty-book warm-up (which would jiggle the mid for
-        several steps and inflate the intraday return kurtosis) and no stale-level
-        crossing. Relative bid/ask ordering is preserved, so no new crosses."""
+        gap. The book reopens at the gapped level with its shape (depth, order ids,
+        sizes) intact, so the new RTH day starts at the gapped V_t with a normal
+        spread: no empty-book warm-up. Relative bid/ask ordering is preserved, so no
+        new crosses."""
         if not (factor == factor) or factor <= 0:
             return
         for name in ("_bids", "_asks"):
@@ -165,12 +159,17 @@ class LOB:
         Updates mid_price, best_bid, best_ask after clearing.
         """
         fills = []
+        # Uniform clearing price: one price per step (the pre-auction mid of the crossing book),
+        # so every fill this minute prints at a single price. Dampens the directional bounce from
+        # pricing each cross at the resting ask; a large one-sided order moves the post-auction mid
+        # through the residual book rather than walking the queue at execution.
+        clear_px = ((max(self._bids) + min(self._asks)) / 2.0
+                    if self._bids and self._asks and max(self._bids) >= min(self._asks) else np.nan)
         while self._bids and self._asks:
             best_bid_px = max(self._bids)
             best_ask_px = min(self._asks)
             if best_bid_px < best_ask_px:
                 break
-            clear_px = best_ask_px
             bid_queue = self._bids[best_bid_px]
             ask_queue = self._asks[best_ask_px]
             b = bid_queue[0]
@@ -217,8 +216,10 @@ class LOB:
             self.mid_price = (self.best_bid + self.best_ask) / 2
             self.spread = self.best_ask - self.best_bid
         else:
-            # One or both sides empty: fall back to the last trade price rather
-            # than teleporting mid to an arbitrary surviving resting limit.
+            # One or both sides empty: fall back to the last trade price (= the uniform clearing
+            # price) rather than carrying a stale mid. Carrying produced long flat-return stretches
+            # in this thin book (~28% zero returns) -> spurious volatility clustering and a surrogate
+            # that could not learn the loss surface; last_price keeps the series moving.
             if not np.isnan(self.last_price):
                 self.mid_price = self.last_price
             self.spread = np.nan

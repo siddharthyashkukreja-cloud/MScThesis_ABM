@@ -1,0 +1,13 @@
+regime,moment,empirical,simulated
+calm,std,0.00024,0.00029
+calm,kurtosis,58.04181,54.46188
+calm,hill,2.34596,2.36919
+calm,acf_r1,0.01502,-0.13702
+calm,acf_absr1,0.31767,0.40301
+calm,acf_absr10,0.2077,0.04145
+stressed,std,0.00123,0.0007
+stressed,kurtosis,67.73921,10.53563
+stressed,hill,2.75215,3.01397
+stressed,acf_r1,-0.00544,-0.05845
+stressed,acf_absr1,0.38208,0.47784
+stressed,acf_absr10,0.34835,0.37011

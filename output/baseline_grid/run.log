@@ -1,7 +1,0 @@
-[21:42:04] === baseline grid start (true-loss grid; calm 7^3, stressed 5^4, 3 seeds) ===
-[21:42:04] GRID calm  n_per_dim=7  (n_days=20, n_runs=3)
-[22:44:55] GRID calm  DONE in 62 min  -> output/baseline_grid/grid_calm.json
-[22:44:55] GRID stressed  n_per_dim=5  (n_days=20, n_runs=3)
-[01:30:36] GRID stressed  DONE in 165 min  -> output/baseline_grid/grid_stressed.json
-[01:30:36] === baseline grid done in 228 min ===
-[01:30:36] Results: output/baseline_grid/grid_calm.json , grid_stressed.json

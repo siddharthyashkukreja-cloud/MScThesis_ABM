@@ -1,0 +1,16 @@
+[13:11:12] === D65 re-lock start (zi_mu in loop; evidence-tightened boxes; FV_GBM=1) ===
+[13:11:12] GRID calm  n_per_dim=5  (n_days=20, n_runs=3)
+[15:13:15] GRID calm  DONE in 122 min -> output/relock_gbm/grid_calm.json
+[15:13:15] GRID stressed  n_per_dim=4  (n_days=20, n_runs=3)
+[18:31:35] GRID stressed  DONE in 198 min -> output/relock_gbm/grid_stressed.json
+[18:31:35] FRESH-SEED VALIDATION calm (top-5 nodes, 2 fresh common seed sets)
+[18:33:52] FRESH calm  DONE in 2 min
+[18:33:52] FRESH-SEED VALIDATION stressed (top-5 nodes, 2 fresh common seed sets)
+[18:36:10] FRESH stressed  DONE in 2 min
+[18:36:10] SURROGATE calm  (160 LHS, 20d, 6 seeds, 2 refine, 32/round, 32 stage-2)
+[20:15:07] SURROGATE calm  DONE in 98 min -> output/relock_gbm/sur_calm.json
+[20:15:07] SURROGATE stressed  (160 LHS, 20d, 6 seeds, 2 refine, 32/round, 32 stage-2)
+[21:50:25] SURROGATE stressed  DONE in 95 min -> output/relock_gbm/sur_stressed.json
+[21:50:25] === done in 519 min — results in output/relock_gbm/ ===
+[21:50:25] Review grid vs surrogate vs fresh-seed agreement, then copy the chosen
+[21:50:25] optimum into globals.CALIBRATED (the D60 record stays in output/baseline_grid/).

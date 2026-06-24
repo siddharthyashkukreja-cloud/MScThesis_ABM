@@ -1,0 +1,59 @@
+================ OVERNIGHT RUN  2026-06-23 13:34:11 ================
+core=1  robust=0  twofactor=0 (6h)  regime=stressed
+seeds: desc=12 hyp=12 sev=20 co=20 mech=40
+
+[core 1/2] MAIN MODEL — descriptive  (2026-06-23 13:34:11)
+  descriptive OK -> output/results/descriptive/*.csv
+
+[core 2/2] HYPOTHESES — margin arms + netting  (2026-06-23 13:41:41)
+  hypotheses OK -> output/thesis_final/experiments/*.csv
+
+================ DONE  2026-06-23 14:21:57 ================
+--- robustness summary ---
+# Robustness experiments — severity, close-out, mechanism
+
+Generated 2026-06-23 13:11
+
+## Severity sweep (reactive margin)
+ severity  drawdown  client_def  member_def  reach_fund  IM_peak_B
+     1.00    -35.65         7.6         1.5         0.8      39.15
+     1.25    -42.34        19.9         3.2         1.0      34.81
+     1.50    -48.36        22.3         3.5         1.0      30.22
+     1.75    -53.73        24.6         4.4         1.0      27.56
+     2.00    -58.57        29.0         4.5         1.0      25.12
+
+## Close-out recovery sweep
+ closeout_recovery margin  member_def  reach_fund  client_def
+              0.70 flat08         0.4         0.3         7.9
+              0.70 flat12         0.7         0.7         5.1
+              0.80 flat08         0.4         0.2         7.9
+              0.80 flat12         0.8         0.7         4.9
+              0.90 flat08         0.4         0.0         8.0
+              0.90 flat12         0.7         0.0         4.8
+              0.95 flat08         0.4         0.0         8.0
+              0.95 flat12         0.7         0.0         4.8
+
+## Tail-concentration mechanism (|position| at client default)
+margin  n_defaults  median    p90    p99    max  tail_gt1800
+flat04         126   802.0 1338.0 3232.0 7273.0        0.024
+flat08          89   813.0 1393.0 5589.0 5590.0        0.079
+flat12          58   842.0 3746.0 4666.0 4745.0        0.207
+--- two-factor summary ---
+# Overnight two-factor (superposition-OU) run
+
+Generated 2026-06-23 11:10
+
+## Stage A - calibration
+- 2f optimum: f=0.297, w=0.149, alpha_fast=3.721e-03, alpha_slow=5.541e-04 (ratio=0.149)
+- jumps (freed): lambda x0.92 = 1.20/day, delta x2.32 = 9.998e-03
+- loss D: 2f=16.35 vs measured-1f=19.496
+- evals: 52 in 24.1 min
+
+## Stage B - stylised-facts validation
+- (not completed)
+
+## Stage C - clearing ensemble
+- (not completed)
+
+Morning: open results_figures.ipynb (core figs) and add panels for
+  output/robustness/*  and  output/overnight_2f/*  (severity curve, closeout bars, |r|-ACF repair).

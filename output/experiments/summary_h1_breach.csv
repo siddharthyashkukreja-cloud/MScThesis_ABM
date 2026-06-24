@@ -1,0 +1,9 @@
+fund,mode,level,frac_seeds_breached,breach_c_median,breach_c_p10,breach_c_p90
+gbm,direct,3,1.0,1.75,1.5,2.0
+gbm,direct,4,1.0,2.0,1.75,2.25
+gbm,tiered,3,0.95,2.75,2.175,3.5
+gbm,tiered,4,0.25,3.5,2.975,4.0
+kalman,direct,3,1.0,2.25,1.975,2.5
+kalman,direct,4,0.95,3.0,2.75,3.650000000000002
+kalman,tiered,3,0.375,3.5,3.0,4.0
+kalman,tiered,4,0.025,4.0,4.0,4.0

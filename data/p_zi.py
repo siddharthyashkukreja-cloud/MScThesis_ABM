@@ -235,9 +235,9 @@ def _process_file(path: Path, rth_only: bool = True, max_add: int | None = None)
                 depth = (px - mid) / TICK_SIZE       # passive ask rests above mid
             else:
                 continue
-            # round half UP — plain round() is banker's rounding, which bins
-            # X.5-tick distances off a half-tick mid onto even integers (the
-            # even-tick sawtooth artifact). round-half-up is monotone.
+            # Round half up: plain round() is banker's rounding, which bins
+            # X.5-tick distances off a half-tick mid onto even integers (an
+            # even-tick sawtooth artifact). Round-half-up is monotone.
             k = int(depth + 0.5)
             if k < 1:
                 n_aggressive += 1                    # at/through mid — marketable-ish

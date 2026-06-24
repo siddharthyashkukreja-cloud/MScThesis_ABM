@@ -1,0 +1,30 @@
+  calm seed 42 done
+  calm seed 43 done
+  calm seed 44 done
+  calm seed 45 done
+  calm seed 46 done
+  calm seed 47 done
+  calm seed 48 done
+  calm seed 49 done
+  calm seed 50 done
+  calm seed 51 done
+  calm seed 52 done
+  calm seed 53 done
+  stressed seed 42 done
+  stressed seed 43 done
+  stressed seed 44 done
+  stressed seed 45 done
+  stressed seed 46 done
+  stressed seed 47 done
+  stressed seed 48 done
+  stressed seed 49 done
+  stressed seed 50 done
+  stressed seed 51 done
+  stressed seed 52 done
+  stressed seed 53 done
+
+DONE -> output/results/descriptive/  (N_SEEDS=12, regimes=['calm', 'stressed'])
+          cm_defaults  client_defaults       im_mean      total_df  n_margin_calls  client_im_share
+regime                                                                                             
+calm              0.0              0.0  1.900652e+10  6.117843e+09         625.583            0.483
+stressed          0.0              7.5  2.862941e+10  4.352006e+09        1476.750            0.499

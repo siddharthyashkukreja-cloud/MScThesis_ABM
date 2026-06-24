@@ -1,0 +1,17 @@
+fund,im_regime,level,frac_seeds_breached,breach_c_median,breach_c_p10,breach_c_p90
+gbm,flat05,3,0.975,3.0,2.75,4.0
+gbm,flat05,4,0.35,3.5,3.5,4.0
+gbm,flat12,3,1.0,2.25,2.0,3.0
+gbm,flat12,4,0.85,3.0,2.75,4.0
+gbm,reactive,3,0.95,2.75,2.175,3.5
+gbm,reactive,4,0.25,3.5,2.975,4.0
+gbm,static,3,1.0,2.25,2.0,3.0500000000000007
+gbm,static,4,0.825,3.5,2.75,4.0
+kalman,flat05,3,0.325,3.5,3.0,4.0
+kalman,flat05,4,0.0,,,
+kalman,flat12,3,0.85,3.5,2.825,4.0
+kalman,flat12,4,0.05,4.0,4.0,4.0
+kalman,reactive,3,0.375,3.5,3.0,4.0
+kalman,reactive,4,0.025,4.0,4.0,4.0
+kalman,static,3,0.925,3.5,3.0,4.0
+kalman,static,4,0.025,4.0,4.0,4.0

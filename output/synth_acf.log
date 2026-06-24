@@ -1,0 +1,9 @@
+empirical |r|-ACF: lag1=0.411  lag20=0.344
+[stressed] seed=101 n_days=30 n=11700: 39 jumps, 29 gaps (gap mean -0.0080), V0=3387.38 Vend=2265.43 maxDD=-33.8%; sigma_t mean=3.777e-04 (theta_eff=5.352e-04) -> /sessions/beautiful-sleepy-lovelace/mnt/mscthesis_abm/data/fv_gbm_joint_logvol_acf.csv
+  path 1/20  (9s)
+[stressed] seed=102 n_days=30 n=11700: 43 jumps, 29 gaps (gap mean -0.0091), V0=3387.38 Vend=2282.58 maxDD=-33.6%; sigma_t mean=4.334e-04 (theta_eff=5.352e-04) -> /sessions/beautiful-sleepy-lovelace/mnt/mscthesis_abm/data/fv_gbm_joint_logvol_acf.csv
+  path 2/20  (17s)
+[stressed] seed=103 n_days=30 n=11700: 34 jumps, 29 gaps (gap mean -0.0007), V0=3387.38 Vend=2684.11 maxDD=-23.2%; sigma_t mean=6.411e-04 (theta_eff=5.352e-04) -> /sessions/beautiful-sleepy-lovelace/mnt/mscthesis_abm/data/fv_gbm_joint_logvol_acf.csv
+  path 3/20  (26s)
+[stressed] seed=104 n_days=30 n=11700: 41 jumps, 29 gaps (gap mean -0.0007), V0=3387.38 Vend=2439.81 maxDD=-28.8%; sigma_t mean=4.616e-04 (theta_eff=5.352e-04) -> /sessions/beautiful-sleepy-lovelace/mnt/mscthesis_abm/data/fv_gbm_joint_logvol_acf.csv
+  path 4/20  (35s)

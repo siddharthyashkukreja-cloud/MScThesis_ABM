@@ -1,0 +1,30 @@
+=== PARALLEL OVERNIGHT  2026-06-23 18:04:14 ===
+core N=100 | H1 N=150 | synth 12h (stressed)
+  [1] core  PID 54539  -> output/results/descriptive/
+  [2] H1    PID 54540  -> output/thesis_final/experiments/
+  [3] synth PID 54541  -> output/overnight_joint_logvol/
+monitor: tail -f output/logs/{core,h1,synth}.log
+[1] core DONE  2026-06-23 19:12:40
+[2] H1 DONE  2026-06-24 00:17:07
+[3] synth FAILED
+=== ALL DONE  2026-06-24 04:54:43  (fail=1) ===
+--- core summary ---
+          cm_defaults  client_defaults       im_mean      total_df  n_margin_calls  client_im_share
+regime                                                                                             
+calm              0.0             0.00  1.910626e+10  6.251043e+09          622.76            0.480
+stressed          0.0             8.31  2.856325e+10  4.503833e+09         1466.39            0.503
+--- H1 summary ---
+    calm   flat08  -5.355085         0.000000     0.000000       0.000000           0.000000       0.000000 1.308507e+10   0.000000e+00          0.000000e+00 3.172881e+10 3.638083e+10
+    calm   flat12  -5.356467         0.000000     0.000000       0.000000           0.000000       0.000000 1.163188e+10   0.000000e+00          0.000000e+00 4.232515e+10 4.820994e+10
+    calm reactive  -5.360887         0.000000     0.000000       0.000000           0.000000       0.000000 1.521059e+10   0.000000e+00          0.000000e+00 1.814379e+10 2.077853e+10
+stressed   flat04 -35.648051        14.786667     0.013333       0.013333           0.040000       0.013333 1.439998e+10   5.819358e+06          1.504969e+06 1.530314e+10 1.863485e+10
+stressed   flat08 -35.646673        11.060000     0.346667       0.346667           0.906667       0.300000 1.301905e+10   1.315227e+08          0.000000e+00 2.855843e+10 3.384452e+10
+stressed   flat12 -35.644901         6.913333     0.553333       0.526667           1.266667       0.420000 1.166754e+10   1.969165e+08          0.000000e+00 3.967309e+10 4.629284e+10
+stressed reactive -35.644533        10.120000     0.333333       0.333333           0.786667       0.253333 1.403068e+10   1.132481e+08          0.000000e+00 2.690058e+10 3.847552e+10
+--- synth summary ---
+    write_summary(opt, vs, cs)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/siddharth/Desktop/GitHub/mscthesis_abm/scripts/overnight_joint.py", line 349, in write_summary
+    f"{opt['fixed']['window_days']}d), jumps x{ro['delta_mult']:.2f} size\n", "## Stage B - validation"]
+                                               ~~^^^^^^^^^^^^^^
+KeyError: 'delta_mult'

@@ -1,0 +1,28 @@
+thesis experiments: 720 runs -> output/thesis_final/experiments/rows.csv  (N_SEEDS=40)
+
+[H1 tiered vs direct]
+  regime  direct   drawdown  client_defaults  cm_defaults  nbcm_defaults  deepest_waterfall  mutualised_l3     total_df  ccp_cash_used  client_loss_absorbed      im_mean      im_peak
+    calm   False  -0.585485            0.000        0.175          0.175              0.000            0.0 6.412379e+09       0.000000          0.000000e+00 1.405844e+10 1.725297e+10
+    calm    True  -0.586500            0.000        0.000          0.000              0.000            0.0 6.421173e+09       0.000000          0.000000e+00 1.069617e+10 1.360515e+10
+stressed   False -18.760300            2.300        0.025          0.025              0.000            0.0 6.945054e+08       0.000000          1.047646e+06 1.256493e+10 1.547680e+10
+stressed    True -18.752344            1.975        1.975          0.000              1.575            0.0 5.055903e+08  389821.949147          7.895875e+05 5.207300e+09 6.524821e+09
+
+[H2 margin regimes]
+  regime   margin  decouple   drawdown  client_defaults  cm_defaults  nbcm_defaults  deepest_waterfall  mutualised_l3     total_df  ccp_cash_used  client_loss_absorbed      im_mean      im_peak
+    calm   flat05     False  -0.585485            0.000        0.275          0.275              0.000            0.0 7.083759e+09            0.0          0.000000e+00 1.165771e+10 1.431364e+10
+    calm   flat12     False  -0.587134            0.000        0.000          0.000              0.000            0.0 2.280744e+09            0.0          0.000000e+00 2.915125e+10 3.600275e+10
+    calm reactive     False  -0.585485            0.000        0.175          0.175              0.000            0.0 6.412379e+09            0.0          0.000000e+00 1.405844e+10 1.725297e+10
+    calm reactive      True  -0.585485            0.000        0.175          0.175              0.000            0.0 6.412379e+09            0.0          0.000000e+00 1.405844e+10 1.725297e+10
+    calm   static     False  -0.585485            0.000        0.175          0.175              0.000            0.0 6.412379e+09            0.0          0.000000e+00 1.405844e+10 1.725297e+10
+stressed   flat05     False -18.759629            1.575        0.350          0.350              0.000            0.0 1.721000e+09            0.0          9.204141e+05 4.723617e+09 5.199538e+09
+stressed   flat12     False -18.760974            1.800        0.000          0.000              0.000            0.0 5.454245e+08            0.0          8.710561e+05 1.136859e+10 1.253002e+10
+stressed reactive     False -18.760300            2.300        0.025          0.025              0.000            0.0 6.945054e+08            0.0          1.047646e+06 1.256493e+10 1.547680e+10
+stressed reactive      True -18.760750            1.525        0.425          0.425              0.025            0.0 2.066769e+09            0.0          8.860513e+05 1.250851e+10 1.534122e+10
+stressed   static     False -18.767142            1.725        0.025          0.025              0.000            0.0 5.733009e+08            0.0          9.809053e+05 1.123591e+10 1.236288e+10
+
+[NET gross vs net]
+  regime netting   drawdown  client_defaults  cm_defaults  nbcm_defaults  deepest_waterfall  mutualised_l3     total_df  ccp_cash_used  client_loss_absorbed      im_mean      im_peak
+    calm   gross  -0.585485            0.000        0.175          0.175                0.0            0.0 6.412379e+09            0.0          0.000000e+00 1.405844e+10 1.725297e+10
+    calm     net  -0.587769            0.000        0.275          0.275                0.0            0.0 6.430846e+09            0.0          0.000000e+00 1.188024e+10 1.490267e+10
+stressed   gross -18.760300            2.300        0.025          0.025                0.0            0.0 6.945054e+08            0.0          1.047646e+06 1.256493e+10 1.547680e+10
+stressed     net -18.759179            2.275        0.000          0.000                0.0            0.0 6.925893e+08            0.0          1.049129e+06 8.297948e+09 1.065833e+10

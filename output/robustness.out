@@ -1,0 +1,42 @@
+[10:43:31] ======================================================================
+[10:43:31] ROBUSTNESS RUN  window=full  seeds sev/co/mech=20/20/40  budget=4.0h
+[10:43:31] SEVERITY: reactive margin, k=[1.0, 1.25, 1.5, 1.75, 2.0], 20 seeds/level
+[10:48:25]   k=1.00: drawdown  -35.6%  client_def  10.2  member_def 0.15  reach-fund   15%  IMpeak 36B
+[10:54:09]   k=1.25: drawdown  -42.4%  client_def  19.9  member_def 0.40  reach-fund   40%  IMpeak 34B
+[11:00:28]   k=1.50: drawdown  -48.4%  client_def  26.0  member_def 0.60  reach-fund   40%  IMpeak 33B
+[11:05:15]   k=1.75: drawdown  -53.8%  client_def  30.2  member_def 0.70  reach-fund   40%  IMpeak 31B
+[11:10:13]   k=2.00: drawdown  -58.7%  client_def  35.1  member_def 1.15  reach-fund   60%  IMpeak 29B
+[11:10:13] SEVERITY done:
+ severity  drawdown  client_def  member_def  reach_fund  IM_peak_B
+     1.00    -35.64       10.25        0.15        0.15      35.77
+     1.25    -42.36       19.85        0.40        0.40      34.24
+     1.50    -48.42       26.00        0.60        0.40      32.57
+     1.75    -53.79       30.25        0.70        0.40      31.04
+     2.00    -58.65       35.15        1.15        0.60      29.26
+[11:10:13] CLOSEOUT: recovery=[0.7, 0.8, 0.9, 0.95], arms=['flat08', 'flat12'], 20 seeds/cell
+[11:15:12]   rec=0.70 flat08: member_def 0.35  reach-fund   35%  client_def 11.9
+[11:19:56]   rec=0.70 flat12: member_def 0.55  reach-fund   50%  client_def 5.3
+[11:25:45]   rec=0.80 flat08: member_def 0.35  reach-fund   35%  client_def 11.8
+[11:30:21]   rec=0.80 flat12: member_def 0.55  reach-fund   45%  client_def 5.3
+[11:34:45]   rec=0.90 flat08: member_def 0.35  reach-fund    0%  client_def 11.8
+[11:40:59]   rec=0.90 flat12: member_def 0.55  reach-fund    0%  client_def 5.3
+[11:45:37]   rec=0.95 flat08: member_def 0.35  reach-fund    0%  client_def 11.8
+[11:54:34]   rec=0.95 flat12: member_def 0.55  reach-fund    0%  client_def 5.3
+[11:54:34] CLOSEOUT done:
+ closeout_recovery margin  member_def  reach_fund  client_def
+              0.70 flat08        0.35        0.35       11.90
+              0.70 flat12        0.55        0.50        5.35
+              0.80 flat08        0.35        0.35       11.85
+              0.80 flat12        0.55        0.45        5.35
+              0.90 flat08        0.35        0.00       11.85
+              0.90 flat12        0.55        0.00        5.35
+              0.95 flat08        0.35        0.00       11.85
+              0.95 flat12        0.55        0.00        5.35
+[11:54:34] MECHANISM: position-at-default, arms=['flat04', 'flat08', 'flat12'], 40 seeds/arm
+[12:23:59] MECHANISM done (median falls, tail grows as margin rises):
+margin  n_defaults  median    p90    p99    max  tail_gt1800
+flat04         606   858.0 1506.0 2432.0 6590.0        0.033
+flat08         478   765.0 1468.0 2442.0 5032.0        0.023
+flat12         260   718.0 1421.0 4235.0 4856.0        0.042
+[12:23:59] wrote SUMMARY.md
+[12:23:59] ALL DONE in 100.5 min. Outputs in /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/robustness

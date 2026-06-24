@@ -1,0 +1,19 @@
+thesis experiments: 480 runs -> output/thesis_final/experiments/rows.csv  (N_SEEDS=40)
+
+[H1 margin procyclicality]
+  regime   margin   drawdown  client_defaults  cm_defaults  nbcm_defaults  deepest_waterfall  mutualised_l3     total_df  ccp_cash_used  client_loss_absorbed      im_mean      im_peak
+    calm   flat04  -5.349016             0.00        0.000          0.000              0.000          0.000 1.558262e+10   0.000000e+00          0.000000e+00 1.580289e+10 1.788339e+10
+    calm   flat08  -5.346323             0.00        0.000          0.000              0.000          0.000 1.323416e+10   0.000000e+00          0.000000e+00 2.776592e+10 3.165670e+10
+    calm   flat12  -5.344977             0.00        0.000          0.000              0.000          0.000 1.170972e+10   0.000000e+00          0.000000e+00 3.745625e+10 4.256706e+10
+    calm reactive  -5.349016             0.00        0.000          0.000              0.000          0.000 1.558262e+10   0.000000e+00          0.000000e+00 1.580289e+10 1.788339e+10
+stressed   flat04 -35.652193            15.15        0.000          0.000              0.000          0.000 1.385772e+10   0.000000e+00          1.106328e+06 1.365961e+10 1.615185e+10
+stressed   flat08 -35.649980            11.95        0.375          0.375              1.050          0.350 1.265044e+10   1.472430e+08          0.000000e+00 2.558195e+10 2.975697e+10
+stressed   flat12 -35.638725             6.50        0.575          0.575              1.475          0.475 1.176511e+10   2.002018e+08          0.000000e+00 3.574080e+10 4.122500e+10
+stressed reactive -35.643707            10.25        0.225          0.225              0.600          0.200 1.362092e+10   8.601163e+07          0.000000e+00 2.437220e+10 3.626289e+10
+
+[NET gross vs net]
+  regime netting   drawdown  client_defaults  cm_defaults  nbcm_defaults  deepest_waterfall  mutualised_l3     total_df  ccp_cash_used  client_loss_absorbed      im_mean      im_peak
+    calm   gross  -5.349016            0.000        0.000          0.000                0.0            0.0 1.558262e+10   0.000000e+00                   0.0 1.580289e+10 1.788339e+10
+    calm     net  -5.355957            0.000        0.000          0.000                0.0            0.0 8.771242e+09   0.000000e+00                   0.0 9.057406e+09 1.065970e+10
+stressed   gross -35.643707           10.250        0.225          0.225                0.6            0.2 1.362092e+10   8.601163e+07                   0.0 2.437220e+10 3.626289e+10
+stressed     net -35.652378            5.925        0.200          0.200                0.6            0.2 9.287109e+09   4.483614e+07                   0.0 1.537877e+10 2.203847e+10

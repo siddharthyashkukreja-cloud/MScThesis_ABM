@@ -1,0 +1,8 @@
+{
+  "K": 10,
+  "joint_coverage": 9,
+  "joint_meanGapSD": 0.64,
+  "base_meanGapSD": 2.64,
+  "joint_ensembleD": 18.31,
+  "base_ensembleD": 24.5
+}

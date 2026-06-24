@@ -1,7 +1,0 @@
-[13:41:30] === high-res baseline start (E0, 160 LHS / 6 seeds, no flags) ===
-[13:41:30] E0 calm  flags=[none/baseline]  args=[160 20 6 2 32 24]
-[15:30:56] E0 calm  DONE in 109 min  -> output/baseline_hires/E0_calm.json
-[15:30:56] E0 stressed  flags=[none/baseline]  args=[160 20 6 2 32 24]
-[17:48:10] E0 stressed  DONE in 137 min  -> output/baseline_hires/E0_stressed.json
-[17:48:10] === high-res baseline done in 246 min ===
-[17:48:10] Results: output/baseline_hires/E0_calm.json , E0_stressed.json

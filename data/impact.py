@@ -3,8 +3,8 @@ impact.py — Almgren-Chriss (2000) impact-parameter calibration on
 1-min BBO-1m + OHLCV-1m data.
 
 Estimates the temporary and permanent market-impact coefficients (η, γ)
-used by `MarketMaker._ac_start()` and (Stage 4+) `BankingClearingMember`
-fire-sales. Run once per regime; outputs go to `output/impact_params.json`
+used by `MarketMaker._ac_start()` and `BankingClearingMember` fire-sales.
+Run once per regime; outputs go to `output/impact_params.json`
 and are auto-populated into `globals.ETA_TEMP` / `globals.GAMMA_PERM`
 when `python data/impact.py wire` is invoked.
 
@@ -149,7 +149,8 @@ def _load_regime(regime: str) -> pd.DataFrame:
     # Signed-volume proxy: sign of contemporaneous return × volume. Lee-Ready
     # classification would be more accurate but needs trade-by-trade data;
     # sign-of-return is the standard 1-min approximation (Hasbrouck 1991).
-    df["signed_vol"] = np.sign(df["ret"]) * df["volume"].astype(float)
+    df["signed_vol"] = np.sign(df["ret"]) * df["volume"].astype(float)   # for the permanent (forward) regression
+    df["abs_ret"] = df["ret"].abs()                                       # for the temporary-impact magnitude (|r| ~ volume)
     return df
 
 
@@ -183,10 +184,12 @@ def calibrate_regime(regime: str, K: int = K_LOOKAHEAD) -> Dict:
     n = len(df)
     print(f"  {n} valid 1-min observations after RTH/overnight filters")
 
-    # β_total: contemporaneous regression r_t ~ signed_vol_t
-    beta_total, se_total = _ols_slope(df["signed_vol"].to_numpy(),
-                                      df["ret"].to_numpy())
-    print(f"  β_total = {beta_total:.4e}  ± {se_total:.4e}   (per-contract per-min log-ret)")
+    # β_total: temporary-impact MAGNITUDE from |r_t| ~ volume_t. Using |r| on raw volume
+    # (no trade sign) avoids the lag-0 sign(r)·V tautology that mechanically inflated the old
+    # contemporaneous r_t ~ sign(r_t)·V_t regression (corr ~0.73 by construction).
+    beta_total, se_total = _ols_slope(df["volume"].to_numpy(),
+                                      df["abs_ret"].to_numpy())
+    print(f"  β_total = {beta_total:.4e}  ± {se_total:.4e}   (|log-ret| per contract; impact magnitude)")
 
     # β_perm: future-cumulative regression on signed_vol_t
     df["fwd_cumret"] = (
@@ -196,24 +199,23 @@ def calibrate_regime(regime: str, K: int = K_LOOKAHEAD) -> Dict:
     beta_perm, se_perm = _ols_slope(df["signed_vol"].to_numpy(),
                                     df["fwd_cumret"].to_numpy())
     print(f"  β_perm  = {beta_perm:.4e}  ± {se_perm:.4e}   (lookahead K={K})")
-    beta_temp = beta_total - beta_perm
+    beta_temp = max(0.0, beta_total - abs(beta_perm))   # temporary = total impact magnitude - permanent magnitude
     print(f"  β_temp  = {beta_temp:.4e}")
 
     # Convert to AC units (η, γ in price units per contract / contract²).
     v0 = float(df["mid"].iloc[0])   # first-bar mid as v0 anchor
     eta_temp_raw = float(beta_temp * v0)
-    gamma_perm_raw = float(beta_perm * v0)
+    gamma_perm_raw = float(abs(beta_perm) * v0)
     print(f"  v0               = {v0:.2f}")
     print(f"  raw  eta_temp    = {eta_temp_raw:.4e}  (price-per-contract² per step)")
     print(f"  raw  gamma_perm  = {gamma_perm_raw:.4e}  (price-per-contract per step)")
 
     # Floor γ at 0: a negative β_perm means prices revert beyond the trade
-    # itself (Hasbrouck 1991; Bouchaud-Mézard-Potters 2002 on transient-
-    # impact dominance in liquid markets). Empirically ES has essentially
-    # no permanent component at 1-min cadence — the simplified AC schedule
-    # uses only η + λ + σ (γ correction term dropped), so γ_perm = 0 doesn't
-    # affect the schedule shape. We record the raw β_perm value alongside
-    # the floored γ_perm for transparency.
+    # itself (Hasbrouck 1991; Bouchaud-Mézard-Potters 2002 on transient-impact
+    # dominance in liquid markets). ES has essentially no permanent component at
+    # 1-min cadence, and the simplified AC schedule uses only η + λ + σ, so
+    # γ_perm = 0 doesn't affect the schedule shape. The raw β_perm is kept in
+    # the JSON alongside the floored γ_perm.
     gamma_perm = max(0.0, gamma_perm_raw)
     eta_temp = max(0.0, eta_temp_raw)
     if gamma_perm_raw < 0:

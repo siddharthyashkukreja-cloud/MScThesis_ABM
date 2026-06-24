@@ -1,0 +1,115 @@
+[11:45:58] ======================================================================
+[11:45:58] OVERNIGHT JOINT RUN - regime=stressed max_hours=0.4 budget={'n_days': 30, 'n_runs': 3, 'sobol_init': 24, 'batch': 16, 'n_pool': 4096, 'calib_hours': 0.4, 'n_paths': 30, 'ens_days': 42, 'agent_seed': 0, 'path_seed': 7, 'drift': -2.1329779981944435e-05, 'drawdown': 0.3, 'window_days': 42}
+[11:46:04] STAGE A: JOINT agent+FV calibration (6-D), regime=stressed, budget 0.4h, drift=-2.133e-05/min (~30% over 42d)
+[stressed] seed=7 n_days=30 n=11700: 36 jumps, 29 gaps (gap mean +0.0014), V0=3387.38 Vend=2300.81 maxDD=-32.7%; sigma_t mean=8.597e-04 (theta_eff=1.018e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:46:35]   measured baseline D=20.018  (CALIBRATED agents + 1-factor FV)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3111.23 maxDD=-8.2%; sigma_t mean=5.463e-04 (theta_eff=5.624e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:47:08]   [sobol 1] mtl=0.064 mtg=0.81 fts=0.76 f=0.79 w=0.87 dx=1.31 -> D=30.035 (30s, 1m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3045.31 maxDD=-10.5%; sigma_t mean=8.860e-04 (theta_eff=1.012e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:47:31]   [sobol 2] mtl=0.111 mtg=1.58 fts=0.35 f=0.32 w=0.46 dx=2.43 -> D=23.362 (23s, 1m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2974.53 maxDD=-12.5%; sigma_t mean=7.429e-04 (theta_eff=8.529e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:48:08]   [sobol 3] mtl=0.194 mtg=0.45 fts=0.64 f=0.51 w=0.16 dx=2.21 -> D=26.175 (37s, 2m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2897.13 maxDD=-14.7%; sigma_t mean=8.538e-04 (theta_eff=9.722e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:48:42]   [sobol 4] mtl=0.051 mtg=1.45 fts=0.10 f=0.37 w=0.56 dx=1.03 -> D=24.364 (34s, 3m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3013.13 maxDD=-11.1%; sigma_t mean=7.906e-04 (theta_eff=8.931e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:49:20]   [sobol 5] mtl=0.007 mtg=0.24 fts=0.46 f=0.47 w=0.68 dx=1.61 -> D=21.800 (38s, 3m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3078.09 maxDD=-9.2%; sigma_t mean=6.979e-04 (theta_eff=7.829e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:49:57]   [sobol 6] mtl=0.152 mtg=1.14 fts=0.70 f=0.59 w=0.28 dx=2.78 -> D=24.572 (37s, 4m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2962.69 maxDD=-13.2%; sigma_t mean=9.573e-04 (theta_eff=1.082e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:50:39]   [sobol 7] mtl=0.140 mtg=0.83 fts=0.23 f=0.22 w=0.40 dx=1.86 -> D=26.884 (42s, 5m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2994.12 maxDD=-11.6%; sigma_t mean=6.109e-04 (theta_eff=6.565e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:51:07]   [sobol 8] mtl=0.095 mtg=1.96 fts=0.55 f=0.71 w=0.80 dx=0.73 -> D=29.722 (28s, 5m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2924.09 maxDD=-13.7%; sigma_t mean=6.558e-04 (theta_eff=7.204e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:51:36]   [sobol 9] mtl=0.084 mtg=0.46 fts=0.26 f=0.65 w=0.41 dx=1.21 -> D=29.603 (28s, 6m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3135.20 maxDD=-7.5%; sigma_t mean=8.207e-04 (theta_eff=9.091e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:52:34]   [sobol 10] mtl=0.137 mtg=1.35 fts=0.48 f=0.45 w=0.81 dx=2.39 -> D=21.016 (58s, 7m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3144.44 maxDD=-7.2%; sigma_t mean=6.004e-04 (theta_eff=6.344e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:53:32]   [sobol 11] mtl=0.175 mtg=0.59 fts=0.39 f=0.73 w=0.51 dx=2.68 -> D=25.744 (58s, 7m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2892.38 maxDD=-15.5%; sigma_t mean=9.910e-04 (theta_eff=1.125e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:53:57]   [sobol 12] mtl=0.025 mtg=1.72 fts=0.73 f=0.15 w=0.12 dx=1.56 -> D=38.943 (25s, 8m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2829.04 maxDD=-17.1%; sigma_t mean=9.183e-04 (theta_eff=1.058e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:54:30]   [sobol 13] mtl=0.030 mtg=1.03 fts=0.61 f=0.25 w=0.25 dx=0.99 -> D=33.370 (33s, 8m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3121.48 maxDD=-7.8%; sigma_t mean=5.355e-04 (theta_eff=5.364e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:54:54]   [sobol 14] mtl=0.181 mtg=1.79 fts=0.18 f=0.81 w=0.65 dx=2.11 -> D=28.008 (25s, 9m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3173.43 maxDD=-6.6%; sigma_t mean=8.867e-04 (theta_eff=9.869e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:55:21]   [sobol 15] mtl=0.117 mtg=0.20 fts=0.83 f=0.35 w=0.73 dx=2.96 -> D=28.579 (27s, 9m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2967.78 maxDD=-12.5%; sigma_t mean=7.050e-04 (theta_eff=7.960e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:55:44]   [sobol 16] mtl=0.066 mtg=1.21 fts=0.33 f=0.58 w=0.33 dx=1.79 -> D=25.483 (23s, 10m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3006.59 maxDD=-11.8%; sigma_t mean=9.911e-04 (theta_eff=1.095e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:56:11]   [sobol 17] mtl=0.075 mtg=0.11 fts=0.51 f=0.20 w=0.58 dx=2.02 -> D=27.263 (27s, 10m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2821.00 maxDD=-16.8%; sigma_t mean=6.432e-04 (theta_eff=6.755e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:56:34]   [sobol 18] mtl=0.122 mtg=1.24 fts=0.27 f=0.70 w=0.18 dx=0.85 -> D=34.571 (23s, 11m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2997.77 maxDD=-11.6%; sigma_t mean=7.588e-04 (theta_eff=8.677e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:56:57]   [sobol 19] mtl=0.184 mtg=0.93 fts=0.73 f=0.50 w=0.49 dx=1.77 -> D=23.468 (23s, 11m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3194.69 maxDD=-6.1%; sigma_t mean=8.141e-04 (theta_eff=8.841e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:57:21]   [active 20] mtl=0.038 mtg=1.36 fts=0.49 f=0.48 w=0.89 dx=2.62 -> D=24.463 (22s, 11m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3143.03 maxDD=-7.3%; sigma_t mean=8.761e-04 (theta_eff=9.486e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:57:43]   [active 21] mtl=0.117 mtg=1.48 fts=0.38 f=0.40 w=0.87 dx=2.40 -> D=27.120 (22s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3179.86 maxDD=-6.5%; sigma_t mean=7.883e-04 (theta_eff=8.779e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:58:05]   [active 22] mtl=0.053 mtg=1.53 fts=0.35 f=0.49 w=0.79 dx=2.70 -> D=19.269 (22s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3154.71 maxDD=-7.0%; sigma_t mean=8.623e-04 (theta_eff=9.377e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:58:27]   [active 23] mtl=0.072 mtg=0.97 fts=0.50 f=0.41 w=0.87 dx=2.48 -> D=25.917 (22s, 12m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3051.20 maxDD=-10.0%; sigma_t mean=8.257e-04 (theta_eff=9.278e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:58:50]   [active 24] mtl=0.021 mtg=1.52 fts=0.39 f=0.43 w=0.72 dx=1.95 -> D=25.238 (23s, 13m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3079.42 maxDD=-9.1%; sigma_t mean=7.952e-04 (theta_eff=8.764e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:59:13]   [active 25] mtl=0.012 mtg=1.22 fts=0.46 f=0.49 w=0.84 dx=1.81 -> D=27.227 (23s, 13m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3235.96 maxDD=-5.9%; sigma_t mean=8.233e-04 (theta_eff=8.971e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:59:35]   [active 26] mtl=0.126 mtg=1.61 fts=0.47 f=0.46 w=0.88 dx=2.98 -> D=22.425 (22s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3205.03 maxDD=-6.0%; sigma_t mean=8.707e-04 (theta_eff=9.510e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[11:59:58]   [active 27] mtl=0.079 mtg=1.85 fts=0.48 f=0.40 w=0.84 dx=2.93 -> D=27.715 (22s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3195.28 maxDD=-6.2%; sigma_t mean=7.969e-04 (theta_eff=8.728e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:00:20]   [active 28] mtl=0.103 mtg=0.77 fts=0.38 f=0.49 w=0.87 dx=2.63 -> D=18.062 (23s, 14m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3094.15 maxDD=-8.7%; sigma_t mean=7.707e-04 (theta_eff=8.561e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:00:43]   [active 29] mtl=0.052 mtg=1.39 fts=0.47 f=0.51 w=0.81 dx=1.96 -> D=22.513 (22s, 15m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3149.38 maxDD=-7.0%; sigma_t mean=5.303e-04 (theta_eff=5.381e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:01:05]   [active 30] mtl=0.008 mtg=0.37 fts=0.13 f=0.81 w=0.76 dx=1.99 -> D=26.071 (22s, 15m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3151.53 maxDD=-7.0%; sigma_t mean=7.161e-04 (theta_eff=7.891e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:01:27]   [active 31] mtl=0.084 mtg=1.49 fts=0.80 f=0.58 w=0.83 dx=2.17 -> D=22.802 (22s, 15m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3050.15 maxDD=-10.1%; sigma_t mean=6.170e-04 (theta_eff=6.165e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:01:49]   [active 32] mtl=0.131 mtg=1.91 fts=0.39 f=0.75 w=0.12 dx=2.82 -> D=27.216 (22s, 16m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3155.78 maxDD=-6.8%; sigma_t mean=5.474e-04 (theta_eff=5.555e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:02:11]   [active 33] mtl=0.015 mtg=1.52 fts=0.78 f=0.79 w=0.64 dx=2.42 -> D=29.650 (22s, 16m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3172.98 maxDD=-6.3%; sigma_t mean=5.241e-04 (theta_eff=5.037e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:02:34]   [active 34] mtl=0.046 mtg=1.37 fts=0.13 f=0.83 w=0.56 dx=2.73 -> D=26.013 (23s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3057.21 maxDD=-9.7%; sigma_t mean=5.180e-04 (theta_eff=4.780e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:02:57]   [active 35] mtl=0.166 mtg=1.53 fts=0.54 f=0.85 w=0.48 dx=1.99 -> D=33.769 (22s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3160.40 maxDD=-6.7%; sigma_t mean=7.864e-04 (theta_eff=8.742e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:03:20]   [active 36] mtl=0.052 mtg=0.73 fts=0.11 f=0.49 w=0.80 dx=2.53 -> D=18.962 (22s, 17m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3177.70 maxDD=-6.3%; sigma_t mean=8.233e-04 (theta_eff=9.077e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:03:42]   [active 37] mtl=0.083 mtg=1.58 fts=0.13 f=0.45 w=0.83 dx=2.65 -> D=19.980 (22s, 18m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3122.69 maxDD=-7.8%; sigma_t mean=7.923e-04 (theta_eff=8.850e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:04:05]   [active 38] mtl=0.099 mtg=0.74 fts=0.36 f=0.48 w=0.77 dx=2.32 -> D=17.670 (23s, 18m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3185.62 maxDD=-6.4%; sigma_t mean=8.026e-04 (theta_eff=9.012e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:04:28]   [active 39] mtl=0.104 mtg=0.76 fts=0.28 f=0.46 w=0.73 dx=2.90 -> D=16.856 (23s, 18m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3181.03 maxDD=-6.4%; sigma_t mean=8.004e-04 (theta_eff=8.868e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:04:51]   [active 40] mtl=0.127 mtg=1.42 fts=0.32 f=0.47 w=0.82 dx=2.68 -> D=19.518 (23s, 19m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3220.85 maxDD=-6.2%; sigma_t mean=7.437e-04 (theta_eff=8.172e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:05:14]   [active 41] mtl=0.062 mtg=0.46 fts=0.36 f=0.55 w=0.86 dx=2.74 -> D=16.588 (23s, 19m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3197.42 maxDD=-6.3%; sigma_t mean=7.797e-04 (theta_eff=8.560e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:05:36]   [active 42] mtl=0.115 mtg=1.08 fts=0.20 f=0.51 w=0.86 dx=2.64 -> D=18.362 (22s, 20m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3224.40 maxDD=-6.2%; sigma_t mean=6.859e-04 (theta_eff=7.525e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:05:58]   [active 43] mtl=0.047 mtg=0.90 fts=0.35 f=0.62 w=0.83 dx=2.64 -> D=16.444 (23s, 20m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3177.41 maxDD=-6.5%; sigma_t mean=7.658e-04 (theta_eff=8.558e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:06:21]   [active 44] mtl=0.041 mtg=0.65 fts=0.22 f=0.51 w=0.77 dx=2.65 -> D=16.359 (23s, 20m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3154.27 maxDD=-6.9%; sigma_t mean=8.231e-04 (theta_eff=9.013e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:06:48]   [active 45] mtl=0.173 mtg=1.23 fts=0.38 f=0.46 w=0.86 dx=2.40 -> D=21.255 (27s, 21m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3254.91 maxDD=-5.9%; sigma_t mean=5.925e-04 (theta_eff=6.314e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:07:16]   [active 46] mtl=0.148 mtg=1.67 fts=0.77 f=0.73 w=0.78 dx=2.78 -> D=25.047 (28s, 21m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2901.52 maxDD=-15.0%; sigma_t mean=9.149e-04 (theta_eff=1.053e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:07:48]   [active 47] mtl=0.122 mtg=0.72 fts=0.80 f=0.26 w=0.28 dx=1.56 -> D=24.717 (32s, 22m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2861.93 maxDD=-15.8%; sigma_t mean=8.819e-04 (theta_eff=1.001e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:08:16]   [active 48] mtl=0.134 mtg=0.73 fts=0.40 f=0.33 w=0.56 dx=0.79 -> D=24.320 (28s, 22m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=2991.70 maxDD=-12.2%; sigma_t mean=8.286e-04 (theta_eff=9.675e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:08:42]   [active 49] mtl=0.045 mtg=0.22 fts=0.52 f=0.37 w=0.20 dx=2.32 -> D=19.130 (26s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3003.62 maxDD=-11.9%; sigma_t mean=1.041e-03 (theta_eff=1.115e-03) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:09:06]   [active 50] mtl=0.184 mtg=1.06 fts=0.28 f=0.17 w=0.73 dx=1.99 -> D=38.835 (24s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3148.55 maxDD=-7.3%; sigma_t mean=9.182e-04 (theta_eff=9.885e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:09:29]   [active 51] mtl=0.065 mtg=1.62 fts=0.26 f=0.35 w=0.87 dx=2.55 -> D=30.765 (23s, 23m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3229.46 maxDD=-6.1%; sigma_t mean=7.788e-04 (theta_eff=8.586e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:09:53]   [active 52] mtl=0.106 mtg=0.86 fts=0.23 f=0.51 w=0.85 dx=2.92 -> D=17.414 (23s, 24m)
+[stressed] seed=7 n_days=30 n=11700: 50 jumps, 29 gaps (gap mean +0.0042), V0=3387.38 Vend=3201.93 maxDD=-6.3%; sigma_t mean=8.051e-04 (theta_eff=8.883e-04) -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/data/fv_gbm_joint_stressed.csv
+[12:10:15]   [active 53] mtl=0.005 mtg=0.55 fts=0.26 f=0.47 w=0.84 dx=2.80 -> D=19.617 (22s, 24m)
+[12:10:15] STAGE A done: joint optimum D=16.359 vs baseline D=20.018 (+18.3%); 53 evals in 24m
+[12:10:15] calib-only mode: skipping path simulation (STAGE B) + clearing (STAGE C)
+[12:10:15] wrote SUMMARY.md
+[12:10:15] ALL DONE in 24.3 min. Outputs in /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/overnight_joint

@@ -1,0 +1,22 @@
+[17:15:44] === market-layer completion run start ===
+[17:15:44] FRESH-SEED VALIDATION kalman calm (top-5 grid nodes, 2 fresh common seed sets)
+[17:17:58] FRESH kalman calm DONE in 2 min (log: output/baseline_gbm/logs/fresh_kalman_calm.log)
+[17:17:58] FRESH-SEED VALIDATION kalman stressed (top-5 grid nodes, 2 fresh common seed sets)
+[17:20:36] FRESH kalman stressed DONE in 2 min (log: output/baseline_gbm/logs/fresh_kalman_stressed.log)
+[17:20:36] GBM GRID calm  n_per_dim=7  (n_days=20, n_runs=3)
+[18:25:06] GBM GRID calm  DONE in 64 min -> output/baseline_gbm/grid_calm.json
+[18:25:06] GBM GRID stressed  n_per_dim=5  (n_days=20, n_runs=3)
+[20:23:21] GBM GRID stressed  DONE in 118 min -> output/baseline_gbm/grid_stressed.json
+[20:23:21] FRESH-SEED VALIDATION gbm calm (top-5 grid nodes, 2 fresh common seed sets)
+[20:25:32] FRESH gbm calm DONE in 2 min (log: output/baseline_gbm/logs/fresh_gbm_calm.log)
+[20:25:32] FRESH-SEED VALIDATION gbm stressed (top-5 grid nodes, 2 fresh common seed sets)
+[20:27:35] FRESH gbm stressed DONE in 2 min (log: output/baseline_gbm/logs/fresh_gbm_stressed.log)
+[20:27:35] GBM SURROGATE calm  (160 LHS, 20d, 6 seeds, 2 refine, 32/round, 32 stage-2)
+[22:05:06] GBM SURROGATE calm  DONE in 97 min -> output/baseline_gbm/sur_calm.json
+[22:05:06] GBM SURROGATE stressed  (160 LHS, 20d, 6 seeds, 2 refine, 32/round, 32 stage-2)
+[23:40:47] GBM SURROGATE stressed  DONE in 95 min -> output/baseline_gbm/sur_stressed.json
+[23:40:47] === done in 385 min — results in output/baseline_gbm/ ===
+[23:40:47] Kalman fresh-seed validation: output/baseline_grid/grid_freshseed_{calm,stressed}.json
+[23:40:47] SV-MJD theta (grid + surrogate + fresh-seed): output/baseline_gbm/
+[23:40:47] NB: do NOT copy the gbm theta into globals.CALIBRATED — it is the SV-MJD
+[23:40:47] ensemble theta; CALIBRATED stays the locked Kalman baseline (D60).

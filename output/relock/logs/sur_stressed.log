@@ -1,0 +1,111 @@
+
+======================================================================
+ CALIBRATING REGIME: stressed (HFABM 2-stage, bootstrap weights)
+======================================================================
+[stressed][1/9] Franke weights from historical 1-min mid returns (200 block resamples × 390-bar blocks)
+ per-moment empirical sampling SD s_i (Franke weights, 390-bar block bootstrap):
+ KS    ks_stat            s_i=9.232e-03
+ V     ret_std            s_i=1.144e-04
+ ACF1  acf_r_1            s_i=4.685e-03
+ ACF1  acf_r_5            s_i=6.212e-03
+ ACF1  acf_r_10           s_i=4.420e-03
+ ACF1  acf_r_20           s_i=6.429e-03
+ ACF2  acf_absr_1         s_i=1.942e-02
+ ACF2  acf_absr_5         s_i=2.757e-02
+ ACF2  acf_absr_10        s_i=2.393e-02
+ ACF2  acf_absr_20        s_i=1.948e-02
+ Hill  hill_tail_index    s_i=1.270e-01
+[stressed][2/9] Cached LHS lacks current moment columns (loss set changed) — regenerating
+ LHS 20/256
+ LHS 40/256
+ LHS 60/256
+ LHS 80/256
+ LHS 100/256
+ LHS 120/256
+ LHS 140/256
+ LHS 160/256
+ LHS 180/256
+ LHS 200/256
+ LHS 220/256
+ LHS 240/256
+ 10917s → /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/calibration_lhs_stressed.csv
+[stressed][3/9] Initial XGBoost surrogate training
+ D(θ) surrogate (single regressor, n=256, label-clip cap=31.92): held-out R²=+0.85, Pearson r=+0.92
+ UNREACHABLE targets (model-side gap — flag for design review):
+ ks_stat                target +0.0000 LHS [+0.0252, +0.1773] miss +0.0252
+[stressed][4/9] Active-learning round 1/3: 48 new sims
+ refine sim 5/48 (exploit 32 / explore 16)
+ refine sim 10/48 (exploit 32 / explore 16)
+ refine sim 15/48 (exploit 32 / explore 16)
+ refine sim 20/48 (exploit 32 / explore 16)
+ refine sim 25/48 (exploit 32 / explore 16)
+ refine sim 30/48 (exploit 32 / explore 16)
+ refine sim 35/48 (exploit 32 / explore 16)
+ refine sim 40/48 (exploit 32 / explore 16)
+ refine sim 45/48 (exploit 32 / explore 16)
+ total samples now 304, 2441s
+ D(θ) surrogate (single regressor, n=304, label-clip cap=31.13): held-out R²=+0.81, Pearson r=+0.90
+ UNREACHABLE targets (model-side gap — flag for design review):
+ ks_stat                target +0.0000 LHS [+0.0252, +0.1773] miss +0.0252
+[stressed][5/9] Active-learning round 2/3: 48 new sims
+ refine sim 5/48 (exploit 32 / explore 16)
+ refine sim 10/48 (exploit 32 / explore 16)
+ refine sim 15/48 (exploit 32 / explore 16)
+ refine sim 20/48 (exploit 32 / explore 16)
+ refine sim 25/48 (exploit 32 / explore 16)
+ refine sim 30/48 (exploit 32 / explore 16)
+ refine sim 35/48 (exploit 32 / explore 16)
+ refine sim 40/48 (exploit 32 / explore 16)
+ refine sim 45/48 (exploit 32 / explore 16)
+ total samples now 352, 2235s
+ D(θ) surrogate (single regressor, n=352, label-clip cap=30.38): held-out R²=+0.90, Pearson r=+0.95
+ UNREACHABLE targets (model-side gap — flag for design review):
+ ks_stat                target +0.0000 LHS [+0.0242, +0.1776] miss +0.0242
+[stressed][6/9] Active-learning round 3/3: 48 new sims
+ refine sim 5/48 (exploit 32 / explore 16)
+ refine sim 10/48 (exploit 32 / explore 16)
+ refine sim 15/48 (exploit 32 / explore 16)
+ refine sim 20/48 (exploit 32 / explore 16)
+ refine sim 25/48 (exploit 32 / explore 16)
+ refine sim 30/48 (exploit 32 / explore 16)
+ refine sim 35/48 (exploit 32 / explore 16)
+ refine sim 40/48 (exploit 32 / explore 16)
+ refine sim 45/48 (exploit 32 / explore 16)
+ total samples now 400, 2137s
+ D(θ) surrogate (single regressor, n=400, label-clip cap=30.13): held-out R²=+0.88, Pearson r=+0.94
+ UNREACHABLE targets (model-side gap — flag for design review):
+ ks_stat                target +0.0000 LHS [+0.0242, +0.1776] miss +0.0242
+[stressed][7/9] Stage 1: surrogate optimum (pool argmin over Sobol candidates)
+ surrogate-predicted D at stage-1 optimum: 7.3499
+[stressed][8/9] Stage 2: grid search around θ* on true simulator (48 sims in ±10% box)
+ stage-2 sim 10/49 (best so far 7.3974)
+ stage-2 sim 20/49 (best so far 6.3627)
+ stage-2 sim 30/49 (best so far 6.3627)
+ stage-2 sim 40/49 (best so far 6.3627)
+ stage-2 best TRUE loss: 6.3162 (surrogate-predicted 7.3499) [2311s → /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/calibration_stage2_stressed.csv]
+[stressed][9/9] Validating at stage-2 optimum
+
+    moment                    target     simulator       |s-t|   |s-t|/s_i
+ ret_std                   0.0012        0.0013      0.0001        0.46
+ ret_kurtosis             67.1315       60.8254      6.3061 (diag)
+ acf_r_1                  -0.0045       -0.0070      0.0025        0.53
+ acf_r_5                  -0.0033       -0.0096      0.0063        1.01
+ acf_r_10                 -0.0018       -0.0044      0.0026        0.59
+ acf_r_20                 -0.0046        0.0001      0.0047        0.73
+ acf_absr_1                0.3793        0.3375      0.0418        2.15
+ acf_absr_5                0.3495        0.2619      0.0877        3.18
+ acf_absr_10               0.3339        0.2593      0.0746        3.12
+ acf_absr_20               0.3377        0.2451      0.0926        4.75
+ hill_tail_index           2.7274        2.6631      0.0643        0.51
+ ks_stat                   0.0000        0.0249      0.0249        2.69
+
+ grouped Δ contributions (Franke-standardised, 5 in loss):
+ ΔKS     = 2.6944 (mean sampling-SDs off)
+ ΔV      = 0.4618 (mean sampling-SDs off)
+ ΔACF1   = 0.7160 (mean sampling-SDs off)
+ ΔACF2   = 3.3002 (mean sampling-SDs off)
+ ΔHill   = 0.5063 (mean sampling-SDs off)
+
+ validated true loss D(θ) at stage-2 θ: 7.6788
+
+Saved output/calibrated_params.json (regimes now: calm, stressed merged with any prior)

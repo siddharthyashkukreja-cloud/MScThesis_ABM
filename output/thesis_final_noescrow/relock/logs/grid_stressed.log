@@ -1,0 +1,18 @@
+
+======================================================================
+ GRID SEARCH: stressed
+======================================================================
+ grid: 5-d x 4/dim = 1024 nodes (20d x 3 seeds each)
+ node 102/1024 best D so far 11.3077
+ node 204/1024 best D so far 6.0063
+ node 306/1024 best D so far 6.0063
+ node 408/1024 best D so far 6.0063
+ node 510/1024 best D so far 6.0063
+ node 612/1024 best D so far 6.0063
+ node 714/1024 best D so far 6.0063
+ node 816/1024 best D so far 6.0063
+ node 918/1024 best D so far 5.1553
+ node 1020/1024 best D so far 5.1553
+ [stressed] best D 5.1553 at {'ft_sigma_c': 0.85, 'zi_alpha': 0.2, 'zi_delta': 0.02, 'p_zi': 0.08, 'zi_mu': 0.058333333333333334} [16933s -> /Users/siddharth/Desktop/GitHub/mscthesis_abm/output/calibration_grid_stressed.csv]
+
+Saved output/calibrated_params_grid.json (regimes now: stressed merged with any prior)

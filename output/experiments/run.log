@@ -1,0 +1,144 @@
+[00:37:23] === PRE-FLIGHT smoke (2 seeds x 2 c, every family + both fundamentals) ===
+[experiments] funds=['kalman', 'gbm'] seeds=2 c-grid=2  total specs=60 done=0 todo=60  nproc=7  -> output/experiments/rows_smoke.csv
+  50/60 done  0.6 min  (0.68s/run)
+[experiments] 60 runs in 0.8 min -> output/experiments/rows_smoke.csv
+[aggregate] wrote 8 summaries + SUMMARY.md to output/experiments/
+
+=== H1 breach multipliers (smallest c reaching a level, over seeds) ===
+  fund   mode  level  frac_seeds_breached  breach_c_median  breach_c_p10  breach_c_p90
+   gbm direct      3                  0.0              NaN           NaN           NaN
+   gbm direct      4                  0.0              NaN           NaN           NaN
+   gbm tiered      3                  0.0              NaN           NaN           NaN
+   gbm tiered      4                  0.0              NaN           NaN           NaN
+kalman direct      3                  0.0              NaN           NaN           NaN
+kalman direct      4                  0.0              NaN           NaN           NaN
+kalman tiered      3                  0.0              NaN           NaN           NaN
+kalman tiered      4                  0.0              NaN           NaN           NaN
+[00:38:13] smoke clean (0 errors).
+[00:38:13] === FULL matrix (SEEDS=42:82, NPROC=auto) ===
+[experiments] funds=['kalman', 'gbm'] seeds=40 c-grid=11  total specs=5520 done=0 todo=5520  nproc=7  -> output/experiments/rows.csv
+  50/5520 done  0.5 min  (0.62s/run)
+  100/5520 done  1.0 min  (0.60s/run)
+  150/5520 done  1.5 min  (0.58s/run)
+  200/5520 done  1.9 min  (0.57s/run)
+  250/5520 done  2.3 min  (0.55s/run)
+  300/5520 done  2.7 min  (0.54s/run)
+  350/5520 done  3.1 min  (0.53s/run)
+  400/5520 done  3.7 min  (0.56s/run)
+  450/5520 done  4.1 min  (0.54s/run)
+  500/5520 done  4.5 min  (0.54s/run)
+  550/5520 done  4.9 min  (0.54s/run)
+  600/5520 done  5.3 min  (0.53s/run)
+  650/5520 done  5.8 min  (0.53s/run)
+  700/5520 done  6.1 min  (0.52s/run)
+  750/5520 done  6.6 min  (0.52s/run)
+  800/5520 done  7.0 min  (0.52s/run)
+  850/5520 done  7.4 min  (0.53s/run)
+  900/5520 done  7.8 min  (0.52s/run)
+  950/5520 done  8.2 min  (0.52s/run)
+  1000/5520 done  8.5 min  (0.51s/run)
+  1050/5520 done  9.0 min  (0.52s/run)
+  1100/5520 done  9.4 min  (0.52s/run)
+  1150/5520 done  9.9 min  (0.52s/run)
+  1200/5520 done  10.3 min  (0.51s/run)
+  1250/5520 done  10.7 min  (0.51s/run)
+  1300/5520 done  11.1 min  (0.51s/run)
+  1350/5520 done  11.5 min  (0.51s/run)
+  1400/5520 done  11.9 min  (0.51s/run)
+  1450/5520 done  12.4 min  (0.51s/run)
+  1500/5520 done  12.8 min  (0.51s/run)
+  1550/5520 done  13.2 min  (0.51s/run)
+  1600/5520 done  13.6 min  (0.51s/run)
+  1650/5520 done  14.0 min  (0.51s/run)
+  1700/5520 done  14.5 min  (0.51s/run)
+  1750/5520 done  14.9 min  (0.51s/run)
+  1800/5520 done  15.2 min  (0.51s/run)
+  1850/5520 done  15.7 min  (0.51s/run)
+  1900/5520 done  16.1 min  (0.51s/run)
+  1950/5520 done  16.6 min  (0.51s/run)
+  2000/5520 done  17.1 min  (0.51s/run)
+  2050/5520 done  17.6 min  (0.51s/run)
+  2100/5520 done  18.0 min  (0.51s/run)
+  2150/5520 done  18.4 min  (0.51s/run)
+  2200/5520 done  18.8 min  (0.51s/run)
+  2250/5520 done  19.3 min  (0.51s/run)
+  2300/5520 done  19.7 min  (0.51s/run)
+  2350/5520 done  20.1 min  (0.51s/run)
+  2400/5520 done  20.5 min  (0.51s/run)
+  2450/5520 done  20.9 min  (0.51s/run)
+  2500/5520 done  21.3 min  (0.51s/run)
+  2550/5520 done  21.7 min  (0.51s/run)
+  2600/5520 done  22.1 min  (0.51s/run)
+  2650/5520 done  22.5 min  (0.51s/run)
+  2700/5520 done  22.9 min  (0.51s/run)
+  2750/5520 done  23.4 min  (0.51s/run)
+  2800/5520 done  23.8 min  (0.51s/run)
+  2850/5520 done  24.3 min  (0.51s/run)
+  2900/5520 done  24.7 min  (0.51s/run)
+  2950/5520 done  25.2 min  (0.51s/run)
+  3000/5520 done  25.7 min  (0.51s/run)
+  3050/5520 done  26.2 min  (0.52s/run)
+  3100/5520 done  26.7 min  (0.52s/run)
+  3150/5520 done  27.2 min  (0.52s/run)
+  3200/5520 done  27.6 min  (0.52s/run)
+  3250/5520 done  28.1 min  (0.52s/run)
+  3300/5520 done  28.6 min  (0.52s/run)
+  3350/5520 done  29.1 min  (0.52s/run)
+  3400/5520 done  29.6 min  (0.52s/run)
+  3450/5520 done  30.1 min  (0.52s/run)
+  3500/5520 done  30.5 min  (0.52s/run)
+  3550/5520 done  31.1 min  (0.52s/run)
+  3600/5520 done  31.6 min  (0.53s/run)
+  3650/5520 done  32.1 min  (0.53s/run)
+  3700/5520 done  32.6 min  (0.53s/run)
+  3750/5520 done  33.1 min  (0.53s/run)
+  3800/5520 done  33.6 min  (0.53s/run)
+  3850/5520 done  34.1 min  (0.53s/run)
+  3900/5520 done  34.5 min  (0.53s/run)
+  3950/5520 done  35.0 min  (0.53s/run)
+  4000/5520 done  35.4 min  (0.53s/run)
+  4050/5520 done  36.0 min  (0.53s/run)
+  4100/5520 done  36.4 min  (0.53s/run)
+  4150/5520 done  36.9 min  (0.53s/run)
+  4200/5520 done  37.4 min  (0.53s/run)
+  4250/5520 done  37.8 min  (0.53s/run)
+  4300/5520 done  38.3 min  (0.53s/run)
+  4350/5520 done  38.8 min  (0.53s/run)
+  4400/5520 done  39.2 min  (0.53s/run)
+  4450/5520 done  39.9 min  (0.54s/run)
+  4500/5520 done  40.5 min  (0.54s/run)
+  4550/5520 done  41.2 min  (0.54s/run)
+  4600/5520 done  41.8 min  (0.54s/run)
+  4650/5520 done  42.2 min  (0.54s/run)
+  4700/5520 done  42.6 min  (0.54s/run)
+  4750/5520 done  43.1 min  (0.55s/run)
+  4800/5520 done  43.6 min  (0.55s/run)
+  4850/5520 done  44.0 min  (0.54s/run)
+  4900/5520 done  44.5 min  (0.55s/run)
+  4950/5520 done  45.0 min  (0.55s/run)
+  5000/5520 done  45.5 min  (0.55s/run)
+  5050/5520 done  45.9 min  (0.55s/run)
+  5100/5520 done  46.5 min  (0.55s/run)
+  5150/5520 done  46.9 min  (0.55s/run)
+  5200/5520 done  47.4 min  (0.55s/run)
+  5250/5520 done  47.9 min  (0.55s/run)
+  5300/5520 done  48.4 min  (0.55s/run)
+  5350/5520 done  48.9 min  (0.55s/run)
+  5400/5520 done  49.4 min  (0.55s/run)
+  5450/5520 done  50.0 min  (0.55s/run)
+  5500/5520 done  50.7 min  (0.55s/run)
+[experiments] 5520 runs in 51.1 min -> output/experiments/rows.csv
+[aggregate] wrote 8 summaries + SUMMARY.md to output/experiments/
+
+=== H1 breach multipliers (smallest c reaching a level, over seeds) ===
+  fund   mode  level  frac_seeds_breached  breach_c_median  breach_c_p10  breach_c_p90
+   gbm direct      3                1.000             1.75         1.500          2.00
+   gbm direct      4                1.000             2.00         1.750          2.25
+   gbm tiered      3                0.950             2.75         2.175          3.50
+   gbm tiered      4                0.250             3.50         2.975          4.00
+kalman direct      3                1.000             2.25         1.975          2.50
+kalman direct      4                0.950             3.00         2.750          3.65
+kalman tiered      3                0.375             3.50         3.000          4.00
+kalman tiered      4                0.025             4.00         4.000          4.00
+[01:29:18] === done in 51 min ===
+[01:29:18] READ output/experiments/SUMMARY.md + summary_*.csv. Re-run this script to resume if interrupted.
