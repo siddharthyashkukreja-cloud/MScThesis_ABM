@@ -10,7 +10,3 @@ __pycache__/
 
 # Local agent / session state
 .claude/
-
-# Frontend clone (own repo) + local env
-ccp-risk-explorer/
-.venv/
