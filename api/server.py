@@ -423,5 +423,4 @@ def simulate_stream(req: SimRequest):
                 _LOCK.release()
 
     return StreamingResponse(gen(), media_type="application/x-ndjson",
-                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-                                      "Connection": "close"})
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
