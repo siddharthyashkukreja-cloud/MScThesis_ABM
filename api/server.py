@@ -320,7 +320,7 @@ def meta():
 def simulate(req: SimRequest):
     ctx = _prepare(req)
     t0 = time.time()
-    if not _LOCK.acquire(timeout=25):
+    if not _LOCK.acquire(timeout=4):
         raise HTTPException(409, "another simulation is still running — retry in a few seconds")
     try:
         for k, val in _G_DEFAULTS.items():
@@ -365,7 +365,7 @@ def simulate(req: SimRequest):
 @app.post("/simulate_stream")
 def simulate_stream(req: SimRequest):
     ctx = _prepare(req)
-    if not _LOCK.acquire(timeout=25):
+    if not _LOCK.acquire(timeout=4):
         raise HTTPException(409, "another simulation is still running — retry in a few seconds")
 
     def gen():
