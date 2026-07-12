@@ -1,0 +1,13 @@
+path,mode,recovery,client_def,cm_def,deepest_wf,client_loss_absorbed,mutualised_B
+38,firesale,,49,15,5,0.0,27.9
+38,transfer,0.8,41,14,5,21.941,39.52
+36,firesale,,52,14,5,0.0,34.553
+36,transfer,0.8,48,14,5,14.489,34.241
+71,firesale,,29,15,5,0.0,34.615
+71,transfer,0.8,27,15,5,16.156,36.827
+51,firesale,,68,5,3,0.0,0.637
+51,transfer,0.8,68,12,4,16.81,9.444
+60,firesale,,29,6,3,0.0,1.95
+60,transfer,0.8,31,11,4,16.045,9.929
+23,firesale,,29,3,3,0.0,2.218
+23,transfer,0.8,26,7,4,10.736,7.779
